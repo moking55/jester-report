@@ -36,7 +36,7 @@ Module id ตั้งครั้งเดียว ห้ามเปลี่
 
 ## Deployment
 
-Docker Compose (ไม่ใช้ Kubernetes) 5 services: `studio` (Next.js), `api` (FastAPI), `gotenberg` (9.4.1, pin digest), `postgres`, `rustfs`
+Docker Compose (ไม่ใช้ Kubernetes) 5 services: `studio` (Next.js), `api` (FastAPI), `gotenberg` (image ของเรา `jester/gotenberg` = 9.4.1 pin digest + TH Sarabun New เป็น system font; ดู [infra/gotenberg](infra/gotenberg/Dockerfile)), `postgres`, `rustfs`
 
 - PostgreSQL มากับ compose เป็นค่าเริ่มต้น; ตั้ง `DATABASE_URL` เพื่อใช้ฐานข้อมูลเดิมขององค์กรแทน
 - Object storage ค่าเริ่มต้น RustFS; ตั้งค่า endpoint/credentials เพื่อใช้ S3-compatible อื่น

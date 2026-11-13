@@ -1,0 +1,7 @@
+# Throwaway spike code: fixture HTML is long by nature
+line-length = 110
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]

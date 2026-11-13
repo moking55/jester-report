@@ -8,7 +8,7 @@ Module id: `engine-client` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · Inte
 
 1. Python ≥3.11 (เครื่อง dev มี 3.11 จึงไม่ดาวน์โหลด 3.12) และใช้ `uv` จัดการ dependency/venv (ผู้ใช้ยืนยัน)
 2. HTTP client คือ `httpx` (async); model คือ `pydantic` v2; test คือ `pytest` + `respx` (mock HTTP) + `pytest-asyncio`; lint/format คือ `ruff`
-3. Engine คือ Gotenberg `9.4.1` (รันด้วย `--chromium-auto-start=true --chromium-start-timeout=60s`) digest `sha256:7d790c081a944f4d30cacb59a2cdccbe71569532af691b93c36551f6a877b4fc` บน VM `10.0.1.29` ผูก `127.0.0.1:3000` และเครื่อง dev เข้าถึงผ่าน SSH tunnel `localhost:3000`
+3. Engine คือ image `jester/gotenberg:9.4.1-th1` ([infra/gotenberg](infra/gotenberg/Dockerfile)) = Gotenberg `9.4.1` + TH Sarabun New เป็น system font (ผู้ใช้เลือกหลัง spike M0 รอบแรก) รันด้วย `--chromium-auto-start=true --chromium-start-timeout=60s` digest `sha256:7d790c081a944f4d30cacb59a2cdccbe71569532af691b93c36551f6a877b4fc` บน VM `10.0.1.29` ผูก `127.0.0.1:3000` และเครื่อง dev เข้าถึงผ่าน SSH tunnel `localhost:3000`
 4. ฟอนต์ (ผู้ใช้ยืนยัน 13 พ.ย. 2026):
    - ค่าเริ่มต้น: **TH Sarabun New** และ **TH SarabunPSK** ถ้าตรวจ license จากต้นทาง (SIPA) แล้วแจกต่อใน repo/Docker image ได้
    - ถ้าแจกต่อไม่ได้: ใช้ **Sarabun** (Google Fonts, OFL) เป็นค่าเริ่มต้นแทน และให้ทีมอัปโหลด TH Sarabun New เองเป็น asset

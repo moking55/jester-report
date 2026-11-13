@@ -1,6 +1,6 @@
 # Implementation Plan: `engine-client` + Spike M0
 
-สถานะ: **อนุมัติแล้ว — Phase 0–1 เสร็จ, Checkpoint A ผ่าน** (13 พฤศจิกายน 2026)
+สถานะ: **อนุมัติแล้ว — เสร็จครบ Checkpoint B ผ่าน** (13 พฤศจิกายน 2026)
 Spec: [SPEC-engine-client.md](../../SPEC-engine-client.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md)
 Task list: [todo.md](todo.md)
 
@@ -53,15 +53,15 @@ T2 scaffold ── T3 models/validation ── T4 convert_html ── T5 errors+
 - [x] ค่า `failOnResourceHttpStatusCodes` และพฤติกรรม 503 ยืนยันจากผลจริงและบันทึกใน spec
 
 ### Phase 2: Spike M0
-- [ ] T6: Spike harness (`run_spike.py`, manifest, checks L1–L3, ภาพหน้าบน VM)
-- [ ] T7: SP-B ตารางข้ามหน้า + หัวตารางซ้ำ
-- [ ] T8: SP-A ใบเสนอราคา + ไทยใน header/footer + fallback
-- [ ] T9: SP-C แถวสูงเกินหน้า + PO02 ไม่มี detail
-- [ ] T10: `REPORT.md` พร้อมผล L4 และการตัดสินใจที่เปิดให้ผู้ใช้
+- [x] T6: Spike harness (`run_spike.py`, manifest, checks L1–L3, ภาพหน้าบน VM)
+- [x] T7: SP-B ตารางข้ามหน้า + หัวตารางซ้ำ
+- [x] T8: SP-A ใบเสนอราคา + ไทยใน header/footer + fallback
+- [x] T9: SP-C แถวสูงเกินหน้า + PO02 ไม่มี detail
+- [x] T10: `REPORT.md` พร้อมผล L4 และการตัดสินใจที่เปิดให้ผู้ใช้
 
 ### Checkpoint B: ผล spike
-- [ ] ทุก case มีผล ผ่าน/ไม่ผ่าน พร้อมหลักฐานใน manifest และภาพ
-- [ ] ผู้ใช้ทบทวน REPORT.md และตัดสินทางเดินของ `binder` ก่อนเขียน spec ถัดไป
+- [x] ทุก case มีผล ผ่าน/ไม่ผ่าน พร้อมหลักฐานใน manifest และภาพ
+- [x] ผู้ใช้ทบทวน REPORT.md และตัดสินทางเดินของ `binder` ก่อนเขียน spec ถัดไป
 
 ## Parallelization
 

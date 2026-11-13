@@ -106,13 +106,13 @@ Live/spike ต้องเปิด tunnel ก่อน: `ssh -N -L 3000:127.0.0
 **Description:** เขียน `spikes/m0/run_spike.py` ที่อ่าน case จาก `fixtures/<case>/` (HTML + `case.json` ระบุ page setup, expected row IDs, expected totals, expected Thai strings, ฟอนต์ที่คาด) แล้ว render ผ่าน `EngineClient` N รอบ เก็บ PDF + `manifest.json` ทำ check L1–L3 ด้วย `pypdf` และส่ง PDF ไป VM ทำภาพหน้าและ `pdftotext` เทียบ
 
 **Acceptance criteria:**
-- [ ] manifest มีครบตาม spec: digest, version, options, sha256 input/ฟอนต์/PDF, page count, text, trace, duration, ผล check
-- [ ] Check L1 (ID ครบ/ไม่ซ้ำ), L2 (ยอด), L3 (สตริงไทยหลัง NFC, ฟอนต์ที่ฝัง, ไม่มี `.notdef`) และ determinism ข้ามรอบ
-- [ ] ภาพหน้า PNG ทุกหน้าใน `out/<case>/run-1/` และผล `pdftotext` เทียบกับ `pypdf`
+- [x] manifest มีครบตาม spec: digest, version, options, sha256 input/ฟอนต์/PDF, page count, text, trace, duration, ผล check
+- [x] Check L1 (ID ครบ/ไม่ซ้ำ), L2 (ยอด), L3 (สตริงไทยหลัง NFC, ฟอนต์ที่ฝัง, ไม่มี `.notdef`) และ determinism ข้ามรอบ
+- [x] ภาพหน้า PNG ทุกหน้าใน `out/<case>/run-1/` และผล `pdftotext` เทียบกับ `pypdf`
 
 **Verification:**
-- [ ] รันกับ case ทดสอบเล็ก 1 ตัว (HTML ง่ายพร้อม expected ที่ทั้งผ่านและตั้งใจให้ fail) แล้วเห็นผล check ตรงคาด
-- [ ] ติดตั้ง `poppler-utils` บน VM แล้ว `pdftoppm -v` ทำงาน
+- [x] รันกับ case ทดสอบเล็ก 1 ตัว (HTML ง่ายพร้อม expected ที่ทั้งผ่านและตั้งใจให้ fail) แล้วเห็นผล check ตรงคาด
+- [x] ติดตั้ง `poppler-utils` บน VM แล้ว `pdftoppm -v` ทำงาน
 
 **Dependencies:** Checkpoint A
 **Files likely touched:** `spikes/m0/run_spike.py`, `spikes/m0/checks.py`, `spikes/m0/fixtures/_smoke/`
@@ -123,12 +123,12 @@ Live/spike ต้องเปิด tunnel ก่อน: `ssh -N -L 3000:127.0.0
 **Description:** สร้าง fixture sales grouped จาก `research/specimens/grouped-cases.json` ขยายเป็น 0, 1, 50 และ 500 แถว แบบ portrait และ landscape ใช้ `<thead>` ซ้ำ ใส่ฟอนต์ค่าเริ่มต้นจาก T1 แล้วรัน 3 รอบ
 
 **Acceptance criteria:**
-- [ ] ทุก variation มีผล L1–L3 ใน manifest
-- [ ] ภาพหน้าที่มีรอยต่อระหว่างหน้า (หัวตารางซ้ำ, ใกล้ footer) ถูกคัดไว้สำหรับ L4
-- [ ] กรณี 0 แถวแสดง no-data และไม่ error
+- [x] ทุก variation มีผล L1–L3 ใน manifest
+- [x] ภาพหน้าที่มีรอยต่อระหว่างหน้า (หัวตารางซ้ำ, ใกล้ footer) ถูกคัดไว้สำหรับ L4
+- [x] กรณี 0 แถวแสดง no-data และไม่ error
 
 **Verification:**
-- [ ] `uv run python ../../spikes/m0/run_spike.py --case sp-b --runs 3` จบโดยไม่มี exception
+- [x] `uv run python ../../spikes/m0/run_spike.py --case sp-b --runs 3` จบโดยไม่มี exception
 
 **Dependencies:** T1, T6
 **Files likely touched:** `spikes/m0/fixtures/sp-b/`, `spikes/m0/fixtures/sp-b/make_rows.py`
@@ -139,12 +139,12 @@ Live/spike ต้องเปิด tunnel ก่อน: `ssh -N -L 3000:127.0.0
 **Description:** สร้าง fixture ใบเสนอราคา Q-DEMO-001 พร้อม header/footer ภาษาไทย, เลขหน้า และ `@font-face` ทั้งใน body และ header/footer; เพิ่ม variation ที่ตัดฟอนต์หลักออกเพื่อทดสอบ fallback Noto Sans Thai
 
 **Acceptance criteria:**
-- [ ] ยอด 3,100.70 / 3,210.00 ตรวจได้ใน L2
-- [ ] ผล L3 แยก body กับ header/footer และแยกรอบฟอนต์หลักกับรอบ fallback
-- [ ] ภาพหน้า header/footer ถูกคัดไว้สำหรับ L4
+- [x] ยอด 3,100.70 / 3,210.00 ตรวจได้ใน L2
+- [x] ผล L3 แยก body กับ header/footer และแยกรอบฟอนต์หลักกับรอบ fallback
+- [x] ภาพหน้า header/footer ถูกคัดไว้สำหรับ L4
 
 **Verification:**
-- [ ] `uv run python ../../spikes/m0/run_spike.py --case sp-a --runs 3`
+- [x] `uv run python ../../spikes/m0/run_spike.py --case sp-a --runs 3`
 
 **Dependencies:** T1, T6
 **Files likely touched:** `spikes/m0/fixtures/sp-a/`
@@ -155,12 +155,12 @@ Live/spike ต้องเปิด tunnel ก่อน: `ssh -N -L 3000:127.0.0
 **Description:** สร้าง fixture PO master-detail จาก `research/specimens/master-detail-cases.json` โดยขยายข้อความ `long-detail` ให้สูงเกินหนึ่งหน้า (specimen เดิมสั้นเกินไป) และรวม PO02 ที่ไม่มี detail
 
 **Acceptance criteria:**
-- [ ] ข้อความใน long-detail ทั้งหมดตรวจด้วย L1 ว่าครบหรือหายส่วนไหน
-- [ ] PO01 = 350.00, PO02 = 0.00 ตรวจใน L2
-- [ ] ภาพหน้าที่แถวถูกตัดถูกคัดไว้สำหรับ L4
+- [x] ข้อความใน long-detail ทั้งหมดตรวจด้วย L1 ว่าครบหรือหายส่วนไหน
+- [x] PO01 = 350.00, PO02 = 0.00 ตรวจใน L2
+- [x] ภาพหน้าที่แถวถูกตัดถูกคัดไว้สำหรับ L4
 
 **Verification:**
-- [ ] `uv run python ../../spikes/m0/run_spike.py --case sp-c --runs 3`
+- [x] `uv run python ../../spikes/m0/run_spike.py --case sp-c --runs 3`
 
 **Dependencies:** T6
 **Files likely touched:** `spikes/m0/fixtures/sp-c/`
@@ -171,13 +171,13 @@ Live/spike ต้องเปิด tunnel ก่อน: `ssh -N -L 3000:127.0.0
 **Description:** สรุปผล SP-A/B/C ราย case เป็น ผ่าน/ไม่ผ่าน พร้อมลิงก์ manifest และภาพ ผลการดูภาพ (L4) และการตัดสินใจที่เปิดให้ผู้ใช้ตาม spec; ระบุข้อจำกัดว่าผ่าน ≠ production ready
 
 **Acceptance criteria:**
-- [ ] ทุก case มีผล L1–L4 และ determinism พร้อมหลักฐาน
-- [ ] ทุกข้อที่ไม่ผ่านมีทางเลือกให้ผู้ใช้ตัดสินตาม spec
-- [ ] บันทึก environment (digest, version, ฟอนต์ + sha256) ไว้ต้นไฟล์
+- [x] ทุก case มีผล L1–L4 และ determinism พร้อมหลักฐาน
+- [x] ทุกข้อที่ไม่ผ่านมีทางเลือกให้ผู้ใช้ตัดสินตาม spec
+- [x] บันทึก environment (digest, version, ฟอนต์ + sha256) ไว้ต้นไฟล์
 
 **Verification:**
-- [ ] ลิงก์ทุกอันใน REPORT.md ชี้ไฟล์ที่มีจริง (script ตรวจลิงก์)
-- [ ] ผู้ใช้ดูภาพหน้าที่คัดไว้ร่วมกันก่อนสรุป L4
+- [x] ลิงก์ทุกอันใน REPORT.md ชี้ไฟล์ที่มีจริง (script ตรวจลิงก์)
+- [ ] ผู้ใช้ดูภาพหน้าที่คัดไว้ร่วมกันก่อนสรุป L4 (รอผู้ใช้)
 
 **Dependencies:** T7, T8, T9
 **Files likely touched:** `spikes/m0/REPORT.md`
@@ -185,6 +185,6 @@ Live/spike ต้องเปิด tunnel ก่อน: `ssh -N -L 3000:127.0.0
 
 ### Checkpoint B: ผล spike
 
-- [ ] REPORT.md ครบทุก case
-- [ ] ผู้ใช้ตัดสินทางเดินของ `binder` แล้ว
-- [ ] อัปเดต CAPABILITY_MAP.md ถ้าผลกระทบ module boundary
+- [x] REPORT.md ครบทุก case
+- [x] ผู้ใช้ตัดสินทางเดินของ `binder` แล้ว (D1 image + ฟอนต์ระบบ, D2 error, D3 auto, D4 ไม่ใช้ tfoot)
+- [x] อัปเดต CAPABILITY_MAP.md ถ้าผลกระทบ module boundary (deployment ใช้ image jester/gotenberg; module boundary ไม่เปลี่ยน)

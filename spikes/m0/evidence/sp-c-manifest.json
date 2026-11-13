@@ -1,0 +1,488 @@
+{
+  "case": "sp-c",
+  "engine": {
+    "version": "9.4.1",
+    "image_digest": "jester/gotenberg:9.4.1-th1 sha256:ab7478a2fef19abad868d64b65de4fad0cb2a394e0d5d56a56e67879a10b1eec"
+  },
+  "fonts_sha256": {
+    "NotoSansThai.ttf": "5a1c559bb539583c8a1fd99d1c5b9491e5e14478c9cd2bd0970d5c3096cc9ef8",
+    "Sarabun-Bold.ttf": "d38308ca27d067b9a1b79006337c1f9a66c29aa016d96a9d88d3801da7fa83b9",
+    "Sarabun-Regular.ttf": "226d4f368fbc0457990ddef2692679badfd2c1a4e89e5ac4d43c10ba7743b2f1",
+    "THSarabunNew-Bold.ttf": "49596f298a8fe248c5340b4589b3b4adfcf34a3e24084ebeb4f49c6600f75fa7",
+    "THSarabunNew-Regular.ttf": "b248f824f3d7a8576bc396826a4d898070c1420564f6ce6aa716aa8ad24f824a"
+  },
+  "variants": [
+    {
+      "variant": "oversize-avoid",
+      "note": "tr { break-inside: avoid } with a row taller than a page",
+      "inputs_sha256": {
+        "index.html": "8ee0c3b681abeb9a179a57129b37f10b022f12cb85c94927c837efdcfac69b73",
+        "footer.html": "3b7c4fcc1568c403668f7c6d1eae720f0717a71c703a8d06750f1dc480f5424f",
+        "THSarabunNew-Regular.ttf": "b248f824f3d7a8576bc396826a4d898070c1420564f6ce6aa716aa8ad24f824a",
+        "THSarabunNew-Bold.ttf": "49596f298a8fe248c5340b4589b3b4adfcf34a3e24084ebeb4f49c6600f75fa7"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "pdf_sha256": "4414d209b0be3f51bbd421857165e2dfe6ce25402b594594f7e42ed03d40fc42",
+          "duration_ms": 2093,
+          "trace": "8579059f-4b35-4aca-85ac-81b239a666d8",
+          "pages_text_sha256": [
+            "f25d2712072cc277d435d6a7f75b6273d5334b785d0ffc0ec54a94632f6d34b9",
+            "fbecdefde57bcb4b71a5cad7c47b80b48029af9c2b32b0de948bfc126744f194",
+            "7e0c5d28c31357619e560c42cd8688acb50b7e82d4c00749034022ed6d71ac69",
+            "0e5f8537ff4533108cc4a44e485a41d2fe95b4a7dc8431a3bfbfc518810b3c64"
+          ],
+          "checks": {
+            "L1_ids": {
+              "pass": true,
+              "expected": 123,
+              "not_exactly_once": {}
+            },
+            "L1_every_page": {
+              "pass": false,
+              "pages_missing": {
+                "PAGE-MARK": [
+                  1,
+                  2,
+                  3,
+                  4
+                ]
+              }
+            },
+            "L2_totals": {
+              "pass": true,
+              "missing": []
+            },
+            "L3_thai_pypdf": {
+              "pass": false,
+              "missing": [
+                "ไม่มีรายการ"
+              ]
+            },
+            "L3_no_replacement_char": {
+              "pass": true
+            },
+            "L3_fonts": {
+              "pass": true,
+              "missing": [],
+              "embedded": [
+                "/AAAAAA+THSarabunNew-Bold",
+                "/BAAAAA+THSarabunNew",
+                "/CAAAAA+NotoSansThai-Regular",
+                "/DAAAAA+NotoSans-Regular"
+              ]
+            },
+            "pages": {
+              "pass": true,
+              "count": 4,
+              "min": 2
+            }
+          }
+        },
+        {
+          "run": 2,
+          "pdf_sha256": "20e747fe4c89b3d4fdd2dfaedb775d846c268e12d71d4d1f11dbbf24c65ede4e",
+          "duration_ms": 2125,
+          "trace": "a9315d66-46c0-4c91-916b-4d4259e45406",
+          "pages_text_sha256": [
+            "f25d2712072cc277d435d6a7f75b6273d5334b785d0ffc0ec54a94632f6d34b9",
+            "fbecdefde57bcb4b71a5cad7c47b80b48029af9c2b32b0de948bfc126744f194",
+            "7e0c5d28c31357619e560c42cd8688acb50b7e82d4c00749034022ed6d71ac69",
+            "0e5f8537ff4533108cc4a44e485a41d2fe95b4a7dc8431a3bfbfc518810b3c64"
+          ],
+          "checks": {
+            "L1_ids": {
+              "pass": true,
+              "expected": 123,
+              "not_exactly_once": {}
+            },
+            "L1_every_page": {
+              "pass": false,
+              "pages_missing": {
+                "PAGE-MARK": [
+                  1,
+                  2,
+                  3,
+                  4
+                ]
+              }
+            },
+            "L2_totals": {
+              "pass": true,
+              "missing": []
+            },
+            "L3_thai_pypdf": {
+              "pass": false,
+              "missing": [
+                "ไม่มีรายการ"
+              ]
+            },
+            "L3_no_replacement_char": {
+              "pass": true
+            },
+            "L3_fonts": {
+              "pass": true,
+              "missing": [],
+              "embedded": [
+                "/AAAAAA+THSarabunNew-Bold",
+                "/BAAAAA+THSarabunNew",
+                "/CAAAAA+NotoSansThai-Regular",
+                "/DAAAAA+NotoSans-Regular"
+              ]
+            },
+            "pages": {
+              "pass": true,
+              "count": 4,
+              "min": 2
+            }
+          }
+        },
+        {
+          "run": 3,
+          "pdf_sha256": "18c54432c4f09acacc06f70b373e5792641f53a05816467480d9059e34eaae04",
+          "duration_ms": 2031,
+          "trace": "ff51730e-71e1-49b8-aaa1-0943483dcdf1",
+          "pages_text_sha256": [
+            "f25d2712072cc277d435d6a7f75b6273d5334b785d0ffc0ec54a94632f6d34b9",
+            "fbecdefde57bcb4b71a5cad7c47b80b48029af9c2b32b0de948bfc126744f194",
+            "7e0c5d28c31357619e560c42cd8688acb50b7e82d4c00749034022ed6d71ac69",
+            "0e5f8537ff4533108cc4a44e485a41d2fe95b4a7dc8431a3bfbfc518810b3c64"
+          ],
+          "checks": {
+            "L1_ids": {
+              "pass": true,
+              "expected": 123,
+              "not_exactly_once": {}
+            },
+            "L1_every_page": {
+              "pass": false,
+              "pages_missing": {
+                "PAGE-MARK": [
+                  1,
+                  2,
+                  3,
+                  4
+                ]
+              }
+            },
+            "L2_totals": {
+              "pass": true,
+              "missing": []
+            },
+            "L3_thai_pypdf": {
+              "pass": false,
+              "missing": [
+                "ไม่มีรายการ"
+              ]
+            },
+            "L3_no_replacement_char": {
+              "pass": true
+            },
+            "L3_fonts": {
+              "pass": true,
+              "missing": [],
+              "embedded": [
+                "/AAAAAA+THSarabunNew-Bold",
+                "/BAAAAA+THSarabunNew",
+                "/CAAAAA+NotoSansThai-Regular",
+                "/DAAAAA+NotoSans-Regular"
+              ]
+            },
+            "pages": {
+              "pass": true,
+              "count": 4,
+              "min": 2
+            }
+          }
+        }
+      ],
+      "options": {
+        "paperWidth": "8.27",
+        "paperHeight": "11.7",
+        "landscape": "false",
+        "marginTop": "20mm",
+        "marginBottom": "20mm",
+        "marginLeft": "15mm",
+        "marginRight": "15mm",
+        "failOnResourceLoadingFailed": "true",
+        "failOnResourceHttpStatusCodes": "[499,599]",
+        "failOnConsoleExceptions": "true"
+      },
+      "deterministic_text": true,
+      "all_checks_pass": true,
+      "checks_poppler": {
+        "L1_ids": {
+          "pass": true,
+          "expected": 123,
+          "not_exactly_once": {}
+        },
+        "L1_every_page": {
+          "pass": true,
+          "pages_missing": {
+            "PAGE-MARK": []
+          }
+        },
+        "L2_totals": {
+          "pass": true,
+          "missing": []
+        },
+        "L3_thai_pypdf": {
+          "pass": true,
+          "missing": []
+        },
+        "L3_no_replacement_char": {
+          "pass": true
+        },
+        "L3_fonts": {
+          "pass": true,
+          "missing": [],
+          "embedded": [
+            "AAAAAA+THSarabunNew-Bold",
+            "BAAAAA+THSarabunNew",
+            "CAAAAA+NotoSansThai-Regular",
+            "DAAAAA+NotoSans-Regular"
+          ]
+        },
+        "pages": {
+          "pass": true,
+          "count": 4,
+          "min": 2
+        }
+      }
+    },
+    {
+      "variant": "oversize-auto",
+      "note": "tr { break-inside: auto }",
+      "inputs_sha256": {
+        "index.html": "ebae15ff642155d043baa2e3e61f615cc9093b1bf30ef296cb80a804eb7c0b1f",
+        "footer.html": "3b7c4fcc1568c403668f7c6d1eae720f0717a71c703a8d06750f1dc480f5424f",
+        "THSarabunNew-Regular.ttf": "b248f824f3d7a8576bc396826a4d898070c1420564f6ce6aa716aa8ad24f824a",
+        "THSarabunNew-Bold.ttf": "49596f298a8fe248c5340b4589b3b4adfcf34a3e24084ebeb4f49c6600f75fa7"
+      },
+      "runs": [
+        {
+          "run": 1,
+          "pdf_sha256": "d77dc21208345a2576ce25e4e4c8e4dbfd39362e4165884b5ed7a6ff4e75d9be",
+          "duration_ms": 1985,
+          "trace": "a8e76e5e-317a-4ab0-9ed5-1890d4581aa4",
+          "pages_text_sha256": [
+            "a72da17d75e1eeaf7fb868aa97aa634ddcb46a0db04714b687e9ca101577fa09",
+            "981e55b589b63123b73b5c75dd34a6209fa78456bd15b2683a0107da9802b894",
+            "a19e11a25ff4ae4df29a60e14576de461aa3b524595c0be8acfa1f2ca58ca8a2"
+          ],
+          "checks": {
+            "L1_ids": {
+              "pass": true,
+              "expected": 123,
+              "not_exactly_once": {}
+            },
+            "L1_every_page": {
+              "pass": false,
+              "pages_missing": {
+                "PAGE-MARK": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            },
+            "L2_totals": {
+              "pass": true,
+              "missing": []
+            },
+            "L3_thai_pypdf": {
+              "pass": false,
+              "missing": [
+                "ไม่มีรายการ"
+              ]
+            },
+            "L3_no_replacement_char": {
+              "pass": true
+            },
+            "L3_fonts": {
+              "pass": true,
+              "missing": [],
+              "embedded": [
+                "/AAAAAA+THSarabunNew-Bold",
+                "/BAAAAA+THSarabunNew",
+                "/CAAAAA+NotoSansThai-Regular",
+                "/DAAAAA+NotoSans-Regular"
+              ]
+            },
+            "pages": {
+              "pass": true,
+              "count": 3,
+              "min": 2
+            }
+          }
+        },
+        {
+          "run": 2,
+          "pdf_sha256": "2e114d61669529cddfade686a0839a29ef968836feac994248375662779eef66",
+          "duration_ms": 1921,
+          "trace": "2d2bf787-02f9-4669-b9b4-9d6df557e42e",
+          "pages_text_sha256": [
+            "a72da17d75e1eeaf7fb868aa97aa634ddcb46a0db04714b687e9ca101577fa09",
+            "981e55b589b63123b73b5c75dd34a6209fa78456bd15b2683a0107da9802b894",
+            "a19e11a25ff4ae4df29a60e14576de461aa3b524595c0be8acfa1f2ca58ca8a2"
+          ],
+          "checks": {
+            "L1_ids": {
+              "pass": true,
+              "expected": 123,
+              "not_exactly_once": {}
+            },
+            "L1_every_page": {
+              "pass": false,
+              "pages_missing": {
+                "PAGE-MARK": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            },
+            "L2_totals": {
+              "pass": true,
+              "missing": []
+            },
+            "L3_thai_pypdf": {
+              "pass": false,
+              "missing": [
+                "ไม่มีรายการ"
+              ]
+            },
+            "L3_no_replacement_char": {
+              "pass": true
+            },
+            "L3_fonts": {
+              "pass": true,
+              "missing": [],
+              "embedded": [
+                "/AAAAAA+THSarabunNew-Bold",
+                "/BAAAAA+THSarabunNew",
+                "/CAAAAA+NotoSansThai-Regular",
+                "/DAAAAA+NotoSans-Regular"
+              ]
+            },
+            "pages": {
+              "pass": true,
+              "count": 3,
+              "min": 2
+            }
+          }
+        },
+        {
+          "run": 3,
+          "pdf_sha256": "781058eafb88ec43865f10ddff85aed69029fff8968df9b6e296bcaeb56c9c07",
+          "duration_ms": 1812,
+          "trace": "2a5aa252-9c41-402a-adfc-64a01c421d72",
+          "pages_text_sha256": [
+            "a72da17d75e1eeaf7fb868aa97aa634ddcb46a0db04714b687e9ca101577fa09",
+            "981e55b589b63123b73b5c75dd34a6209fa78456bd15b2683a0107da9802b894",
+            "a19e11a25ff4ae4df29a60e14576de461aa3b524595c0be8acfa1f2ca58ca8a2"
+          ],
+          "checks": {
+            "L1_ids": {
+              "pass": true,
+              "expected": 123,
+              "not_exactly_once": {}
+            },
+            "L1_every_page": {
+              "pass": false,
+              "pages_missing": {
+                "PAGE-MARK": [
+                  1,
+                  2,
+                  3
+                ]
+              }
+            },
+            "L2_totals": {
+              "pass": true,
+              "missing": []
+            },
+            "L3_thai_pypdf": {
+              "pass": false,
+              "missing": [
+                "ไม่มีรายการ"
+              ]
+            },
+            "L3_no_replacement_char": {
+              "pass": true
+            },
+            "L3_fonts": {
+              "pass": true,
+              "missing": [],
+              "embedded": [
+                "/AAAAAA+THSarabunNew-Bold",
+                "/BAAAAA+THSarabunNew",
+                "/CAAAAA+NotoSansThai-Regular",
+                "/DAAAAA+NotoSans-Regular"
+              ]
+            },
+            "pages": {
+              "pass": true,
+              "count": 3,
+              "min": 2
+            }
+          }
+        }
+      ],
+      "options": {
+        "paperWidth": "8.27",
+        "paperHeight": "11.7",
+        "landscape": "false",
+        "marginTop": "20mm",
+        "marginBottom": "20mm",
+        "marginLeft": "15mm",
+        "marginRight": "15mm",
+        "failOnResourceLoadingFailed": "true",
+        "failOnResourceHttpStatusCodes": "[499,599]",
+        "failOnConsoleExceptions": "true"
+      },
+      "deterministic_text": true,
+      "all_checks_pass": true,
+      "checks_poppler": {
+        "L1_ids": {
+          "pass": true,
+          "expected": 123,
+          "not_exactly_once": {}
+        },
+        "L1_every_page": {
+          "pass": true,
+          "pages_missing": {
+            "PAGE-MARK": []
+          }
+        },
+        "L2_totals": {
+          "pass": true,
+          "missing": []
+        },
+        "L3_thai_pypdf": {
+          "pass": true,
+          "missing": []
+        },
+        "L3_no_replacement_char": {
+          "pass": true
+        },
+        "L3_fonts": {
+          "pass": true,
+          "missing": [],
+          "embedded": [
+            "AAAAAA+THSarabunNew-Bold",
+            "BAAAAA+THSarabunNew",
+            "CAAAAA+NotoSansThai-Regular",
+            "DAAAAA+NotoSans-Regular"
+          ]
+        },
+        "pages": {
+          "pass": true,
+          "count": 3,
+          "min": 2
+        }
+      }
+    }
+  ]
+}
