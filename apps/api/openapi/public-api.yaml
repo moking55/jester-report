@@ -942,10 +942,10 @@ components:
           description: Validated against the version's data schema; any JSON value
         filename:
           type: string
-          pattern: '^[^\\/"\r\n]{1,200}$'
+          pattern: '^[^\\/"\x00-\x1f\x7f]{1,200}$'
           description: |
             Download name for `Content-Disposition`; defaults to `<templateId>-v<version>.pdf`.
-            No slashes, quotes or line breaks, so a bad name is a 422 instead of a broken header.
+            No slashes, quotes or control characters (incl. line breaks), so a bad name is a 422 instead of a broken header.
 
     Session:
       type: object
