@@ -1,0 +1,1106 @@
+openapi: 3.1.0
+info:
+  title: Jester Report Server API
+  version: 0.1.0-draft
+  description: |
+    DRAFT contract for module `public-api` (CAPABILITY_MAP.md). Not implemented.
+    Written so `studio` (Next.js) can build against a mock while the backend is built.
+
+    Two callers:
+    - **External systems** call `POST /v1/render` with an API key.
+    - **Studio** (Next.js server, never the browser) calls everything else with the
+      user's session token, server-to-server.
+
+    Conventions:
+    - Errors are `application/problem+json` (RFC 9457) with a stable `code`.
+    - Single-tenant, every signed-in user has the same rights (intent v1). Objects that
+      do not exist and objects the caller cannot see both return 404.
+    - Template ids are slugs chosen by the author; versions are integers starting at 1.
+    - v1 render is synchronous only; no job queue, no stored PDFs, no Idempotency-Key.
+servers:
+  - url: http://localhost:8000
+    description: Local development (FastAPI)
+
+tags:
+  - name: render
+  - name: setup
+  - name: auth
+  - name: users
+  - name: api-keys
+  - name: templates
+  - name: draft
+  - name: versions
+  - name: runs
+  - name: system
+
+security:
+  - SessionAuth: []
+
+paths:
+  /v1/render:
+    post:
+      tags: [render]
+      operationId: render
+      summary: Render a published template version to PDF
+      description: |
+        Resolves `template.version` to one immutable published version before rendering.
+        `"published"` means the version the published alias points to at request time;
+        the resolved number is returned in `Jester-Template-Version`. There is no fallback
+        to drafts. Data comes only from the caller.
+      security:
+        - ApiKeyAuth: []
+        - SessionAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RequestId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RenderRequest' }
+            example:
+              template: { id: quotation, version: published }
+              params: { quoteId: Q-DEMO-001, locale: th-TH, docDate: '2026-11-12' }
+              data:
+                customer: { name: บริษัท ลูกค้า จำกัด }
+                discount: '100.70'
+                items:
+                  - { id: QL01, description: บริการติดตั้งระบบรายงาน, qty: 2, unitPrice: '1250.50' }
+                  - { id: QL02, description: ค่าอบรมผู้ใช้งาน, qty: 3, unitPrice: '199.90' }
+              filename: Q-DEMO-001.pdf
+      responses:
+        '200':
+          description: PDF
+          headers:
+            Jester-Run-Id: { $ref: '#/components/headers/RunId' }
+            Jester-Template-Version:
+              description: Resolved published version number
+              schema: { type: integer, minimum: 1 }
+            Content-Disposition:
+              description: '`attachment; filename*=UTF-8''''<filename>` (RFC 6266/8187)'
+              schema: { type: string }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+        '502': { $ref: '#/components/responses/RenderFailed' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '504': { $ref: '#/components/responses/RenderTimeout' }
+
+  /v1/setup:
+    get:
+      tags: [setup]
+      operationId: getSetupStatus
+      summary: Whether first-run setup is still required
+      security: []
+      responses:
+        '200':
+          description: Setup status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [setupRequired]
+                properties:
+                  setupRequired: { type: boolean }
+    post:
+      tags: [setup]
+      operationId: completeSetup
+      summary: Create the first user with the one-time setup token from the API log
+      description: |
+        Allowed only while no user exists. The setup token is printed to the `api` container
+        log at first start, is single-use, and is discarded once a user exists.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [setupToken, username, password]
+              additionalProperties: false
+              properties:
+                setupToken: { type: string, minLength: 16 }
+                username: { $ref: '#/components/schemas/Username' }
+                password: { $ref: '#/components/schemas/Password' }
+      responses:
+        '201':
+          description: First user created; returns a session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '403':
+          description: Wrong or used setup token
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: Setup already completed
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/auth/login:
+    post:
+      tags: [auth]
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              additionalProperties: false
+              properties:
+                username: { type: string }
+                password: { type: string }
+      responses:
+        '200':
+          description: Session created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Too many failed attempts
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/auth/logout:
+    post:
+      tags: [auth]
+      operationId: logout
+      responses:
+        '204': { description: Session revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/auth/me:
+    get:
+      tags: [auth]
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/users:
+    get:
+      tags: [users]
+      operationId: listUsers
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [users]
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              additionalProperties: false
+              properties:
+                username: { $ref: '#/components/schemas/Username' }
+                password: { $ref: '#/components/schemas/Password' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Username taken
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/users/{userId}:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [users]
+      operationId: deleteUser
+      description: The last remaining user cannot be deleted.
+      responses:
+        '204': { description: Deleted; that user's sessions are revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Would delete the last user
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/api-keys:
+    get:
+      tags: [api-keys]
+      operationId: listApiKeys
+      responses:
+        '200':
+          description: API keys (never includes the secret)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ApiKey' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [api-keys]
+      operationId: createApiKey
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 80 }
+      responses:
+        '201':
+          description: Created. `secret` is shown only in this response; only its hash is stored.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiKey'
+                  - type: object
+                    required: [secret]
+                    properties:
+                      secret: { type: string, example: jrk_5Zq9... }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/api-keys/{keyId}:
+    parameters:
+      - { name: keyId, in: path, required: true, schema: { type: string, format: uuid } }
+    delete:
+      tags: [api-keys]
+      operationId: revokeApiKey
+      responses:
+        '204': { description: Revoked; later requests with it get 401 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/templates:
+    get:
+      tags: [templates]
+      operationId: listTemplates
+      summary: Catalog for the Studio report list
+      responses:
+        '200':
+          description: Templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [templates]
+      operationId: createTemplate
+      summary: Create a template with an empty or starter draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, name]
+              additionalProperties: false
+              properties:
+                id: { $ref: '#/components/schemas/TemplateId' }
+                name: { type: string, minLength: 1, maxLength: 120 }
+                starter:
+                  type: string
+                  enum: [blank, quotation, grouped-table, master-detail]
+                  default: blank
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: Template id taken
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/templates/{templateId}:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    get:
+      tags: [templates]
+      operationId: getTemplate
+      responses:
+        '200':
+          description: Template
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [templates]
+      operationId: renameTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              additionalProperties: false
+              properties:
+                name: { type: string, minLength: 1, maxLength: 120 }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/templates/{templateId}/draft:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    get:
+      tags: [draft]
+      operationId: getDraft
+      summary: Draft file list with text contents and asset metadata
+      responses:
+        '200':
+          description: Draft
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Draft' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/templates/{templateId}/draft/files/{fileName}:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      - name: fileName
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/TextFileName' }
+    put:
+      tags: [draft]
+      operationId: putDraftFile
+      summary: Create or replace a text file in the draft
+      description: |
+        `If-Match` with the draft `revision` is required so two Studio tabs cannot silently
+        overwrite each other.
+      parameters:
+        - $ref: '#/components/parameters/IfMatchRevision'
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema: { type: string, maxLength: 1048576 }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftRevision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+    delete:
+      tags: [draft]
+      operationId: deleteDraftFile
+      description: '`report.json` and `template.html` cannot be deleted.'
+      parameters:
+        - $ref: '#/components/parameters/IfMatchRevision'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftRevision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Required file
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+
+  /v1/templates/{templateId}/draft/assets:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      tags: [draft]
+      operationId: uploadDraftAsset
+      summary: Upload a binary asset (image or font) to object storage and attach it to the draft
+      description: |
+        Uploaded fonts apply to the body (`template.html`) only. Header/footer templates cannot
+        load `@font-face` (spike M0) and only see fonts installed in the `jester/gotenberg` image,
+        e.g. TH Sarabun New. `validateDraft` reports `FONT_MISSING` when `header.html` or
+        `footer.html` uses a font that is not installed in the image (decision D2).
+      parameters:
+        - $ref: '#/components/parameters/IfMatchRevision'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+            encoding:
+              file:
+                contentType: image/png, image/jpeg, image/svg+xml, font/ttf, font/otf, font/woff2
+      responses:
+        '201':
+          description: Stored (content-addressed by sha256; uploading the same bytes is a no-op)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [asset, revision]
+                properties:
+                  asset: { $ref: '#/components/schemas/Asset' }
+                  revision: { type: integer }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: An asset with this name already exists in the draft
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: File type not allowed
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/templates/{templateId}/draft/assets/{assetName}:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      - { name: assetName, in: path, required: true, schema: { $ref: '#/components/schemas/AssetName' } }
+    delete:
+      tags: [draft]
+      operationId: deleteDraftAsset
+      description: Detaches the asset from the draft. Bytes stay in storage while any published version uses them.
+      parameters:
+        - $ref: '#/components/parameters/IfMatchRevision'
+      responses:
+        '200':
+          description: Detached
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftRevision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+
+  /v1/templates/{templateId}/draft/validate:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      tags: [draft]
+      operationId: validateDraft
+      summary: Validate the draft definition, template and sample data without rendering
+      responses:
+        '200':
+          description: Validation result (empty `problems` means valid)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/templates/{templateId}/draft/preview:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      tags: [draft]
+      operationId: previewDraft
+      summary: Render the draft through the same pipeline as /v1/render
+      description: |
+        Uses the same engine, options and fonts as a real render, plus a DRAFT watermark.
+        Without `data`, uses `sampleFile` from the draft (default `sample.json`).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                params: { type: object, additionalProperties: true }
+                data: {}
+                sampleFile: { $ref: '#/components/schemas/TextFileName' }
+      responses:
+        '200':
+          description: PDF preview
+          headers:
+            Jester-Run-Id: { $ref: '#/components/headers/RunId' }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+        '502': { $ref: '#/components/responses/RenderFailed' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '504': { $ref: '#/components/responses/RenderTimeout' }
+
+  /v1/templates/{templateId}/versions:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    get:
+      tags: [versions]
+      operationId: listVersions
+      responses:
+        '200':
+          description: Published versions, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Version' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [versions]
+      operationId: publishDraft
+      summary: Freeze the current draft into a new immutable version and point the published alias at it
+      description: Refused when the draft does not validate.
+      parameters:
+        - $ref: '#/components/parameters/IfMatchRevision'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                note: { type: string, maxLength: 500 }
+      responses:
+        '201':
+          description: Published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Version' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+        '422':
+          description: Draft does not validate
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /v1/templates/{templateId}/versions/{version}:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+      - { name: version, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      tags: [versions]
+      operationId: getVersion
+      summary: Read-only files of a published version
+      responses:
+        '200':
+          description: Version with files
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Version'
+                  - type: object
+                    required: [files, assets]
+                    properties:
+                      files: { type: array, items: { $ref: '#/components/schemas/TextFile' } }
+                      assets: { type: array, items: { $ref: '#/components/schemas/Asset' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/templates/{templateId}/published:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    put:
+      tags: [versions]
+      operationId: setPublishedVersion
+      summary: Roll back or forward by moving the published alias to an existing version
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              additionalProperties: false
+              properties:
+                version: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Alias moved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/templates/{templateId}/draft/reset:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      tags: [draft]
+      operationId: resetDraftFromVersion
+      summary: Replace the draft with a copy of a published version
+      parameters:
+        - $ref: '#/components/parameters/IfMatchRevision'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version]
+              additionalProperties: false
+              properties:
+                version: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Draft replaced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DraftRevision' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+
+  /v1/runs:
+    get:
+      tags: [runs]
+      operationId: listRuns
+      summary: Render history (metadata only; PDFs are not stored in v1)
+      parameters:
+        - { name: templateId, in: query, schema: { $ref: '#/components/schemas/TemplateId' } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/RunStatus' } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+        - { name: before, in: query, description: Cursor from the previous page, schema: { type: string } }
+      responses:
+        '200':
+          description: Runs, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Run' } }
+                  next: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/runs/{runId}:
+    parameters:
+      - { name: runId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [runs]
+      operationId: getRun
+      responses:
+        '200':
+          description: Run with provenance
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Run' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/health:
+    get:
+      tags: [system]
+      operationId: getHealth
+      security: []
+      summary: API, database, object storage and engine status
+      responses:
+        '200':
+          description: Status (also returned with 503 when a dependency is down)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+        '503':
+          description: A dependency is down
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: 'API key created in Studio, sent as `Authorization: Bearer jrk_...`. Only `/v1/render` accepts it.'
+    SessionAuth:
+      type: http
+      scheme: bearer
+      description: |
+        Session token from `/v1/auth/login` or `/v1/setup`, sent as `Authorization: Bearer jrs_...`
+        by the Next.js server. The browser only holds an httpOnly cookie set by Next.js.
+
+  parameters:
+    TemplateId:
+      name: templateId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/TemplateId' }
+    IfMatchRevision:
+      name: If-Match
+      in: header
+      required: true
+      description: Draft revision the change is based on, e.g. `"12"`
+      schema: { type: string }
+    RequestId:
+      name: X-Request-Id
+      in: header
+      required: false
+      description: Optional caller correlation id; echoed in logs and the run record
+      schema: { type: string, maxLength: 128 }
+
+  headers:
+    RunId:
+      description: Id of the run record (see /v1/runs/{runId})
+      schema: { type: string }
+
+  responses:
+    Unauthorized:
+      description: Missing, invalid, expired or revoked credentials
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: Not found (also used for objects the caller cannot see)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    PayloadTooLarge:
+      description: Request exceeds the configured size limit
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    InputInvalid:
+      description: Request, params or data failed validation; see `problems`
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RevisionConflict:
+      description: Draft changed since the given revision; reload and retry
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RenderFailed:
+      description: '`RENDER_RESOURCE_FAILED`, `RENDER_FAILED`, `FONT_MISSING` or `ENGINE_MISCONFIGURED`'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ServiceUnavailable:
+      description: Engine unreachable or busy; `retryable` is true
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RenderTimeout:
+      description: Render exceeded the time limit; `retryable` is true
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    TemplateId:
+      type: string
+      pattern: '^[a-z0-9][a-z0-9-]{1,62}$'
+      example: quotation
+    Username:
+      type: string
+      pattern: '^[a-zA-Z0-9._-]{3,40}$'
+    Password:
+      type: string
+      minLength: 12
+      maxLength: 200
+    TextFileName:
+      type: string
+      description: |
+        Basename only; text files of a draft. `index.html` is reserved: the binder generates it
+        from `template.html`, and a second file with that name would make every render fail.
+      pattern: '^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$'
+      example: template.html
+    AssetName:
+      type: string
+      description: Basename only; must not collide with text files or index/header/footer.html
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|ttf|otf|woff2)$'
+
+    ErrorCode:
+      type: string
+      enum:
+        - INPUT_INVALID
+        - UNAUTHORIZED
+        - NOT_FOUND
+        - CONFLICT
+        - REVISION_CONFLICT
+        - PAYLOAD_TOO_LARGE
+        - UNSUPPORTED_MEDIA_TYPE
+        - RATE_LIMITED
+        - SETUP_COMPLETED
+        - SETUP_TOKEN_INVALID
+        - DRAFT_INVALID
+        - FONT_MISSING
+        - RENDER_INPUT_INVALID
+        - RENDER_RESOURCE_FAILED
+        - RENDER_FAILED
+        - RENDER_TIMEOUT
+        - SERVICE_UNAVAILABLE
+        - ENGINE_MISCONFIGURED
+    Problem:
+      type: object
+      description: RFC 9457 problem details plus Jester fields
+      required: [type, title, status, code]
+      properties:
+        type: { type: string, format: uri-reference, example: 'https://jester-report.dev/errors/input-invalid' }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        code: { $ref: '#/components/schemas/ErrorCode' }
+        retryable: { type: boolean, default: false }
+        runId: { type: [string, 'null'] }
+        problems:
+          type: array
+          items: { $ref: '#/components/schemas/ValidationProblem' }
+    ValidationProblem:
+      type: object
+      required: [severity, message]
+      properties:
+        severity: { type: string, enum: [error, warning] }
+        message: { type: string }
+        pointer:
+          type: string
+          description: JSON Pointer into the request, e.g. `/data/items/0/qty` or `/params/docDate`
+        file: { type: string, description: 'Draft file, e.g. `template.html`' }
+        line: { type: integer, minimum: 1 }
+        column: { type: integer, minimum: 1 }
+    ValidationResult:
+      type: object
+      required: [valid, problems, revision]
+      properties:
+        valid: { type: boolean }
+        revision: { type: integer }
+        problems: { type: array, items: { $ref: '#/components/schemas/ValidationProblem' } }
+
+    RenderRequest:
+      type: object
+      required: [template, data]
+      additionalProperties: false
+      properties:
+        template:
+          type: object
+          required: [id, version]
+          additionalProperties: false
+          properties:
+            id: { $ref: '#/components/schemas/TemplateId' }
+            version:
+              description: 'Explicit version number, or `"published"`'
+              oneOf:
+                - { type: integer, minimum: 1 }
+                - { const: published }
+        params:
+          type: object
+          description: Validated against the version's `report.json` parameters
+          additionalProperties: true
+        data:
+          description: Validated against the version's data schema; any JSON value
+        filename:
+          type: string
+          pattern: '^[^\\/"\r\n]{1,200}$'
+          description: |
+            Download name for `Content-Disposition`; defaults to `<templateId>-v<version>.pdf`.
+            No slashes, quotes or line breaks, so a bad name is a 422 instead of a broken header.
+
+    Session:
+      type: object
+      required: [token, expiresAt, user]
+      properties:
+        token: { type: string, description: 'Opaque, prefix `jrs_`' }
+        expiresAt: { type: string, format: date-time }
+        user: { $ref: '#/components/schemas/User' }
+    User:
+      type: object
+      required: [id, username, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        username: { type: string }
+        createdAt: { type: string, format: date-time }
+        lastLoginAt: { type: [string, 'null'], format: date-time }
+    ApiKey:
+      type: object
+      required: [id, name, prefix, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        prefix: { type: string, description: 'First characters for identification, e.g. `jrk_5Zq9`' }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string }
+        lastUsedAt: { type: [string, 'null'], format: date-time }
+
+    TemplateSummary:
+      type: object
+      required: [id, name, publishedVersion, draftRevision, updatedAt]
+      properties:
+        id: { $ref: '#/components/schemas/TemplateId' }
+        name: { type: string }
+        publishedVersion: { type: [integer, 'null'], description: null until first publish }
+        latestVersion: { type: [integer, 'null'] }
+        draftRevision: { type: integer }
+        draftChangedSincePublish: { type: boolean }
+        page:
+          type: object
+          properties:
+            size: { const: A4 }
+            orientation: { type: string, enum: [portrait, landscape] }
+        lastRun:
+          oneOf:
+            - $ref: '#/components/schemas/RunSummary'
+            - type: 'null'
+        updatedAt: { type: string, format: date-time }
+    TextFile:
+      type: object
+      required: [name, content, sha256]
+      properties:
+        name: { $ref: '#/components/schemas/TextFileName' }
+        content: { type: string }
+        sha256: { type: string }
+    Asset:
+      type: object
+      required: [name, contentType, size, sha256]
+      properties:
+        name: { $ref: '#/components/schemas/AssetName' }
+        contentType: { type: string }
+        size: { type: integer }
+        sha256: { type: string }
+    Draft:
+      type: object
+      required: [templateId, revision, files, assets, updatedAt]
+      properties:
+        templateId: { $ref: '#/components/schemas/TemplateId' }
+        revision: { type: integer }
+        basedOnVersion: { type: [integer, 'null'] }
+        files: { type: array, items: { $ref: '#/components/schemas/TextFile' } }
+        assets: { type: array, items: { $ref: '#/components/schemas/Asset' } }
+        updatedAt: { type: string, format: date-time }
+        updatedBy: { type: string }
+    DraftRevision:
+      type: object
+      required: [revision]
+      properties:
+        revision: { type: integer }
+    Version:
+      type: object
+      required: [templateId, version, publishedAt, publishedBy, sha256]
+      properties:
+        templateId: { $ref: '#/components/schemas/TemplateId' }
+        version: { type: integer, minimum: 1 }
+        publishedAt: { type: string, format: date-time }
+        publishedBy: { type: string }
+        note: { type: [string, 'null'] }
+        sha256: { type: string, description: Hash over all files and asset hashes of this version }
+        isPublished: { type: boolean, description: True if the published alias points here }
+
+    RunStatus:
+      type: string
+      enum: [succeeded, failed]
+    RunSummary:
+      type: object
+      required: [id, status, createdAt]
+      properties:
+        id: { type: string }
+        status: { $ref: '#/components/schemas/RunStatus' }
+        errorCode: { oneOf: [{ $ref: '#/components/schemas/ErrorCode' }, { type: 'null' }] }
+        pages: { type: [integer, 'null'] }
+        createdAt: { type: string, format: date-time }
+    Run:
+      allOf:
+        - $ref: '#/components/schemas/RunSummary'
+        - type: object
+          required: [kind, templateId, caller]
+          properties:
+            kind: { type: string, enum: [render, preview] }
+            templateId: { $ref: '#/components/schemas/TemplateId' }
+            version: { type: [integer, 'null'], description: null for draft previews }
+            draftRevision: { type: [integer, 'null'] }
+            caller:
+              type: object
+              required: [type, id]
+              properties:
+                type: { type: string, enum: [user, api-key] }
+                id: { type: string }
+                name: { type: string }
+            requestId: { type: [string, 'null'] }
+            durationMs: { type: [integer, 'null'] }
+            provenance:
+              type: object
+              description: No params or data are stored, only their hashes
+              properties:
+                templateSha256: { type: string }
+                paramsSha256: { type: string }
+                dataSha256: { type: string }
+                engineVersion: { type: string }
+                engineImage: { type: string }
+                fonts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      sha256: { type: string }
+                options: { type: object, additionalProperties: { type: string } }
+                outputSha256: { type: [string, 'null'] }
+                engineTrace: { type: [string, 'null'] }
+            problems: { type: array, items: { $ref: '#/components/schemas/ValidationProblem' } }
+
+    Health:
+      type: object
+      required: [status, components]
+      properties:
+        status: { type: string, enum: [up, degraded, down] }
+        version: { type: string }
+        components:
+          type: object
+          properties:
+            database: { type: string, enum: [up, down] }
+            objectStorage: { type: string, enum: [up, down] }
+            engine:
+              type: object
+              properties:
+                status: { type: string, enum: [up, down] }
+                version: { type: [string, 'null'] }
