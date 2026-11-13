@@ -1,0 +1,319 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Research specimen: report input",
+  "description": "Draft research specimen; no production or render claims",
+  "type": "object",
+  "required": [
+    "reportType",
+    "parameters",
+    "data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "reportType": {
+      "enum": [
+        "quotation",
+        "sales_summary",
+        "purchase_order"
+      ]
+    },
+    "parameters": {
+      "type": "object",
+      "required": [
+        "locale",
+        "calendar",
+        "timezone",
+        "currency"
+      ],
+      "properties": {
+        "locale": {
+          "enum": [
+            "th-TH",
+            "en-US"
+          ]
+        },
+        "calendar": {
+          "enum": [
+            "gregory",
+            "buddhist"
+          ]
+        },
+        "timezone": {
+          "enum": [
+            "Asia/Bangkok",
+            "UTC"
+          ]
+        },
+        "currency": {
+          "enum": [
+            "THB",
+            "USD"
+          ]
+        },
+        "from": {
+          "type": "string",
+          "format": "date"
+        },
+        "toExclusive": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "additionalProperties": false
+    },
+    "data": {
+      "type": "object"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "reportType": {
+            "const": "quotation"
+          }
+        },
+        "required": [
+          "reportType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "quoteId",
+              "documentDate",
+              "company",
+              "customer",
+              "lines",
+              "discount"
+            ],
+            "properties": {
+              "quoteId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "documentDate": {
+                "type": "string",
+                "format": "date"
+              },
+              "company": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "customer": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100
+              },
+              "lines": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "description",
+                    "quantity",
+                    "unitPrice"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "unitPrice": {
+                      "type": "string",
+                      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,4})?$"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "discount": {
+                "type": "string",
+                "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,4})?$"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reportType": {
+            "const": "sales_summary"
+          }
+        },
+        "required": [
+          "reportType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "parameters": {
+            "required": [
+              "from",
+              "toExclusive"
+            ]
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "records"
+            ],
+            "properties": {
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "region",
+                    "transactionDate",
+                    "amount"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "region": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "transactionDate": {
+                      "type": "string",
+                      "format": "date"
+                    },
+                    "amount": {
+                      "type": "string",
+                      "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,4})?$"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "reportType": {
+            "const": "purchase_order"
+          }
+        },
+        "required": [
+          "reportType"
+        ]
+      },
+      "then": {
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "component",
+              "orders"
+            ],
+            "properties": {
+              "component": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "version"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "additionalProperties": false
+              },
+              "orders": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "orderId",
+                    "supplier",
+                    "details"
+                  ],
+                  "properties": {
+                    "orderId": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "supplier": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "details": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": [
+                          "detailId",
+                          "parentId",
+                          "amount"
+                        ],
+                        "properties": {
+                          "detailId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "parentId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                          },
+                          "amount": {
+                            "type": "string",
+                            "pattern": "^-?(0|[1-9][0-9]*)(\\.[0-9]{1,4})?$"
+                          },
+                          "description": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "status": "proposed tabletop scenarios; no runtime execution",
+  "states": ["queued", "running", "retry_wait", "succeeded", "failed", "canceled"],
+  "terminal_states": ["succeeded", "failed", "canceled"],
+  "allowed_transitions": {
+    "queued": ["running", "canceled"],
+    "running": ["succeeded", "retry_wait", "failed", "canceled"],
+    "retry_wait": ["queued", "canceled", "failed"],
+    "succeeded": [], "failed": [], "canceled": []
+  },
+  "scenarios": [
+    {"id":"J01","path":["queued","running","succeeded"],"artifact_ref":"artifact/J01","expected":"success requires committed artifact"},
+    {"id":"J02","path":["queued","running","retry_wait","queued","running","succeeded"],"artifact_ref":"artifact/J02","expected":"429 retry is bounded and attempt changes"},
+    {"id":"J03","path":["queued","running","failed"],"artifact_ref":null,"expected":"permanent error is not retried"},
+    {"id":"J04","path":["queued","canceled"],"artifact_ref":null,"expected":"cancel before work is terminal"},
+    {"id":"J05","path":["queued","running","canceled"],"artifact_ref":null,"late_event":"success","expected":"late output cannot reverse canceled"},
+    {"id":"J06","path":["queued","running","retry_wait","queued","running","succeeded"],"artifact_ref":"artifact/J06","expected":"timeout after upload reconciles before retry and publishes at most one visible artifact"},
+    {"id":"J07","path":["queued","running","retry_wait","queued","running","succeeded"],"artifact_ref":"artifact/J07","expected":"lease expiry fences stale worker"},
+    {"id":"J08","path":["queued","running","succeeded"],"artifact_ref":"artifact/J08","late_event":"duplicate_success","expected":"duplicate callback cannot change terminal job"},
+    {"id":"J09","path":["queued","running","retry_wait","failed"],"artifact_ref":null,"expected":"budget exhaustion terminates retries"},
+    {"id":"J10","path":["queued","running","retry_wait","canceled"],"artifact_ref":null,"expected":"cancel during retry wait is terminal"},
+    {"id":"J11","path":["queued","running","canceled"],"artifact_ref":null,"late_event":"retryable_failure","expected":"cancel race cannot reopen terminal job"}
+  ]
+}

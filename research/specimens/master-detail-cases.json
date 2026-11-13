@@ -1,0 +1,12 @@
+{
+  "status": "synthetic; pagination and PDF runtime not tested",
+  "component": {"id":"purchase-order-header","version":"1.0.0"},
+  "cases": [
+    {"id":"basic-and-empty","orders":[{"orderId":"PO01","details":[{"detailId":"D01","parentId":"PO01","amount":"200.00"},{"detailId":"D02","parentId":"PO01","amount":"150.00"}]},{"orderId":"PO02","details":[]}],"expected_totals":{"PO01":"350.00","PO02":"0.00"},"expected_grand":"350.00"},
+    {"id":"negative-adjustment","orders":[{"orderId":"PO03","details":[{"detailId":"D03","parentId":"PO03","amount":"-10.00"}]}],"expected_totals":{"PO03":"-10.00"},"expected_grand":"-10.00"},
+    {"id":"long-detail","orders":[{"orderId":"PO04","details":[{"detailId":"D04","parentId":"PO04","amount":"5.00","description":"ข้อความยาวสำหรับออกแบบกรณีข้ามหน้า; ไม่ยืนยันว่าข้ามหน้าจริง"}]}],"expected_totals":{"PO04":"5.00"},"expected_grand":"5.00"},
+    {"id":"orphan-detail","orders":[{"orderId":"PO05","details":[{"detailId":"D05","parentId":"OTHER","amount":"1.00"}]}],"expected_error":"orphan_detail"},
+    {"id":"null-details","orders":[{"orderId":"PO06","details":null}],"expected_error":"invalid_details"},
+    {"id":"missing-component","component":null,"orders":[],"expected_error":"missing_component"}
+  ]
+}

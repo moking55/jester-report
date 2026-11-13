@@ -1,0 +1,12 @@
+{
+  "status": "synthetic; PDF runtime not tested",
+  "rounding_assumption": "ROUND_HALF_UP to 0.01 per row; business confirmation required",
+  "cases": [
+    {"id":"sales-basic","records":[{"id":"S01","region":"North","amount":"1200.25"},{"id":"S02","region":"North","amount":"799.75"},{"id":"S03","region":"South","amount":"500.10"},{"id":"S04","region":"South","amount":"-100.10"}],"expected_groups":{"North":"2000.00","South":"400.00"},"expected_grand":"2400.00"},
+    {"id":"empty-dataset","records":[],"expected_groups":{},"expected_grand":"0.00"},
+    {"id":"rounding","records":[{"id":"R01","region":"A","amount":"1.005"},{"id":"R02","region":"A","amount":"-0.005"}],"expected_groups":{"A":"1.00"},"expected_grand":"1.00"},
+    {"id":"null-amount","records":[{"id":"N01","region":"A","amount":null}],"expected_error":"invalid_amount"},
+    {"id":"missing-group","records":[{"id":"M01","amount":"1.00"}],"expected_error":"invalid_group"},
+    {"id":"duplicate-id","records":[{"id":"D01","region":"A","amount":"1.00"},{"id":"D01","region":"A","amount":"2.00"}],"expected_error":"duplicate_id"}
+  ]
+}

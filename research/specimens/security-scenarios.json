@@ -1,0 +1,13 @@
+{
+  "status": "tabletop-only; no runtime verification",
+  "scenarios": [
+    {"id":"SEC01","surface":"asset redirect to private host","expected":"deny according to egress policy","verified_runtime":false},
+    {"id":"SEC02","surface":"downloadFrom or webhook","expected":"disable unused or validate destination","verified_runtime":false},
+    {"id":"SEC03","surface":"blocked or timed-out critical asset","expected":"fail or explicitly report incomplete per policy","verified_runtime":false},
+    {"id":"SEC04","surface":"untrusted template/helper","expected":"minimal isolated context without host access","verified_runtime":false},
+    {"id":"SEC05","surface":"cross-tenant object ID","expected":"deny access to template/job/artifact","verified_runtime":false},
+    {"id":"SEC06","surface":"forged or duplicate callback","expected":"authenticate, deduplicate and validate transition","verified_runtime":false},
+    {"id":"SEC07","surface":"large request or archive","expected":"bound resources under explicit budget","verified_runtime":false},
+    {"id":"SEC08","surface":"logs containing sensitive data","expected":"redact and restrict access","verified_runtime":false}
+  ]
+}

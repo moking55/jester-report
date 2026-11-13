@@ -1,0 +1,11 @@
+{
+  "status":"documentation-based evaluation only; no editor executed",
+  "scenario":"grouped-sales-reference",
+  "personas":["developer-integrator","business-report-author"],
+  "required_actions":["add field","edit table","group by region","show subtotal","handle long Thai text","reuse versioned company header","undo","preview final PDF"],
+  "candidates":[
+    {"id":"grapesjs-core","version":"rolling documentation; exact release not pinned","documented":["component-based HTML editing","project data persistence","undo manager"],"unknown":["group semantics","Thai PDF pagination","accessible report-specific controls","lossless export to report definition"],"integration":"HTML/CSS output requires report data binding, security boundary and Gotenberg request adapter"},
+    {"id":"pdfme-designer","version":"rolling documentation; exact release not pinned","documented":["template schema designer","plugins","dynamic layout constraints depend on basePdf"],"unknown":["schema-to-HTML translation","grouped table semantics","Gotenberg PDF parity","lossless round trip"],"integration":"conversion from pdfme template schemas to HTML/CSS and equivalent dynamic layout is unproven"}
+  ],
+  "outcome":"unselected; estimates and usability unverified"
+}

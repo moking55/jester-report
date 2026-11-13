@@ -1,0 +1,10 @@
+{
+  "status": "hypothetical; no runtime measurements",
+  "formula": "requests_per_hour * assumed_seconds_per_request / 3600 / assumed_concurrent_slots",
+  "scenarios": [
+    {"id":"small","requests_per_hour":30,"assumed_seconds_per_request":2,"assumed_concurrent_slots":1,"expected_utilization":0.0166666667},
+    {"id":"medium","requests_per_hour":300,"assumed_seconds_per_request":5,"assumed_concurrent_slots":2,"expected_utilization":0.2083333333},
+    {"id":"medium_slow","requests_per_hour":300,"assumed_seconds_per_request":10,"assumed_concurrent_slots":2,"expected_utilization":0.4166666667}
+  ],
+  "unknown": ["actual_throughput","p50","p95","queue_wait","memory_peak","scaling_efficiency"]
+}

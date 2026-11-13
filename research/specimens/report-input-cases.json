@@ -1,0 +1,453 @@
+{
+  "description": "Synthetic inputs; schema versus semantic validation separated",
+  "cases": [
+    {
+      "id": "quote-valid",
+      "expectedSchema": "valid",
+      "expectedSemantic": "valid",
+      "input": {
+        "reportType": "quotation",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB"
+        },
+        "data": {
+          "quoteId": "Q-DEMO-001",
+          "documentDate": "2026-11-12",
+          "company": "บริษัท ตัวอย่าง จำกัด",
+          "customer": "ลูกค้า",
+          "lines": [
+            {
+              "id": "QL01",
+              "description": "รายการ A",
+              "quantity": 2,
+              "unitPrice": "1250.50"
+            },
+            {
+              "id": "QL02",
+              "description": "รายการ B",
+              "quantity": 3,
+              "unitPrice": "199.90"
+            }
+          ],
+          "discount": "100.70"
+        }
+      }
+    },
+    {
+      "id": "sales-valid",
+      "expectedSchema": "valid",
+      "expectedSemantic": "valid",
+      "input": {
+        "reportType": "sales_summary",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB",
+          "from": "2026-11-01",
+          "toExclusive": "2026-12-01"
+        },
+        "data": {
+          "records": [
+            {
+              "id": "S01",
+              "region": "North",
+              "transactionDate": "2026-11-10",
+              "amount": "1200.25"
+            },
+            {
+              "id": "S02",
+              "region": "North",
+              "transactionDate": "2026-11-11",
+              "amount": "799.75"
+            },
+            {
+              "id": "S03",
+              "region": "South",
+              "transactionDate": "2026-11-12",
+              "amount": "500.10"
+            },
+            {
+              "id": "S04",
+              "region": "South",
+              "transactionDate": "2026-11-13",
+              "amount": "-100.10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "po-valid-empty-detail",
+      "expectedSchema": "valid",
+      "expectedSemantic": "valid",
+      "input": {
+        "reportType": "purchase_order",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB"
+        },
+        "data": {
+          "component": {
+            "id": "purchase-order-header",
+            "version": "1.0.0"
+          },
+          "orders": [
+            {
+              "orderId": "PO01",
+              "supplier": "Supplier A",
+              "details": [
+                {
+                  "detailId": "D01",
+                  "parentId": "PO01",
+                  "amount": "200.00"
+                },
+                {
+                  "detailId": "D02",
+                  "parentId": "PO01",
+                  "amount": "150.00"
+                }
+              ]
+            },
+            {
+              "orderId": "PO02",
+              "supplier": "Supplier B",
+              "details": []
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "missing-customer",
+      "expectedSchema": "invalid",
+      "expectedPointer": "/data",
+      "input": {
+        "reportType": "quotation",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB"
+        },
+        "data": {
+          "quoteId": "Q-DEMO-001",
+          "documentDate": "2026-11-12",
+          "company": "บริษัท ตัวอย่าง จำกัด",
+          "lines": [
+            {
+              "id": "QL01",
+              "description": "รายการ A",
+              "quantity": 2,
+              "unitPrice": "1250.50"
+            },
+            {
+              "id": "QL02",
+              "description": "รายการ B",
+              "quantity": 3,
+              "unitPrice": "199.90"
+            }
+          ],
+          "discount": "100.70"
+        }
+      }
+    },
+    {
+      "id": "null-price",
+      "expectedSchema": "invalid",
+      "expectedPointer": "/data/lines/0/unitPrice",
+      "input": {
+        "reportType": "quotation",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB"
+        },
+        "data": {
+          "quoteId": "Q-DEMO-001",
+          "documentDate": "2026-11-12",
+          "company": "บริษัท ตัวอย่าง จำกัด",
+          "customer": "ลูกค้า",
+          "lines": [
+            {
+              "id": "QL01",
+              "description": "รายการ A",
+              "quantity": 2,
+              "unitPrice": null
+            },
+            {
+              "id": "QL02",
+              "description": "รายการ B",
+              "quantity": 3,
+              "unitPrice": "199.90"
+            }
+          ],
+          "discount": "100.70"
+        }
+      }
+    },
+    {
+      "id": "invalid-date",
+      "expectedSchema": "invalid",
+      "expectedPointer": "/parameters/from",
+      "input": {
+        "reportType": "sales_summary",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB",
+          "from": "2026-13-01",
+          "toExclusive": "2026-12-01"
+        },
+        "data": {
+          "records": [
+            {
+              "id": "S01",
+              "region": "North",
+              "transactionDate": "2026-11-10",
+              "amount": "1200.25"
+            },
+            {
+              "id": "S02",
+              "region": "North",
+              "transactionDate": "2026-11-11",
+              "amount": "799.75"
+            },
+            {
+              "id": "S03",
+              "region": "South",
+              "transactionDate": "2026-11-12",
+              "amount": "500.10"
+            },
+            {
+              "id": "S04",
+              "region": "South",
+              "transactionDate": "2026-11-13",
+              "amount": "-100.10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "invalid-currency",
+      "expectedSchema": "invalid",
+      "expectedPointer": "/parameters/currency",
+      "input": {
+        "reportType": "quotation",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "EUR"
+        },
+        "data": {
+          "quoteId": "Q-DEMO-001",
+          "documentDate": "2026-11-12",
+          "company": "บริษัท ตัวอย่าง จำกัด",
+          "customer": "ลูกค้า",
+          "lines": [
+            {
+              "id": "QL01",
+              "description": "รายการ A",
+              "quantity": 2,
+              "unitPrice": "1250.50"
+            },
+            {
+              "id": "QL02",
+              "description": "รายการ B",
+              "quantity": 3,
+              "unitPrice": "199.90"
+            }
+          ],
+          "discount": "100.70"
+        }
+      }
+    },
+    {
+      "id": "numeric-amount",
+      "expectedSchema": "invalid",
+      "expectedPointer": "/data/records/0/amount",
+      "input": {
+        "reportType": "sales_summary",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB",
+          "from": "2026-11-01",
+          "toExclusive": "2026-12-01"
+        },
+        "data": {
+          "records": [
+            {
+              "id": "S01",
+              "region": "North",
+              "transactionDate": "2026-11-10",
+              "amount": 1200.25
+            },
+            {
+              "id": "S02",
+              "region": "North",
+              "transactionDate": "2026-11-11",
+              "amount": "799.75"
+            },
+            {
+              "id": "S03",
+              "region": "South",
+              "transactionDate": "2026-11-12",
+              "amount": "500.10"
+            },
+            {
+              "id": "S04",
+              "region": "South",
+              "transactionDate": "2026-11-13",
+              "amount": "-100.10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "reversed-interval",
+      "expectedSchema": "valid",
+      "expectedSemantic": "invalid",
+      "expectedPointer": "/parameters/toExclusive",
+      "input": {
+        "reportType": "sales_summary",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB",
+          "from": "2026-11-01",
+          "toExclusive": "2026-11-01"
+        },
+        "data": {
+          "records": [
+            {
+              "id": "S01",
+              "region": "North",
+              "transactionDate": "2026-11-10",
+              "amount": "1200.25"
+            },
+            {
+              "id": "S02",
+              "region": "North",
+              "transactionDate": "2026-11-11",
+              "amount": "799.75"
+            },
+            {
+              "id": "S03",
+              "region": "South",
+              "transactionDate": "2026-11-12",
+              "amount": "500.10"
+            },
+            {
+              "id": "S04",
+              "region": "South",
+              "transactionDate": "2026-11-13",
+              "amount": "-100.10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "duplicate-record",
+      "expectedSchema": "valid",
+      "expectedSemantic": "invalid",
+      "expectedPointer": "/data/records/1/id",
+      "input": {
+        "reportType": "sales_summary",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB",
+          "from": "2026-11-01",
+          "toExclusive": "2026-12-01"
+        },
+        "data": {
+          "records": [
+            {
+              "id": "S01",
+              "region": "North",
+              "transactionDate": "2026-11-10",
+              "amount": "1200.25"
+            },
+            {
+              "id": "S01",
+              "region": "North",
+              "transactionDate": "2026-11-11",
+              "amount": "799.75"
+            },
+            {
+              "id": "S03",
+              "region": "South",
+              "transactionDate": "2026-11-12",
+              "amount": "500.10"
+            },
+            {
+              "id": "S04",
+              "region": "South",
+              "transactionDate": "2026-11-13",
+              "amount": "-100.10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "orphan-detail",
+      "expectedSchema": "valid",
+      "expectedSemantic": "invalid",
+      "expectedPointer": "/data/orders/0/details/0/parentId",
+      "input": {
+        "reportType": "purchase_order",
+        "parameters": {
+          "locale": "th-TH",
+          "calendar": "buddhist",
+          "timezone": "Asia/Bangkok",
+          "currency": "THB"
+        },
+        "data": {
+          "component": {
+            "id": "purchase-order-header",
+            "version": "1.0.0"
+          },
+          "orders": [
+            {
+              "orderId": "PO01",
+              "supplier": "Supplier A",
+              "details": [
+                {
+                  "detailId": "D01",
+                  "parentId": "OTHER",
+                  "amount": "200.00"
+                },
+                {
+                  "detailId": "D02",
+                  "parentId": "PO01",
+                  "amount": "150.00"
+                }
+              ]
+            },
+            {
+              "orderId": "PO02",
+              "supplier": "Supplier B",
+              "details": []
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
