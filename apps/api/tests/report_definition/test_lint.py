@@ -122,3 +122,15 @@ def test_declared_fonts():
 def test_declared_fonts_unverified():
     problems = lint({}, rep=report(), fonts=None)
     assert {p.code for p in problems} == {"FONT_UNVERIFIED"}
+
+
+def test_anchor_links_are_not_resource_loads():
+    footer = (
+        '<style>body{font-family:"TH Sarabun New"}</style>'
+        '<a href="https://company.example">เว็บไซต์</a> <a href="mailto:sales@company.example">อีเมล</a>'
+        ' <a href="tel:+6621234567">โทร</a> <a href="missing-page.html">x</a>'
+    )
+    assert lint({"footer.html": footer}) == []
+    # stylesheets are loaded, so <link href> is still checked
+    problems = lint({"template.html": '<link rel="stylesheet" href="https://cdn.example/x.css">'})
+    assert [p.code for p in problems] == ["EXTERNAL_URL"]

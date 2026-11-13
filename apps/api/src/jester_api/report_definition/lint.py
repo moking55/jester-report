@@ -26,7 +26,11 @@ _COMMENTS = re.compile(r"<!--.*?-->|\{#.*?#\}|/\*.*?\*/", re.S)
 _TFOOT = re.compile(r"<tfoot\b", re.I)
 _FONT_FACE = re.compile(r"@font-face\b", re.I)
 _FONT_FAMILY = re.compile(r"font-family\s*:\s*([^;}<\"]+(?:\"[^\"]*\"[^;}<\"]*)*)", re.I)
-_REFS = re.compile(r"""(?:\b(?:src|href)\s*=\s*["']([^"']*)["'])|(?:url\(\s*["']?([^"')\s]+))""", re.I)
+# resources the engine loads: src=, <link href=>, CSS url(); <a href> is only a link in the PDF
+_REFS = re.compile(
+    r"""<link\b[^>]*?\bhref\s*=\s*["']([^"']*)["']|\bsrc\s*=\s*["']([^"']*)["']|url\(\s*["']?([^"')\s]+)""",
+    re.I,
+)
 _EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.I)
 
 
@@ -96,7 +100,7 @@ def _check_text(name: str, text: str, known: set[str], fonts: frozenset[str] | N
             )
         )
     for m in _REFS.finditer(masked):
-        target = (m.group(1) if m.group(1) is not None else m.group(2)).strip()
+        target = next(g for g in m.groups() if g is not None).strip()
         if not target or target.startswith(("data:", "#")) or "{{" in target or "{%" in target:
             continue
         where = {"file": name, "line": _line(masked, m.start())}
