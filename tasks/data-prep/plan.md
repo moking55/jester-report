@@ -1,6 +1,6 @@
 # Implementation Plan: `data-prep`
 
-สถานะ: **อนุมัติแล้ว — กำลัง implement** (14 พฤศจิกายน 2026)
+สถานะ: **T1–T5 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
 Spec: [SPEC-data-prep.md](../../SPEC-data-prep.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -28,19 +28,19 @@ T1, T2, T3 ไม่ขึ้นกับกัน (ไฟล์แยก)
 ## Task List
 
 ### Phase 1: ชิ้นส่วนอิสระ
-- [ ] T1: formatters (`money`, `number`, `thai_date`, `thai_date_short`, `baht_text`)
-- [ ] T2: evaluator ของ expression + decimal context
-- [ ] T3: ตรวจและเติม params
+- [x] T1: formatters (`money`, `number`, `thai_date`, `thai_date_short`, `baht_text`)
+- [x] T2: evaluator ของ expression + decimal context
+- [x] T3: ตรวจและเติม params
 
 ### Checkpoint A
-- [ ] tests T1–T3 ผ่าน, ruff สะอาด; decimal context global ไม่เปลี่ยน
+- [x] tests T1–T3 ผ่าน, ruff สะอาด; decimal context global ไม่เปลี่ยน
 
 ### Phase 2: รวมเป็น view model
-- [ ] T4: lists — ดึง, แปลงตัวเลข, float, id ซ้ำ, computed/totals ต่อแถว, sort, group
-- [ ] T5: `prepare` — ตรวจ data, รวมทุกขั้น, fixture 3 แบบ, specimen ของ research
+- [x] T4: lists — ดึง, แปลงตัวเลข, float, id ซ้ำ, computed/totals ต่อแถว, sort, group
+- [x] T5: `prepare` — ตรวจ data, รวมทุกขั้น, fixture 3 แบบ, specimen ของ research
 
 ### Checkpoint B: module เสร็จ
-- [ ] Success criteria 1–5 ของ spec ผ่าน, coverage ≥ 90%
+- [x] Success criteria 1–5 ของ spec ผ่าน, coverage 98%
 - [ ] ผู้ใช้ทบทวนก่อนเริ่ม `binder`
 
 ## Risks and Mitigations

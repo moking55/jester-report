@@ -114,7 +114,7 @@ def check_data(report: ReportJson, files: Mapping[str, str]) -> tuple[DataSchema
             problems.append(
                 error(
                     "SAMPLE_INVALID",
-                    _safe_message(err.validator, err.validator_value, err.message),
+                    safe_message(err.validator, err.validator_value, err.message),
                     file=sample_name,
                     pointer=pointer(err.absolute_path),
                 )
@@ -124,7 +124,7 @@ def check_data(report: ReportJson, files: Mapping[str, str]) -> tuple[DataSchema
     return DataSchema(schema, lists), problems + list_problems
 
 
-def _safe_message(keyword: object, value: object, message: str) -> str:
+def safe_message(keyword: object, value: object, message: str) -> str:
     # jsonschema messages quote the offending value; describe the rule instead (spec: no data in messages)
     if keyword in ("required", "additionalProperties"):
         return message  # names come from the schema / object keys, not values
