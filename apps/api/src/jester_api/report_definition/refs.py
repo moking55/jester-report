@@ -165,6 +165,12 @@ class _Checker:
         if key not in self.data.lists:
             return  # LIST_PATH_INVALID already reported
         fields = _fields(self.data.lists[key])
+        named = [(("id",), spec.id), *((("sort", i), s) for i, s in enumerate(spec.sort))]
+        if spec.groupBy:
+            named.append((("groupBy", "key"), spec.groupBy.key))
+        for sub, name in named:
+            if name not in fields:
+                self._err("REF_UNKNOWN", f"{name!r} is not a field of this list", pointer((*where, *sub)))
         self._check_set(spec.computed, (*where, "computed"), _Scope(dict(fields), None))
         children: dict[str, dict[str, bool]] = {}
         for child_name, child in spec.lists.items():

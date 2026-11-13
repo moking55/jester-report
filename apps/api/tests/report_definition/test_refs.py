@@ -211,3 +211,27 @@ def test_bad_list_path_skipped_without_crash():
     assert problems[0].code == "LIST_PATH_INVALID"
     _, problems = check_expressions(rep, data)
     assert [p.code for p in problems] == ["REF_UNKNOWN"]
+
+
+def test_list_id_sort_and_group_key_must_exist():
+    lists = {
+        "records": {
+            "path": "/records",
+            "id": "rid",
+            "sort": ["regoin", "id"],
+            "groupBy": {"key": "regoin", "totals": {"subtotal": "sum(amount)"}},
+        },
+        "orders": {
+            "path": "/orders",
+            "id": "orderId",
+            "lists": {"details": {"path": "/details", "id": "detailID", "sort": ["amount"]}},
+        },
+    }
+    found = codes(run(lists, {}))
+    assert {
+        ("REF_UNKNOWN", "/lists/records/id"),
+        ("REF_UNKNOWN", "/lists/records/sort/0"),
+        ("REF_UNKNOWN", "/lists/records/groupBy/key"),
+        ("REF_UNKNOWN", "/lists/orders/lists/details/id"),
+    } <= found
+    assert ("REF_UNKNOWN", "/lists/orders/lists/details/sort/0") not in found
