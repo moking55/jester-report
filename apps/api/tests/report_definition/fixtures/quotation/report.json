@@ -18,8 +18,7 @@
     "locale": {
       "type": "enum",
       "values": [
-        "th-TH",
-        "en-US"
+        "th-TH"
       ],
       "default": "th-TH"
     },

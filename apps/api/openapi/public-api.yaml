@@ -942,7 +942,9 @@ components:
           description: Validated against the version's `report.json` parameters
           additionalProperties: true
         data:
-          description: Validated against the version's data schema; any JSON value
+          description: |
+            Validated against the version's data schema; any JSON value. JSON numbers are parsed
+            as exact decimals (never binary floating point), so `1250.5` stays exactly 1250.5.
         filename:
           type: string
           pattern: '^[^\\/"\x00-\x1f\x7f]{1,200}$'

@@ -56,7 +56,7 @@ Asset (ภาพ/ฟอนต์) อยู่ใน object storage รับม
   "fonts": { "body": ["TH Sarabun New"], "headerFooter": ["TH Sarabun New"] },
   "parameters": {
     "quoteId": { "type": "string", "required": true, "maxLength": 40 },
-    "locale":  { "type": "enum", "values": ["th-TH", "en-US"], "default": "th-TH" },
+    "locale":  { "type": "enum", "values": ["th-TH"], "default": "th-TH" },
     "docDate": { "type": "date", "required": true }
   },
   "data": { "schema": "data.schema.json", "samples": ["sample.json"] },
