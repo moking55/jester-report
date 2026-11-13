@@ -900,9 +900,12 @@ components:
           items: { $ref: '#/components/schemas/ValidationProblem' }
     ValidationProblem:
       type: object
-      required: [severity, message]
+      required: [severity, code, message]
       properties:
         severity: { type: string, enum: [error, warning] }
+        code:
+          type: string
+          description: Machine-readable problem code, e.g. `EXPRESSION_INVALID`, `FONT_MISSING`, `FILE_MISSING`
         message: { type: string }
         pointer:
           type: string

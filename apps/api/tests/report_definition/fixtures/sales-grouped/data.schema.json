@@ -1,0 +1,51 @@
+{
+  "type": "object",
+  "required": [
+    "company",
+    "records"
+  ],
+  "properties": {
+    "company": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "region",
+          "date",
+          "amount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "region": {
+            "enum": [
+              "North",
+              "South"
+            ]
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount": {
+            "type": "string",
+            "format": "decimal"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "name": "ใบสั่งซื้อ",
+  "fonts": {
+    "body": [
+      "TH Sarabun New"
+    ],
+    "headerFooter": [
+      "TH Sarabun New"
+    ]
+  },
+  "parameters": {
+    "currency": {
+      "type": "enum",
+      "values": [
+        "THB"
+      ],
+      "default": "THB"
+    }
+  },
+  "data": {
+    "schema": "data.schema.json",
+    "samples": [
+      "sample.json"
+    ]
+  },
+  "lists": {
+    "orders": {
+      "path": "/orders",
+      "id": "orderId",
+      "totals": {
+        "total": "sum(details.amount)"
+      },
+      "lists": {
+        "details": {
+          "path": "/details",
+          "id": "detailId"
+        }
+      }
+    }
+  },
+  "totals": {
+    "grand": "sum(orders.total)"
+  }
+}

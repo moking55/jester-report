@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "name": "ใบเสนอราคา",
+  "fonts": {
+    "body": [
+      "TH Sarabun New"
+    ],
+    "headerFooter": [
+      "TH Sarabun New"
+    ]
+  },
+  "parameters": {
+    "quoteId": {
+      "type": "string",
+      "required": true,
+      "maxLength": 40
+    },
+    "locale": {
+      "type": "enum",
+      "values": [
+        "th-TH",
+        "en-US"
+      ],
+      "default": "th-TH"
+    },
+    "docDate": {
+      "type": "date",
+      "required": true
+    }
+  },
+  "data": {
+    "schema": "data.schema.json",
+    "samples": [
+      "sample.json"
+    ]
+  },
+  "lists": {
+    "items": {
+      "path": "/items",
+      "id": "id",
+      "computed": {
+        "amount": "round(qty * unitPrice, 2)"
+      }
+    }
+  },
+  "totals": {
+    "subtotal": "sum(items.amount)",
+    "net": "subtotal - discount",
+    "vat": "round(net * 0.07, 2)",
+    "grand": "net + vat"
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "company": {
+    "name": "บริษัท ตัวอย่าง จำกัด"
+  },
+  "records": [
+    {
+      "id": "S01",
+      "region": "North",
+      "date": "2026-11-01",
+      "amount": "1200.25"
+    },
+    {
+      "id": "S02",
+      "region": "North",
+      "date": "2026-11-02",
+      "amount": "799.75"
+    },
+    {
+      "id": "S03",
+      "region": "South",
+      "date": "2026-11-03",
+      "amount": "500.10"
+    },
+    {
+      "id": "S04",
+      "region": "South",
+      "date": "2026-11-04",
+      "amount": "-100.10"
+    }
+  ]
+}

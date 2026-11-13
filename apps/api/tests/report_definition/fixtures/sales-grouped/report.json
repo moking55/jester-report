@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "name": "สรุปยอดขายตามภูมิภาค",
+  "fonts": {
+    "body": [
+      "TH Sarabun New"
+    ],
+    "headerFooter": [
+      "TH Sarabun New"
+    ]
+  },
+  "page": {
+    "orientation": "landscape"
+  },
+  "parameters": {
+    "from": {
+      "type": "date",
+      "required": true
+    },
+    "toExclusive": {
+      "type": "date",
+      "required": true
+    }
+  },
+  "data": {
+    "schema": "data.schema.json",
+    "samples": [
+      "sample.json",
+      "sample-empty.json"
+    ]
+  },
+  "lists": {
+    "records": {
+      "path": "/records",
+      "id": "id",
+      "sort": [
+        "region",
+        "id"
+      ],
+      "groupBy": {
+        "key": "region",
+        "totals": {
+          "subtotal": "sum(amount)",
+          "rows": "count()"
+        }
+      }
+    }
+  },
+  "totals": {
+    "grand": "sum(records.amount)"
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "type": "object",
+  "required": [
+    "company",
+    "customer",
+    "discount",
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "company": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "customer": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "discount": {
+      "type": "string",
+      "format": "decimal"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "description",
+          "qty",
+          "unitPrice"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "unitPrice": {
+            "type": "string",
+            "format": "decimal"
+          }
+        }
+      }
+    }
+  }
+}
