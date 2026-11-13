@@ -41,7 +41,7 @@ def _lookup(env: Env, name: str) -> Decimal:
 def _aggregate(func: str, ref: Ref, env: Env) -> Decimal:
     *owner, fld = ref.parts
     rows = env.lists.get(".".join(owner), ())
-    values = [_number(row.get(fld), ".".join(ref.parts)) for row in rows]
+    values = [_number(row.get(fld), f"{'.'.join(ref.parts)} (row {i})") for i, row in enumerate(rows)]
     if func == "sum":
         return sum(values, Decimal(0))
     if not values:

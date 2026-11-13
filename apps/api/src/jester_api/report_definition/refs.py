@@ -42,7 +42,7 @@ def _is_numeric(schema: Any) -> bool:
     )
 
 
-def _fields(item_schema: dict[str, Any]) -> dict[str, bool]:
+def field_types(item_schema: dict[str, Any]) -> dict[str, bool]:
     """Field name -> is numeric."""
     props = item_schema.get("properties") or {}
     return {name: _is_numeric(s) for name, s in props.items()}
@@ -156,7 +156,7 @@ class _Checker:
         return order if ok else None
 
     def _row_scope(self, key: str, spec: ListSpec) -> dict[str, bool]:
-        names = dict(_fields(self.data.lists[key]))
+        names = dict(field_types(self.data.lists[key]))
         names.update(dict.fromkeys(spec.computed, True))
         names.update(dict.fromkeys(spec.totals, True))
         return names
@@ -164,7 +164,7 @@ class _Checker:
     def _check_list(self, key: str, spec: ListSpec, where: tuple[str, ...]) -> None:
         if key not in self.data.lists:
             return  # LIST_PATH_INVALID already reported
-        fields = _fields(self.data.lists[key])
+        fields = field_types(self.data.lists[key])
         named = [(("id",), spec.id), *((("sort", i), s) for i, s in enumerate(spec.sort))]
         if spec.groupBy:
             named.append((("groupBy", "key"), spec.groupBy.key))
@@ -190,7 +190,7 @@ class _Checker:
             self._check_list(name, spec, ("lists", name))
             if name in self.data.lists:
                 aggregates[name] = self._row_scope(name, spec)
-        self._check_set(self.report.totals, ("totals",), _Scope(_fields(self.data.schema), aggregates))
+        self._check_set(self.report.totals, ("totals",), _Scope(field_types(self.data.schema), aggregates))
 
 
 def check_expressions(report: ReportJson, data: DataSchema) -> tuple[CheckedExpressions, list[Problem]]:
