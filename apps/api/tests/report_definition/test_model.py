@@ -174,3 +174,9 @@ def test_root_must_be_object():
 def test_collects_all_problems_at_once():
     obj = with_(extra=1, schemaVersion=2, page__size="A5")
     assert len(pointers(obj)) >= 3
+
+
+@pytest.mark.parametrize("value", ["20261112", "2026-W46-5", "2026-11-12T00:00", "2026-1-2"])
+def test_date_default_must_be_yyyy_mm_dd(value):
+    model, _ = parse(with_(parameters={"p": {"type": "date", "default": value}}))
+    assert model is None

@@ -132,3 +132,10 @@ def test_date_format_checked():
     schema = {"type": "object", "properties": {"d": {"type": "string", "format": "date"}}}
     _, problems = check_data(report(lists={}), files(schema=schema, sample={"d": "2026-13-40"}))
     assert problems[0].pointer == "/d"
+
+
+def test_date_format_requires_yyyy_mm_dd():
+    schema = {"type": "object", "properties": {"d": {"type": "string", "format": "date"}}}
+    for value, ok in [("2026-11-12", True), ("20261112", False), ("2026-W46-5", False)]:
+        _, problems = check_data(report(lists={}), files(schema=schema, sample={"d": value}))
+        assert (problems == []) is ok, value

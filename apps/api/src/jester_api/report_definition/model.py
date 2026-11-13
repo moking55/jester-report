@@ -18,6 +18,17 @@ Expr = Annotated[str, StringConstraints(min_length=1, max_length=500)]
 DECIMAL_RE = re.compile(r"^-?\d+(\.\d+)?$")
 
 
+def is_iso_date(value: object) -> bool:
+    """YYYY-MM-DD only; date.fromisoformat alone also accepts 20261112 and week dates."""
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return False
+    try:
+        date.fromisoformat(value)
+        return True
+    except ValueError:
+        return False
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, populate_by_name=True)
 
@@ -51,11 +62,7 @@ def _matches_type(kind: str, value: Any, values: list[str] | None) -> bool:
         return isinstance(value, bool)
     if kind == "enum":
         return value in (values or [])
-    try:  # date
-        date.fromisoformat(value)
-        return True
-    except (TypeError, ValueError):
-        return False
+    return is_iso_date(value)
 
 
 class Parameter(_Strict):

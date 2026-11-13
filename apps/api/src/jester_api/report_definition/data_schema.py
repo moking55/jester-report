@@ -5,13 +5,12 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
 from typing import Any
 
 from jsonschema import Draft202012Validator, FormatChecker
 from jsonschema.exceptions import SchemaError
 
-from .model import DECIMAL_RE, ListSpec, ReportJson
+from .model import DECIMAL_RE, ListSpec, ReportJson, is_iso_date
 from .problems import Problem, error, pointer
 
 FORMATS = FormatChecker()
@@ -22,11 +21,9 @@ def _is_decimal(value: object) -> bool:
     return not isinstance(value, str) or bool(DECIMAL_RE.match(value))
 
 
-@FORMATS.checks("date", raises=ValueError)
+@FORMATS.checks("date")
 def _is_date(value: object) -> bool:
-    if isinstance(value, str):
-        date.fromisoformat(value)
-    return True
+    return not isinstance(value, str) or is_iso_date(value)
 
 
 @dataclass(frozen=True)
