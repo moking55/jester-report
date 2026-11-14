@@ -4,7 +4,7 @@ import psycopg
 import pytest
 from psycopg import AsyncConnection
 
-from jester_api.template_store.migrate import migrate
+from jester_api.db.migrate import MIGRATIONS, migrate
 
 pytestmark = pytest.mark.db
 
@@ -15,7 +15,7 @@ async def _migrate(url: str) -> list[str]:
 
 
 async def test_migrations_run_once(db_url):
-    assert await _migrate(db_url) == ["0001_init.sql"]
+    assert await _migrate(db_url) == sorted(p.name for p in MIGRATIONS.glob("*.sql"))
     assert await _migrate(db_url) == []
 
 
