@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import sys
 from collections.abc import Mapping
 from decimal import Decimal
@@ -21,6 +22,7 @@ from jinja2.sandbox import SandboxedEnvironment, SecurityError
 from ..data_prep import formatters
 from ..report_definition.problems import Problem, error, warning
 
+_QUOTED = re.compile(r"'([^']*)'")
 MAX_OUTPUT_BYTES = 20 * 1024 * 1024  # same limit as engine-client's request size
 
 
@@ -38,6 +40,7 @@ class BindEnvironment(SandboxedEnvironment):
         )
         super().__init__(loader=loader, autoescape=True, undefined=StrictUndefined, finalize=self._finalize)
         self.globals.pop("lipsum", None)
+        self.templates = dict(templates)
         self.template_names = frozenset(templates)
         self.warnings: list[Problem] = []
 
@@ -82,15 +85,25 @@ def _location(exc: BaseException, names: frozenset[str], fallback: str) -> tuple
     return found
 
 
-def _problem(exc: Exception, name: str, names: frozenset[str]) -> Problem:
+def _undefined_message(exc: UndefinedError, source: str) -> str:
+    """Jinja names the missing key; a key looked up from data (data.prices[item.code]) would leak a value."""
+    message = exc.message or "undefined value"
+    quoted = _QUOTED.findall(message)
+    if quoted and quoted[-1] not in source:
+        return "a value looked up by a key that comes from data is missing"
+    return message
+
+
+def _problem(exc: Exception, name: str, env: BindEnvironment) -> Problem:
+    names = env.template_names
     if isinstance(exc, TemplateSyntaxError):
         return error(
             "TEMPLATE_SYNTAX", exc.message or "template syntax error", file=exc.name or name, line=exc.lineno
         )
     file, line = _location(exc, names, name)
     if isinstance(exc, UndefinedError):
-        # messages name the attribute and the object type only, never a value
-        return error("TEMPLATE_UNDEFINED", exc.message or "undefined value", file=file, line=line)
+        message = _undefined_message(exc, env.templates.get(file, ""))
+        return error("TEMPLATE_UNDEFINED", message, file=file, line=line)
     if isinstance(exc, SecurityError):
         return error("TEMPLATE_UNSAFE", str(exc), file=file, line=line)
     if isinstance(exc, TemplateNotFound):
@@ -124,5 +137,5 @@ def render(
     except TooLarge:
         return None, [error("OUTPUT_TOO_LARGE", "rendered documents are larger than 20 MB", file=name)]
     except Exception as exc:  # every template failure becomes a problem; nothing reaches the caller raw
-        return None, [_problem(exc, name, env.template_names)]
+        return None, [_problem(exc, name, env)]
     return "".join(out), []

@@ -85,3 +85,10 @@ def test_output_limit_stops_streaming():
 
 def test_lipsum_is_not_available():
     assert run({"t.html": "{{ lipsum() }}"})[1][0].code == "TEMPLATE_UNDEFINED"
+
+
+def test_undefined_key_from_data_is_not_echoed():
+    templates = {"t.html": "\n{{ data.prices[item.code] }}"}
+    _, problems, _ = run(templates, ctx={"data": {"prices": {}}, "item": {"code": "SECRET-123"}})
+    assert where(problems) == [("TEMPLATE_UNDEFINED", "t.html", 2)]
+    assert "SECRET" not in problems[0].message
