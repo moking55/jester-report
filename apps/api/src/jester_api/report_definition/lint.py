@@ -133,6 +133,22 @@ def _font_problem(family: str, fonts: frozenset[str] | None, **where: object) ->
     return []
 
 
+def engine_font_candidates(files: Mapping[str, str], report: ReportJson | None) -> set[str]:
+    """Font families whose presence in the engine matters: report.json fonts and header/footer CSS.
+
+    render-service probes exactly these before calling load_definition with `system_fonts`.
+    """
+    found: set[str] = set()
+    if report is not None:
+        found.update(report.fonts.body)
+        found.update(report.fonts.headerFooter)
+    for name in HEADER_FOOTER:
+        if name in files:
+            for m in _FONT_FAMILY.finditer(mask(files[name])):
+                found.update(_families(m.group(1)))
+    return found
+
+
 def _check_declared_fonts(report: ReportJson, assets: Mapping[str, AssetInfo], fonts: frozenset[str] | None):
     asset_families = {a.font_family.casefold() for a in assets.values() if a.font_family}
     problems: list[Problem] = []
