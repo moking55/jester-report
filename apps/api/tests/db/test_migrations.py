@@ -21,7 +21,7 @@ async def test_migrations_run_once(db_url):
 
 async def test_concurrent_start_migrates_once(db_url):
     results = await asyncio.gather(*(_migrate(db_url) for _ in range(4)))
-    assert sorted(len(r) for r in results) == [0, 0, 0, 1]
+    assert sorted(len(r) for r in results) == [0, 0, 0, len(list(MIGRATIONS.glob("*.sql")))]
 
 
 async def test_published_versions_reject_change(db_url):
