@@ -1,6 +1,6 @@
 # Implementation Plan: `binder`
 
-สถานะ: **ร่าง รออนุมัติ** (14 พฤศจิกายน 2026)
+สถานะ: **Phase 1 เสร็จ (T1–T4) — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-binder.md](../../SPEC-binder.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -31,13 +31,13 @@ T1–T4 ไม่ขึ้นกับกัน (ไฟล์แยก); T6 ต�
 ## Task List
 
 ### Phase 1: ชิ้นส่วน
-- [ ] T1: `data-prep` เติม property ที่ประกาศแต่ไม่ได้ส่งมา (data + แถวของ list + list ลูก) + อัปเดต SPEC-data-prep.md
-- [ ] T2: `binder/environment.py` — sandbox, finalize, แปลง exception เป็น Problem พร้อมบรรทัด, จำกัด output 20 MB
-- [ ] T3: `binder/document.py` — ห่อ index.html, CSS พื้นฐาน, @font-face ของ asset, CSS ของ header/footer, `PageSetup`
-- [ ] T4: `binder/resources.py` — ตรวจ resource/script/tfoot หลัง render, รวบรวมไฟล์และ asset ที่ถูกอ้าง
+- [x] T1: `data-prep` เติม property ที่ประกาศแต่ไม่ได้ส่งมา (data + แถวของ list + list ลูก) + อัปเดต SPEC-data-prep.md
+- [x] T2: `binder/environment.py` — sandbox, finalize, แปลง exception เป็น Problem พร้อมบรรทัด, จำกัด output 20 MB
+- [x] T3: `binder/document.py` — ห่อ index.html, CSS พื้นฐาน, @font-face ของ asset, CSS ของ header/footer, `PageSetup`
+- [x] T4: `binder/resources.py` — ตรวจ resource/script/tfoot หลัง render, รวบรวมไฟล์และ asset ที่ถูกอ้าง
 
 ### Checkpoint A
-- [ ] tests T1–T4 ผ่าน, ruff สะอาด, test เดิมทั้งหมดยังผ่าน
+- [x] tests T1–T4 ผ่าน, ruff สะอาด, test เดิมทั้งหมดยังผ่าน
 
 ### Phase 2: รวมและยืนยันกับ engine จริง
 - [ ] T5: `bind()` — รวมทุกขั้น, fixture 3 แบบ, ตารางค่าที่หาย, escape, SSRF, determinism
