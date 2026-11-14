@@ -1,0 +1,137 @@
+# Spec: `public-api`
+
+สถานะ: **อนุมัติแล้ว 14 พ.ย. 2026** (ปรับตาม interview)
+Module id: `public-api` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้นกับ: `render-service`, `template-store`, `auth` · ถูกใช้โดย: `studio` (Next.js server) และระบบภายนอก
+อ้างอิง: [public-api.yaml](apps/api/openapi/public-api.yaml) (contract 34 operation + `GET /v1/openapi.yaml`), [SPEC-auth.md](SPEC-auth.md) (`X-Jester-Client-IP`), [SPEC-render-service.md](SPEC-render-service.md) (ลำดับ route ของ `/v1/runs/retention`), [intent](docs/intent/report-server-v1.md)
+
+## สมมติฐาน (ผู้ใช้ยืนยันใน interview)
+1. **การติดตั้ง (ผู้ใช้ยืนยัน):** ระบบภายนอกเรียก api ผ่าน reverse proxy ของทีม (TLS อยู่ที่ proxy); Studio คุยกับ api ผ่าน network ภายในของ compose; พอร์ตที่เปิดออกนอก compose มีแค่ของ api (postgres, rustfs, gotenberg ไม่เปิด); IP ที่ api เห็นจาก connection จึงเป็นของ proxy — v1 ไม่เชื่อ `X-Forwarded-For` (rate limit ของ login ใช้ `X-Jester-Client-IP` จาก Studio อยู่แล้ว)
+2. **เป็นชั้นบาง ๆ ตาม contract:** ทุก operation ใน `public-api.yaml` เป็น route ของ FastAPI ที่แปลง HTTP → เรียก module → แปลงผล/ error กลับเป็น HTTP ไม่มี business logic ใหม่ใน module นี้ (กติกาอยู่ใน module ที่ทำไปแล้ว)
+3. **Contract คือความจริง:** ใช้ไฟล์ `public-api.yaml` ที่เขียนเองเป็นหลัก ไม่ใช้ OpenAPI ที่ FastAPI สร้างอัตโนมัติ — มี test ที่เทียบว่า route ที่ FastAPI มีตรงกับ path + method ใน contract ครบ และ response ตัวอย่างผ่าน schema ของ contract (ตรวจด้วย `jsonschema` ที่มีอยู่แล้ว)
+4. **ตัวตน:** ทุก route ยกเว้น `/v1/setup`, `/v1/auth/login`, `/v1/health` ต้องมี `Authorization: Bearer …`
+   - session (`jrs_`) ใช้ได้ทุก route; API key (`jrk_`) ใช้ได้กับ `POST /v1/render` เท่านั้น ที่อื่น → `401`
+   - ผู้เรียกที่ไม่มีสิทธิ์เห็น object ได้ `404` เหมือนไม่มี (contract) — v1 ทุกคนเห็นทุกอย่าง จึงเกิดเฉพาะกรณีไม่มีจริง
+5. **IP ของผู้ใช้จริงสำหรับ rate limit (ตาม SPEC-auth, ผู้ใช้ยืนยันค่าลับร่วม):** Next.js ส่ง `X-Jester-Client-IP` พร้อม `X-Jester-Studio-Key: <ค่าลับร่วม>` (env `JESTER_STUDIO_KEY` ตั้งเหมือนกันทั้ง api และ studio); ถ้าค่าลับตรง (เทียบแบบ constant-time) เชื่อ header IP ไม่งั้นใช้ IP ของ connection — ระบบภายนอกปลอม IP ไม่ได้
+6. **ตัวเลขในข้อมูลเป็นทศนิยมแม่นยำ:** body ของ `render` และ `preview` parse เองด้วย `json.loads(parse_float=Decimal)` ไม่ใช่ parser ปกติของ FastAPI (ที่ให้ float) แล้วตรวจรูปร่างด้วย pydantic
+7. **ขนาด request:** ไม่เกิน `JESTER_MAX_REQUEST_BYTES` (ค่าเริ่มต้น 10 MB) ตรวจจาก `Content-Length` และนับระหว่างอ่าน body → `413`; ไฟล์ข้อความ/asset ใช้ขีดจำกัดของ template-store
+8. **Error เป็น RFC 9457 (`application/problem+json`):** `type` = `https://jester-report.dev/errors/<code-kebab>`, `code` ตาม `ErrorCode` ของ contract, `problems` ตาม `ValidationProblem`, `retryable` และ `runId` เมื่อมี; ทุก exception ของ module (`StoreError`, `AuthError`, `RenderError`) map ในที่เดียว; error ที่ไม่คาดคิด → `500` ข้อความกลาง ๆ + log แบบมี stack (ไม่มีค่าจาก request)
+9. **Revision ใน header:** route ที่แก้ draft อ่าน `If-Match` (เช่น `"12"`) ถ้าไม่มีหรือไม่ใช่ตัวเลข → `428`/`422`; publish ใช้ revision จาก `If-Match` ตรวจด้วย `validate` ก่อนแล้วส่งต่อให้ `publish` (draft ไม่ผ่าน → `422 DRAFT_INVALID` พร้อม problems)
+10. **Start-up:** อ่าน config จาก env → เปิด psycopg pool → `migrate()` → `auth.prepare_setup()` ถ้าได้ token พิมพ์ลง log เป็นบรรทัดเด่น → `S3BlobStore.ensure_bucket()`; shutdown ปิด pool และ engine client
+11. **Deploy (ผู้ใช้ยืนยัน):** `apps/api/Dockerfile` (Python 3.12-slim, `uv sync --frozen`, user ไม่ใช่ root) และ `infra/compose.yaml` ใน module นี้: api + postgres + rustfs + gotenberg (image ของเราพร้อม args ที่ปิด JS และ allow-list) — studio เพิ่มภายหลัง
+   - ค่าลับทั้งหมด (รหัส DB, S3, `JESTER_STUDIO_KEY`) มาจาก `.env` ที่สร้างจาก `infra/.env.example`; ไม่มีค่าลับจริงใน repo
+   - **uvicorn 2 workers เป็นค่าเริ่มต้น** ตั้งได้ด้วย `JESTER_API_WORKERS` (render พร้อมกันสูงสุด 12 ขณะที่ Gotenberg รับ 6 ที่เหลือรอที่ Gotenberg ภายใน timeout 30 วินาที); เครื่อง 1 CPU ตั้งเป็น 1
+   - ฝั่ง Windows dev ตั้ง selector event loop ใน entrypoint
+12. **Log:** JSON หนึ่งบรรทัดต่อ request (method, path template, status, ms, run id, request id) ไม่ log body, header `Authorization`, token หรือค่าจาก data
+13. **Docs (ผู้ใช้ยืนยัน):** ปิด `/docs`, `/redoc`, `/openapi.json` ที่ FastAPI สร้างเอง (ไม่ตรงกับ contract เช่น body ของ render ที่ parse เป็น Decimal) แล้วเสิร์ฟไฟล์ `public-api.yaml` ที่ `GET /v1/openapi.yaml` โดยไม่ต้อง login — เพิ่ม operation นี้ใน contract
+
+## Objective
+
+เปิด HTTP API ตาม contract ให้ระบบภายนอก render PDF ด้วย API key และให้ Studio ทำทุกอย่างผ่าน session — โดยเป็นแค่ชั้นแปลง HTTP ที่ map error ตรงตาม contract และไม่มีช่องโหว่ระดับ HTTP (ขนาด, ตัวตน, header ปลอม)
+
+### User stories
+
+- ในฐานะระบบภายนอก ฉันส่ง `POST /v1/render` ด้วย `Authorization: Bearer jrk_…` แล้วได้ PDF พร้อม `Jester-Run-Id`, `Jester-Template-Version`, `Content-Disposition` ที่ชื่อไฟล์ภาษาไทยถูกต้อง (RFC 6266/8187); ตัวเลข `1250.5` ใน data ไม่กลายเป็น float
+- ในฐานะ Studio (Next.js server) ฉันเรียกทุก operation ด้วย session token และส่ง IP ของ browser ผ่าน header ที่ยืนยันด้วยค่าลับร่วม
+- ในฐานะคนติดตั้ง ฉัน `docker compose up` แล้วเห็น setup token ใน log ของ `api` ชัดเจน
+- ในฐานะผู้ดูแล ฉันดู `/v1/health` แล้วรู้ว่า db, storage, engine ตัวไหนล่ม
+
+## Interface
+
+```python
+def create_app(settings: Settings | None = None) -> FastAPI: ...   # อ่าน env เมื่อไม่ส่ง settings
+
+@dataclass(frozen=True)
+class Settings:
+    database_url: str
+    s3_endpoint: str; s3_bucket: str; s3_access_key: str; s3_secret_key: str
+    gotenberg_url: str
+    studio_key: str | None              # ไม่ตั้ง = ไม่เชื่อ X-Jester-Client-IP เลย
+    max_request_bytes: int = 10 * 1024 * 1024
+    engine_image: str = "jester/gotenberg:9.4.1-th1"
+    workers: int = 2                    # ใช้ตอนรัน uvicorn ใน container
+```
+
+env: `DATABASE_URL`, `JESTER_S3_ENDPOINT`, `JESTER_S3_BUCKET`, `JESTER_S3_ACCESS_KEY`, `JESTER_S3_SECRET_KEY`, `GOTENBERG_URL`, `JESTER_STUDIO_KEY`, `JESTER_MAX_REQUEST_BYTES`, `JESTER_API_WORKERS`
+
+## Tech Stack
+
+Python ≥3.11, **dependency ใหม่: `fastapi`, `uvicorn[standard]`** (ทั้งคู่ MIT/BSD; ระบุไว้ใน intent แล้ว), module เดิมทั้งหมด; test ใช้ `httpx.AsyncClient` + `ASGITransport` (มี `httpx` แล้ว)
+
+## Commands
+
+```bash
+cd apps/api
+uv run ruff check . && uv run ruff format --check .
+uv run pytest tests/public_api -q --cov=jester_api.public_api --cov-report=term-missing
+JESTER_TEST_DATABASE_URL=… JESTER_TEST_S3_ENDPOINT=… GOTENBERG_URL=… uv run pytest tests/public_api -m "db or engine or storage" -q
+uv run uvicorn jester_api.public_api:app --reload     # dev
+docker build -t jester/api apps/api
+```
+
+## Project Structure
+
+```
+apps/api/src/jester_api/public_api/
+  __init__.py     → create_app, app (สำหรับ uvicorn)
+  settings.py     → Settings จาก env
+  app.py          → lifespan (pool, migrate, setup token, bucket), middleware (ขนาด, log), error handler
+  security.py     → อ่าน bearer → Principal, session-only / render-allowed, IP ของผู้ใช้จริง
+  problems.py     → แปลง StoreError/AuthError/RenderError → problem+json
+  routes/         → setup_auth.py, users_keys.py, templates.py, draft.py, versions.py, render.py, runs.py, health.py
+apps/api/Dockerfile, apps/api/.dockerignore
+infra/compose.yaml                 → api + postgres + rustfs + gotenberg (เปิดพอร์ตแค่ api); studio เพิ่มภายหลัง
+infra/.env.example                 → ค่าที่ต้องตั้ง (ไม่มีค่าลับจริง)
+apps/api/tests/public_api/
+  test_contract.py  test_security.py  test_render.py  test_templates.py  test_auth_routes.py  test_runs_health.py
+```
+
+## Code Style
+
+```python
+@router.post("/v1/render", responses=..., dependencies=[])
+async def render(request: Request, caller: Principal = Depends(render_caller)) -> Response:
+    body = RenderRequest.model_validate(await decimal_json(request))      # parse_float=Decimal, size-checked
+    outcome = await services(request).render.render(
+        body.template.id, body.template.version, body.params or {}, body.data, caller,
+        request.headers.get("X-Request-Id"), body.filename,
+    )
+    return Response(outcome.pdf, media_type="application/pdf", headers={
+        "Jester-Run-Id": outcome.run_id,
+        "Jester-Template-Version": str(outcome.version),
+        "Content-Disposition": content_disposition(outcome.filename),
+    })
+```
+
+route สั้น: อ่าน input → เรียก module → สร้าง response; error ไหลไปที่ handler กลาง
+
+## Testing Strategy
+
+- **Contract:** ทุก path+method ใน `public-api.yaml` มี route และไม่มี route เกิน (`/docs`, `/openapi.json` ตอบ 404; `/v1/openapi.yaml` คืนไฟล์ contract); response ของ test หลัก (TemplateSummary, Draft, Version, Run, User, ApiKey, Health, Problem) ผ่าน schema ของ contract
+- **Security:** ไม่มี bearer → 401 ทุก route ที่ต้องมี; API key ใช้ได้แค่ render; `X-Jester-Client-IP` ถูกเชื่อเฉพาะเมื่อค่าลับตรง; ไม่มี token/รหัสผ่านใน log ที่จับได้ระหว่าง test
+- **Render:** `1250.5` ใน data ถึง data-prep เป็น `Decimal("1250.5")`; header ครบ; ชื่อไฟล์ไทยใน `Content-Disposition` แบบ `filename*=UTF-8''…`; body ใหญ่เกิน → 413
+- **Map error:** ตัวอย่างละหนึ่งของทุก code (404, 409, 412, 413, 415, 422, 428, 429, 502, 503, 504) ได้ problem+json ที่ถูกต้อง
+- **Flow ครบ (db + engine จำลอง):** setup → login → สร้าง template จาก starter → แก้ไฟล์ (If-Match) → validate → publish → สร้าง API key → render ด้วย key → ดู run
+- **Live (VM):** flow เดียวกันกับ engine/db/storage จริง
+- Coverage ≥ 90%
+
+## Boundaries
+
+- **Always:** ตาม contract เท่านั้น (เปลี่ยน contract ก่อนเปลี่ยน route), error ผ่าน handler กลาง, body ของ render/preview เป็น Decimal, ไม่ log ความลับหรือข้อมูลลูกค้า
+- **Ask first:** เพิ่ม endpoint ที่ไม่อยู่ใน contract, เปิด CORS/ให้ browser เรียกตรง, เปลี่ยนจำนวน worker หรือขีดจำกัดขนาด, เพิ่ม dependency นอกจาก fastapi/uvicorn
+- **Never:** business logic ใน route, เชื่อ `X-Jester-Client-IP` โดยไม่มีค่าลับ, คืน stack trace ให้ผู้เรียก, เปิด FastAPI docs อัตโนมัติที่ไม่ตรง contract ใน production
+
+## Success Criteria
+
+1. ทุก operation ใน contract ทำงานและผ่าน test contract (route ครบ, response ตรง schema)
+2. Flow ครบตั้งแต่ setup ถึง render ด้วย API key ผ่านทั้งแบบจำลองและบน VM จริง
+3. ทุก error code ได้ HTTP status และ problem+json ตาม contract
+4. ช่องโหว่ระดับ HTTP ที่ระบุ (ขนาด, API key ผิดที่, IP ปลอม) มี test และปิดได้
+5. `docker build` ผ่าน และ `docker compose up` (api + postgres + rustfs + gotenberg) ได้ `/v1/health` = up บน VM; coverage ≥ 90%, `ruff` สะอาด
+
+## Open Questions
+
+ปิดแล้วทั้งหมดจาก interview 14 พ.ย. 2026: เรียกผ่าน reverse proxy และ Studio อยู่ใน network ภายใน, ใช้ค่าลับร่วม `JESTER_STUDIO_KEY`, uvicorn 2 workers (ตั้งได้), ปิด docs อัตโนมัติและเสิร์ฟ `public-api.yaml` ที่ `/v1/openapi.yaml`, ทำ `infra/compose.yaml` (ไม่มี studio) ใน module นี้
+
+## Out of scope
+
+Studio UI, CORS/browser เรียกตรง, rate limit ต่อ API key, metrics/Prometheus, OpenAPI client generation, TLS (ให้ reverse proxy ทำ), async render/webhook
