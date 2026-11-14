@@ -102,6 +102,7 @@ async def build_services(settings: Settings) -> Services:
     from ..engine_client import EngineClient
     from ..render_service import RenderService, RenderSettings
     from ..template_store import S3BlobStore, TemplateStore
+    from ..themes import Themes
 
     pool = AsyncConnectionPool(settings.database_url, min_size=1, max_size=10, open=False)
     await pool.open()
@@ -124,7 +125,7 @@ async def build_services(settings: Settings) -> Services:
             token,
             banner,
         )
-    return Services(auth, store, render, closers=(engine, pool))
+    return Services(auth, store, render, Themes(pool), closers=(engine, pool))
 
 
 def create_app(settings: Settings | None = None, services: Services | None = None) -> FastAPI:

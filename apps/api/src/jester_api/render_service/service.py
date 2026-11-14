@@ -30,7 +30,7 @@ from ..report_definition.problems import Problem, error, has_errors
 from ..template_store import StoredDefinition, StoreError, TemplateStore
 from .fonts import EngineFonts
 from .runs import Caller, NewRun, Retention, Run, Runs, canonical_sha256
-from .worker import WorkerTimeout, run_in_worker
+from .worker import WorkerTimeout, prepare_in_worker, run_in_worker
 
 
 @dataclass(frozen=True)
@@ -388,6 +388,41 @@ class RenderService:
         return await self._run(
             "preview", template_id, "draft", dict(params or {}), data, caller, None, None, watermark=True
         )
+
+    async def prepared(
+        self,
+        template_id: str,
+        params: Mapping[str, Any] | None,
+        data: Any | None,
+        sample_file: str | None,
+    ) -> tuple[dict[str, Any], list[Problem]]:
+        """The draft's view model for Studio (data-prep only); errors match preview, no run is recorded."""
+        async with self._slot():
+            stored = await self._resolve(template_id, "draft")
+            if data is None:
+                data = _load_sample(stored.files, sample_file or "sample.json")
+            definition, problems = await self._definition(stored)
+            if definition is None:
+                raise RenderError("DRAFT_INVALID", 422, "the draft does not validate", problems=problems)
+            meta = {"templateId": template_id, "version": None, "renderedAt": self._now().isoformat()}
+            try:
+                result = await prepare_in_worker(
+                    definition, dict(params or {}), data, meta, timeout_s=self._settings.bind_timeout_s
+                )
+            except WorkerTimeout:
+                raise RenderError(
+                    "RENDER_TIMEOUT", 504, "preparing the data took too long", retryable=True
+                ) from None
+        if result.view is None:
+            if any(p.code == "RENDER_FAILED" for p in result.problems):
+                raise RenderError(
+                    "RENDER_FAILED", 502, "the data could not be prepared", problems=result.problems
+                )
+            raise RenderError(
+                "INPUT_INVALID", 422, "params or data do not fit the template", problems=result.problems
+            )
+        warnings = [p for p in problems if p.severity == "warning"]
+        return result.view, [*warnings, *result.problems]
 
     async def validate(self, template_id: str) -> ValidationResult:
         """load_definition plus a trial bind of every sample, for the draft at one revision."""

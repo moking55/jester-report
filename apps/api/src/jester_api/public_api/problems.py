@@ -14,6 +14,7 @@ from ..auth import AuthError
 from ..render_service import RenderError
 from ..report_definition.problems import Problem
 from ..template_store import StoreError
+from ..themes import ThemeError
 
 log = logging.getLogger("jester.api")
 
@@ -87,6 +88,12 @@ def install(app: FastAPI) -> None:
     @app.exception_handler(AuthError)
     async def _auth(_: Request, exc: AuthError) -> JSONResponse:
         return problem_response(exc.code, STATUS[exc.code], exc.message)
+
+    @app.exception_handler(ThemeError)
+    async def _theme(_: Request, exc: ThemeError) -> JSONResponse:
+        return problem_response(
+            exc.code, STATUS[exc.code], exc.message, problems=[problem_dict(p) for p in exc.problems]
+        )
 
     @app.exception_handler(RenderError)
     async def _render(_: Request, exc: RenderError) -> JSONResponse:

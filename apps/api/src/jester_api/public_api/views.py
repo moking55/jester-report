@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from ..auth import ApiKey, Session, User
 from ..render_service import Retention, Run
 from ..template_store import Asset, Draft, TemplateSummary, TextFile, Version, VersionFiles
+from ..themes import Theme
 from .problems import problem_dict
 
 
@@ -134,3 +135,14 @@ def retention(r: Retention) -> dict[str, Any]:
 
 def problems(items: list[Any]) -> list[dict[str, Any]]:
     return [problem_dict(p) for p in items]
+
+
+def theme(t: Theme) -> dict[str, Any]:
+    return {
+        "id": t.id,
+        "name": t.name,
+        "builtIn": t.built_in,
+        "tokens": t.tokens,
+        "createdBy": t.created_by,
+        "updatedAt": iso(t.updated_at),
+    }

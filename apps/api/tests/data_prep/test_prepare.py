@@ -334,3 +334,17 @@ def test_one_bad_row_gives_one_problem_not_a_cascade():
     data = sample("purchase-order")
     data["orders"][0]["details"][0]["amount"] = None  # order total fails; grand must not repeat it
     assert [p.code for p in prepare(purchase_order, {}, data, {}).problems] == ["VALUE_MISSING"]
+
+
+def test_view_model_is_plain_json_with_exact_decimal_strings(quotation, sales):
+    view = prepare(quotation, QUOTE_PARAMS, sample("quotation"), {}).prepared.view_model()
+    assert json.loads(json.dumps(view)) == view  # nothing but JSON types
+    assert view["totals"]["grand"] == "3210.00"
+    assert view["lists"]["items"]["rows"][0]["amount"] == "2501.00"
+    assert view["lists"]["items"]["groups"] == []
+    grouped = prepare(sales, SALES_PARAMS, sample("sales-grouped"), {}).prepared.view_model()
+    assert [(g["key"], g["totals"]["subtotal"]) for g in grouped["lists"]["records"]["groups"]] == [
+        ("North", "2000.00"),
+        ("South", "400.00"),
+    ]
+    assert grouped["totals"]["grand"] == "2400.00"

@@ -10,6 +10,7 @@ from fastapi import Request
 from ..auth import Auth
 from ..render_service import RenderService
 from ..template_store import TemplateStore
+from ..themes import Themes
 from .settings import Settings
 
 
@@ -18,6 +19,7 @@ class Services:
     auth: Auth
     store: TemplateStore
     render: RenderService
+    themes: Themes
     closers: tuple[Any, ...] = ()  # pool, engine client: closed at shutdown when the app built them
 
 

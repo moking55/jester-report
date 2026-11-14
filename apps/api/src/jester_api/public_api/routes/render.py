@@ -86,6 +86,15 @@ async def render(request: Request, caller: RenderCaller) -> Response:
     return pdf_response(outcome)
 
 
+@router.post("/v1/templates/{templateId}/draft/prepared")
+async def prepared(request: Request, caller: SessionCaller, templateId: str) -> dict:  # noqa: N803
+    body: PreviewBody = parse(PreviewBody, await decimal_json(request))
+    view, warnings = await services(request).render.prepared(
+        templateId, body.params, body.data, body.sampleFile
+    )
+    return {**view, "problems": views.problems(warnings)}
+
+
 @router.post("/v1/templates/{templateId}/draft/preview")
 async def preview(request: Request, caller: SessionCaller, templateId: str) -> Response:  # noqa: N803
     body: PreviewBody = parse(PreviewBody, await decimal_json(request))

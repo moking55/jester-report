@@ -81,7 +81,16 @@ def test_auth_rules_match_the_contract():
 def test_routes_with_path_ids_use_the_contract_names():
     for _, path in contract_operations():
         for name in re.findall(r"{(\w+)}", path):
-            assert name in {"templateId", "fileName", "assetName", "version", "userId", "keyId", "runId"}
+            assert name in {
+                "templateId",
+                "fileName",
+                "assetName",
+                "version",
+                "userId",
+                "keyId",
+                "runId",
+                "themeId",
+            }
 
 
 def test_schema_checker_catches_a_wrong_response():

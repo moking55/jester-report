@@ -31,6 +31,7 @@ tags:
   - name: draft
   - name: versions
   - name: runs
+  - name: themes
   - name: system
 
 security:
@@ -612,6 +613,41 @@ paths:
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '504': { $ref: '#/components/responses/RenderTimeout' }
 
+  /v1/templates/{templateId}/draft/prepared:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      tags: [draft]
+      operationId: prepareDraft
+      summary: The view model the draft's template would receive (data-prep only, no template, no PDF)
+      description: |
+        Runs data-prep on the draft in the same worker as a render. Without `data`, uses `sampleFile`
+        from the draft (default `sample.json`). Decimal numbers come back as decimal strings so nothing
+        is rounded on the way (`"3210.00"`). Nothing is recorded in the run history.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                params: { type: object, additionalProperties: true }
+                data: {}
+                sampleFile: { $ref: '#/components/schemas/TextFileName' }
+      responses:
+        '200':
+          description: The prepared view model
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PreparedData' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+        '502': { $ref: '#/components/responses/RenderFailed' }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+        '504': { $ref: '#/components/responses/RenderTimeout' }
+
   /v1/templates/{templateId}/versions:
     parameters:
       - $ref: '#/components/parameters/TemplateId'
@@ -819,6 +855,118 @@ paths:
               schema: { $ref: '#/components/schemas/RunRetention' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/themes:
+    get:
+      tags: [themes]
+      operationId: listThemes
+      summary: Every theme, the two built-in ones first
+      responses:
+        '200':
+          description: Themes
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Theme' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [themes]
+      operationId: createTheme
+      summary: Create a theme (also used by Studio's JSON import)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ThemeInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Theme' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409':
+          description: A theme with that name exists, or there are already 50 themes
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/themes/default:
+    get:
+      tags: [themes]
+      operationId: getDefaultTheme
+      summary: The theme for the login/setup pages and users who have not picked one
+      description: Public, because the login page needs it. A theme holds only colours, a font and sizes.
+      security: []
+      responses:
+        '200':
+          description: The default theme
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Theme' }
+    put:
+      tags: [themes]
+      operationId: setDefaultTheme
+      summary: Make a theme the default for everyone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [themeId]
+              additionalProperties: false
+              properties:
+                themeId: { $ref: '#/components/schemas/ThemeId' }
+      responses:
+        '200':
+          description: The new default theme
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Theme' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/themes/{themeId}:
+    parameters:
+      - { name: themeId, in: path, required: true, schema: { $ref: '#/components/schemas/ThemeId' } }
+    put:
+      tags: [themes]
+      operationId: updateTheme
+      summary: Replace a theme's name and tokens (built-in themes are 409)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ThemeInput' }
+      responses:
+        '200':
+          description: Saved
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Theme' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Built-in theme, or another theme has that name
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+    delete:
+      tags: [themes]
+      operationId: deleteTheme
+      summary: Delete a theme; if it was the default, the default goes back to `classic`
+      responses:
+        '204': { description: Deleted }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Built-in theme
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/openapi.yaml:
     get:
@@ -1200,6 +1348,81 @@ components:
         setBy: { type: [string, 'null'] }
         setAt: { type: [string, 'null'], format: date-time }
         wouldDelete: { type: [integer, 'null'], description: Only with previewDays }
+
+    PreparedData:
+      type: object
+      description: data-prep's view model; every Decimal is a decimal string
+      required: [params, data, lists, totals, problems]
+      properties:
+        params: { type: object, additionalProperties: true }
+        data: {}
+        lists:
+          type: object
+          additionalProperties:
+            type: object
+            required: [rows, groups]
+            properties:
+              rows: { type: array, items: { type: object, additionalProperties: true } }
+              groups:
+                type: array
+                items:
+                  type: object
+                  required: [key, rows, totals]
+                  properties:
+                    key: {}
+                    rows: { type: array, items: { type: object, additionalProperties: true } }
+                    totals: { type: object, additionalProperties: { type: string } }
+        totals: { type: object, additionalProperties: { type: string } }
+        problems:
+          type: array
+          description: Warnings only (errors are a 422)
+          items: { $ref: '#/components/schemas/ValidationProblem' }
+
+    ThemeId:
+      type: string
+      description: '`classic` and `suriyan` are built in; themes made in Studio get a UUID'
+      pattern: '^[a-z0-9-]{1,64}$'
+    ThemeTokens:
+      type: object
+      description: |
+        The only things a theme can set. The server checks every value against these rules, and Studio
+        checks again before a value reaches CSS; raw CSS is never accepted.
+      additionalProperties: false
+      required: [color.background, color.surface, color.surfaceAlt, color.border, color.text, color.textMuted, color.primary, color.onPrimary, color.danger, color.warning, color.success, font.family, font.size, radius, shadow, density]
+      properties:
+        color.background: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.surface: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.surfaceAlt: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.border: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.text: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.textMuted: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.primary: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.onPrimary: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.danger: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.warning: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        color.success: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
+        font.family: { type: string, enum: [TH Sarabun New, Sarabun, Noto Sans Thai, system-ui] }
+        font.size: { type: integer, minimum: 12, maximum: 18 }
+        radius: { type: integer, minimum: 0, maximum: 16 }
+        shadow: { type: string, enum: [none, soft, strong] }
+        density: { type: string, enum: [compact, comfortable] }
+    ThemeInput:
+      type: object
+      required: [name, tokens]
+      additionalProperties: false
+      properties:
+        name: { type: string, minLength: 1, maxLength: 40 }
+        tokens: { $ref: '#/components/schemas/ThemeTokens' }
+    Theme:
+      type: object
+      required: [id, name, builtIn, tokens]
+      properties:
+        id: { $ref: '#/components/schemas/ThemeId' }
+        name: { type: string }
+        builtIn: { type: boolean }
+        tokens: { $ref: '#/components/schemas/ThemeTokens' }
+        createdBy: { type: [string, 'null'] }
+        updatedAt: { type: [string, 'null'], format: date-time }
 
     Health:
       type: object

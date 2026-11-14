@@ -37,7 +37,7 @@ class FakeRender:
 
 def make_app(health: Health | None = None):
     up = health or Health("up", "up", "up", "up", "9.4.1")
-    app = create_app(SETTINGS, Services(FakeAuth(), None, FakeRender(up)))  # type: ignore[arg-type]
+    app = create_app(SETTINGS, Services(FakeAuth(), None, FakeRender(up), None))  # type: ignore[arg-type]
 
     @app.post("/test/echo-size")
     async def echo(request: Request) -> dict:

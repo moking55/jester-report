@@ -6,6 +6,8 @@ import pytest
 
 from jester_api.public_api.routes.render import content_disposition
 
+from .test_contract import assert_fits
+
 pytestmark = pytest.mark.db
 PARAMS = {"quoteId": "Q-1", "docDate": "2026-11-14"}
 DATA_JSON = (
@@ -107,3 +109,19 @@ async def test_preview_runs_and_retention(api, admin, published):
     assert saved.json()["days"] == 90 and saved.json()["setBy"] == "alice"
     assert (await api.put("/v1/runs/retention", headers=admin, json={"days": 0})).status_code == 422
     assert (await api.get("/v1/runs/retention", headers=published)).status_code == 401  # API key
+
+
+async def test_prepared_data_of_the_starter(api, admin, published):
+    response = await api.post("/v1/templates/quote/draft/prepared", headers=admin, json={"params": PARAMS})
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert_fits("PreparedData", body)
+    assert body["totals"]["grand"] == "3210.00"
+    assert body["lists"]["items"]["rows"][0]["amount"] == "2501.00"
+    runs = (await api.get("/v1/runs", headers=admin)).json()["items"]
+    assert runs == []  # not a render: nothing in the history
+
+    bad = await api.post(
+        "/v1/templates/quote/draft/prepared", headers=admin, json={"params": PARAMS, "data": {"items": "x"}}
+    )
+    assert bad.status_code == 422 and bad.json()["code"] == "INPUT_INVALID" and bad.json()["problems"]

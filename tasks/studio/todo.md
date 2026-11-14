@@ -11,12 +11,12 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Description:** contract ก่อน: `POST /v1/templates/{templateId}/draft/prepared`, `GET/POST /v1/themes`, `PUT/DELETE /v1/themes/{themeId}`, `GET/PUT /v1/themes/default` (+ schema `Theme`, `ThemeTokens`, `PreparedData`); `render-service.prepared()` (data-prep ใน worker, Decimal → string); `jester_api/themes/` (built-in `classic`/`suriyan` ในโค้ด, ตาราง `themes` + `theme_default` ใน `0004_themes.sql`, ตรวจ token ด้วย allow-list + regex); route ใน public-api
 
 **Acceptance criteria:**
-- [ ] prepared ของ starter quotation → `totals.grand == "3210.00"` และ `lists.items.rows[0].amount == "2501.00"`; data ผิด → 422 พร้อม problems
-- [ ] token ไม่อยู่ในรายการ, สีที่ไม่ใช่ `#RRGGBB` (รวม `red;}body{display:none`), ตัวเลขนอกช่วง → 422 พร้อม pointer; built-in แก้/ลบ → 409; ลบ theme ที่เป็นค่าเริ่มต้น → ค่าเริ่มต้นกลับเป็น `classic`
-- [ ] `GET /v1/themes/default` ไม่ต้อง login; test contract ของ api ผ่าน (route ครบ 43 operation)
+- [x] prepared ของ starter quotation → `totals.grand == "3210.00"` และ `lists.items.rows[0].amount == "2501.00"`; data ผิด → 422 พร้อม problems
+- [x] token ไม่อยู่ในรายการ, สีที่ไม่ใช่ `#RRGGBB` (รวม `red;}body{display:none`), ตัวเลขนอกช่วง → 422 พร้อม pointer; built-in แก้/ลบ → 409; ลบ theme ที่เป็นค่าเริ่มต้น → ค่าเริ่มต้นกลับเป็น `classic`
+- [x] `GET /v1/themes/default` ไม่ต้อง login; test contract ของ api ผ่าน (route ครบ 42 operation)
 
 **Verification:**
-- [ ] `uv run pytest tests -q` และ `-m db` (themes, prepared, contract)
+- [x] `uv run pytest tests -q` และ `-m db` (themes, prepared, contract)
 
 **Dependencies:** None
 **Files likely touched:** `openapi/public-api.yaml`, `themes/{__init__,builtin,store}.py`, `db/migrations/0004_themes.sql`, `render_service/service.py`, `public_api/routes/{themes,render}.py`, tests

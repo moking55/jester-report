@@ -26,6 +26,12 @@ from ..report_definition.problems import AssetInfo, Problem, error
 
 
 @dataclass(frozen=True)
+class PrepareOnly:
+    view: dict[str, Any] | None  # Prepared.view_model(); None when any problem is an error
+    problems: list[Problem]
+
+
+@dataclass(frozen=True)
 class WorkerResult:
     bound: Bound | None  # None when any problem is an error
     problems: list[Problem]  # prepare problems first, then bind problems
@@ -50,9 +56,17 @@ def _job(
     return WorkerResult(bound.bound, [*prepared.problems, *bound.problems])
 
 
-def _child(conn: Any, *args: Any) -> None:
+def _prepare_job(
+    definition: ReportDefinition, params: Mapping[str, Any], data: Any, meta: Mapping[str, Any]
+) -> PrepareOnly:
+    prepared = prepare(definition, params, data, meta)
+    view = prepared.prepared.view_model() if prepared.prepared is not None else None
+    return PrepareOnly(view, prepared.problems)
+
+
+def _child(conn: Any, job: Any, *args: Any) -> None:
     try:
-        result = _job(*args)
+        result = job(*args)
     except Exception as exc:  # never let the child die silently; the message has no data in it
         result = WorkerResult(
             None, [error("RENDER_FAILED", f"{type(exc).__name__} while preparing the document")]
@@ -73,10 +87,10 @@ def _context() -> Any:
     return ctx
 
 
-def _run_blocking(timeout_s: float, args: tuple[Any, ...]) -> WorkerResult:
+def _run_blocking(timeout_s: float, args: tuple[Any, ...], job: Any = _job) -> Any:
     ctx = _context()
     receive, send = ctx.Pipe(duplex=False)
-    process = ctx.Process(target=_child, args=(send, *args), daemon=True)
+    process = ctx.Process(target=_child, args=(send, job, *args), daemon=True)
     process.start()
     send.close()
     try:
@@ -105,3 +119,20 @@ async def run_in_worker(
     """prepare + bind in a fresh process; raises WorkerTimeout after `timeout_s` (the process is killed)."""
     args = (definition, dict(files), dict(assets), dict(params), data, dict(meta))
     return await asyncio.to_thread(_run_blocking, timeout_s, args)  # waiting must not block the event loop
+
+
+async def prepare_in_worker(
+    definition: ReportDefinition,
+    params: Mapping[str, Any],
+    data: Any,
+    meta: Mapping[str, Any],
+    *,
+    timeout_s: float,
+) -> PrepareOnly:
+    """data-prep alone (Studio's Prepared data tab), killed at the timeout like a render.
+
+    A crash comes back as a WorkerResult with no bound document; callers read only `.problems` then.
+    """
+    args = (definition, dict(params), data, dict(meta))
+    result = await asyncio.to_thread(_run_blocking, timeout_s, args, _prepare_job)
+    return result if isinstance(result, PrepareOnly) else PrepareOnly(None, result.problems)

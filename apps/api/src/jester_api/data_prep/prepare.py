@@ -16,7 +16,7 @@ from ..report_definition.problems import Problem, error, has_errors, pointer
 from ..report_definition.refs import field_types
 from .evaluate import CalcError, Env, evaluate
 from .formatters import FORMATTERS
-from .lists import ListView, build_lists, convert_numbers, fill_missing
+from .lists import Group, ListView, build_lists, convert_numbers, fill_missing
 from .params import check_params
 
 MAX_PROBLEMS = 50
@@ -40,6 +40,29 @@ class Prepared:
             "meta": self.meta,
             "fmt": self.fmt,
         }
+
+    def view_model(self) -> dict[str, Any]:
+        """JSON-ready copy for Studio's Prepared data tab: Decimals become exact decimal strings."""
+        return {
+            "params": _plain(self.params),
+            "data": _plain(self.data),
+            "lists": {name: _plain(view) for name, view in self.lists.items()},
+            "totals": _plain(self.totals),
+        }
+
+
+def _plain(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return format(value, "f")  # "3210.00", never "3.21E+3" or a float
+    if isinstance(value, ListView):
+        return {"rows": _plain(value.rows), "groups": [_plain(g) for g in value.groups]}
+    if isinstance(value, Group):
+        return {"key": _plain(value.key), "rows": _plain(value.rows), "totals": _plain(value.totals)}
+    if isinstance(value, Mapping):
+        return {str(k): _plain(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [_plain(v) for v in value]
+    return value
 
 
 @dataclass(frozen=True)
