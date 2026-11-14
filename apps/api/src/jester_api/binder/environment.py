@@ -44,6 +44,12 @@ class BindEnvironment(SandboxedEnvironment):
         self.template_names = frozenset(templates)
         self.warnings: list[Problem] = []
 
+    def getattr(self, obj: Any, attribute: str) -> Any:
+        # data keys win over dict methods: `lists.items` / `data.items` is the "items" key, not dict.items
+        if isinstance(obj, Mapping) and attribute in obj:
+            return obj[attribute]
+        return super().getattr(obj, attribute)
+
     def _finalize(self, value: Any) -> Any:
         # allow-list: anything else (dict, list, Group, a function like `fmt.money` without parens)
         # would print its repr - possibly with data - so it prints blank and warns instead
