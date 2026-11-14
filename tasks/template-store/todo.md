@@ -11,12 +11,12 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 **Description:** `infra/compose.dev.yaml` มี postgres 16 และ rustfs (pin เวอร์ชัน, bind 127.0.0.1); รันบน VM; ตรวจ license และระดับความพร้อมของ RustFS แล้วเขียนใน `infra/README.md`; conftest ข้าม test marker `db`/`storage` เมื่อไม่มี env
 
 **Acceptance criteria:**
-- [ ] `docker compose -f infra/compose.dev.yaml up -d` บน VM ได้ postgres และ rustfs ที่ health ผ่าน
-- [ ] README บอก license, เวอร์ชัน, ระดับความพร้อมของ RustFS และวิธีเปลี่ยนเป็น MinIO/SeaweedFS
-- [ ] test ทั้งชุดยังผ่านบนเครื่องที่ไม่มี env (marker ใหม่ถูก skip)
+- [x] `docker compose -f infra/compose.dev.yaml up -d` บน VM ได้ postgres และ rustfs ที่ health ผ่าน
+- [x] README บอก license, เวอร์ชัน, ระดับความพร้อมของ RustFS และวิธีเปลี่ยนเป็น MinIO/SeaweedFS
+- [x] test ทั้งชุดยังผ่านบนเครื่องที่ไม่มี env (marker ใหม่ถูก skip)
 
 **Verification:**
-- [ ] `psql` และ S3 PUT/GET ผ่าน tunnel ได้
+- [x] `psql` และ S3 PUT/GET ผ่าน tunnel ได้
 
 **Dependencies:** None
 **Files likely touched:** `infra/compose.dev.yaml`, `infra/README.md`, `apps/api/tests/conftest.py`, `apps/api/pyproject.toml` (markers)
@@ -27,12 +27,12 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 **Description:** `detect(name, data) -> AssetInfo`: ชนิดจาก bytes (png, jpeg, svg, ttf, otf) ต้องตรงนามสกุล; ฟอนต์อ่าน family (nameID 16 ก่อน 1) ด้วย `fonttools`; เพิ่ม dependency `fonttools`; ตัด woff2 ออกจาก `AssetName` และ content type ใน `public-api.yaml`
 
 **Acceptance criteria:**
-- [ ] TH Sarabun New Regular/Bold → `font_family == "TH Sarabun New"`; Noto Sans Thai อ่านได้
-- [ ] `.png` ที่เป็น HTML, `.ttf` ที่เป็น PNG, `.woff2` → `UNSUPPORTED_MEDIA_TYPE`
-- [ ] SVG ที่ขึ้นต้นด้วย `<?xml`/comment ผ่าน; ไฟล์ข้อความที่ไม่มี `<svg` ไม่ผ่าน
+- [x] TH Sarabun New Regular/Bold → `font_family == "TH Sarabun New"`; Noto Sans Thai อ่านได้
+- [x] `.png` ที่เป็น HTML, `.ttf` ที่เป็น PNG, `.woff2` → `UNSUPPORTED_MEDIA_TYPE`
+- [x] SVG ที่ขึ้นต้นด้วย `<?xml`/comment ผ่าน; ไฟล์ข้อความที่ไม่มี `<svg` ไม่ผ่าน
 
 **Verification:**
-- [ ] `uv run pytest tests/template_store/test_assets.py -q`
+- [x] `uv run pytest tests/template_store/test_assets.py -q`
 
 **Dependencies:** None
 **Files likely touched:** `template_store/assets.py`, `tests/template_store/test_assets.py`, `pyproject.toml`, `openapi/public-api.yaml`
@@ -43,12 +43,12 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 **Description:** `BlobStore` protocol + `MemoryBlobStore` + `S3BlobStore` (`boto3` ผ่าน `asyncio.to_thread`, key `assets/<sha256>`, `put_if_absent` = HEAD แล้ว PUT, ตรวจ sha256 ของ bytes ก่อนเขียน); เพิ่ม dependency `boto3`
 
 **Acceptance criteria:**
-- [ ] put ซ้ำด้วย bytes เดิมไม่เขียนใหม่ (นับ PUT จริงใน memory และใน S3 ด้วย HEAD)
-- [ ] sha256 ที่ไม่ตรงกับ bytes → error ไม่เขียน
-- [ ] `storage`: put/get/exists กับ RustFS จริงผ่าน
+- [x] put ซ้ำด้วย bytes เดิมไม่เขียนใหม่ (นับ PUT จริงใน memory และใน S3 ด้วย HEAD)
+- [x] sha256 ที่ไม่ตรงกับ bytes → error ไม่เขียน
+- [x] `storage`: put/get/exists กับ RustFS จริงผ่าน
 
 **Verification:**
-- [ ] `uv run pytest tests/template_store/test_blobs.py -q` และ `-m storage`
+- [x] `uv run pytest tests/template_store/test_blobs.py -q` และ `-m storage`
 
 **Dependencies:** T1 (เฉพาะ test storage)
 **Files likely touched:** `template_store/blobs.py`, `tests/template_store/test_blobs.py`, `pyproject.toml`
@@ -56,7 +56,7 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 
 ### Checkpoint A
 
-- [ ] tests T1–T3 ผ่าน (รวม `storage` บน VM), ruff สะอาด
+- [x] tests T1–T3 ผ่าน (รวม `storage` บน VM), ruff สะอาด
 
 ## Phase 2: store
 

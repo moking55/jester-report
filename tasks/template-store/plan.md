@@ -1,6 +1,6 @@
 # Implementation Plan: `template-store`
 
-สถานะ: **ร่าง รออนุมัติ** (14 พฤศจิกายน 2026)
+สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-template-store.md](../../SPEC-template-store.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -30,12 +30,12 @@ T2, T3 ไม่ต้องใช้ DB ทำคู่กับ T1 ได้
 ## Task List
 
 ### Phase 1: พื้นฐาน
-- [ ] T1: `infra/compose.dev.yaml` (postgres 16 + rustfs) บน VM + ตรวจ license/maturity ของ RustFS + marker `db`/`storage` ใน conftest
-- [ ] T2: `assets.py` — ตรวจชนิดจาก bytes, อ่าน font family; dependency `fonttools`; ตัด woff2 ออกจาก contract
-- [ ] T3: `blobs.py` — BlobStore ใน memory + S3 (`boto3`); test `storage` กับ RustFS จริง
+- [x] T1: `infra/compose.dev.yaml` (postgres 16 + rustfs) บน VM + ตรวจ license/maturity ของ RustFS + marker `db`/`storage` ใน conftest
+- [x] T2: `assets.py` — ตรวจชนิดจาก bytes, อ่าน font family; dependency `fonttools`; ตัด woff2 ออกจาก contract
+- [x] T3: `blobs.py` — BlobStore ใน memory + S3 (`boto3`); test `storage` กับ RustFS จริง
 
 ### Checkpoint A
-- [ ] tests T1–T3 ผ่าน (รวม `storage` บน VM), ruff สะอาด
+- [x] tests T1–T3 ผ่าน (รวม `storage` บน VM), ruff สะอาด
 
 ### Phase 2: store
 - [ ] T4: migrations + runner + schema + trigger immutable; migrate พร้อมกันสอง process ได้
