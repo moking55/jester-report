@@ -1,6 +1,6 @@
 # Implementation Plan: `render-service`
 
-สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
+สถานะ: **T1–T6 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
 Spec: [SPEC-render-service.md](../../SPEC-render-service.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -39,12 +39,13 @@ T1–T3 ไม่ขึ้นกับกัน
 - [x] tests T1–T3 ผ่าน (T3 บน db), ruff สะอาด
 
 ### Phase 2: service
-- [ ] T4: `service.py` — `render`: resolve version, cache definition/asset, worker, engine, provenance, map error ทุกแถวของตาราง, คิว
-- [ ] T5: `preview` (ลายน้ำ), `validate` (trial bind ทุก sample), `list_runs`/`get_run`/`last_runs`, `health`, `retention`/`set_retention`; contract `/v1/runs/retention`; `pypdf` เป็น dependency จริง
-- [ ] T6: live test บน VM (engine + db + storage): render quotation จาก starter ที่ publish, preview มี DRAFT ทุกหน้า, probe เจอ TH Sarabun New, ลูปไม่รู้จบได้ 504 ขณะ request อื่นยังตอบ
+- [x] T4: `service.py` — `render`: resolve version, cache definition/asset, worker, engine, provenance, map error ทุกแถวของตาราง, คิว
+- [x] T5: `preview` (ลายน้ำ), `validate` (trial bind ทุก sample), `list_runs`/`get_run`/`last_runs`, `health`, `retention`/`set_retention`; contract `/v1/runs/retention`; `pypdf` เป็น dependency จริง
+- [x] T6: live test บน VM (engine + db + storage): render quotation จาก starter ที่ publish, preview มี DRAFT ทุกหน้า, probe เจอ TH Sarabun New, ลูปไม่รู้จบได้ 504 ขณะ request อื่นยังตอบ
 
 ### Checkpoint B
-- [ ] Success criteria 1–5 ของ spec ผ่าน; ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] Success criteria 1–5 ของ spec ผ่าน
+- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
 
 ## Risks and Mitigations
 
