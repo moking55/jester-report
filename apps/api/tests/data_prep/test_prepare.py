@@ -285,3 +285,18 @@ def test_child_list_rows_are_filled():
     definition = load_definition(DefinitionInput(files, {}, FONTS)).definition
     p = prepare(definition, {}, sample("purchase-order"), {}).prepared
     assert [d["note"] for d in p.lists["orders"][0]["details"]] == [None, None]
+
+
+def test_nullable_child_list_is_accepted_and_null_means_empty():
+    from .conftest import fixture_files
+
+    files = fixture_files("purchase-order")
+    schema = json.loads(files["data.schema.json"])
+    schema["properties"]["orders"]["items"]["properties"]["details"]["type"] = ["array", "null"]
+    files["data.schema.json"] = json.dumps(schema)
+    loaded = load_definition(DefinitionInput(files, {}, FONTS))
+    assert loaded.problems == []
+    data = sample("purchase-order")
+    data["orders"][0]["details"] = None
+    p = prepare(loaded.definition, {}, data, {}).prepared
+    assert len(p.lists["orders"][0]["details"]) == 0 and p.lists["orders"][0]["total"] == 0

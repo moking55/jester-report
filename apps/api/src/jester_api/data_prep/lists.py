@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, overload
 
+from ..report_definition.data_schema import schema_types
 from ..report_definition.loader import ReportDefinition
 from ..report_definition.model import DECIMAL_RE, ListSpec
 from ..report_definition.problems import Problem, error, pointer
@@ -59,18 +60,13 @@ def convert_numbers(raw: Mapping[str, Any], types: Mapping[str, bool]) -> Row:
     return {k: to_number(v) if types.get(k) else v for k, v in raw.items()}
 
 
-def _types(schema: Mapping[str, Any]) -> list[Any]:
-    kind = schema.get("type")
-    return kind if isinstance(kind, list) else [kind]
-
-
 def _empty(schema: Any) -> Any:
     """Value for a declared property the caller did not send: blank object skeleton, [] or None."""
     if not isinstance(schema, Mapping):
         return None
     if isinstance(schema.get("properties"), Mapping):
         return {k: _empty(s) for k, s in schema["properties"].items()}
-    return [] if "array" in _types(schema) else None
+    return [] if "array" in schema_types(schema) else None
 
 
 def fill_missing(value: Any, schema: Any) -> Any:

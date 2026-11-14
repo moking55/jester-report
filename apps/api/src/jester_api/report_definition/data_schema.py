@@ -52,8 +52,14 @@ def _resolve(schema: dict[str, Any], json_pointer: str) -> dict[str, Any] | None
     return cur if isinstance(cur, dict) else None
 
 
+def schema_types(schema: Mapping[str, Any]) -> list[Any]:
+    """`type` as a list: "array" and ["array", "null"] both contain "array"."""
+    kind = schema.get("type")
+    return kind if isinstance(kind, list) else [kind]
+
+
 def _array_items(node: dict[str, Any] | None) -> dict[str, Any] | None:
-    if not node or node.get("type") != "array" or not isinstance(node.get("items"), dict):
+    if not node or "array" not in schema_types(node) or not isinstance(node.get("items"), dict):
         return None
     return node["items"]
 
