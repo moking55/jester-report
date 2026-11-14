@@ -59,6 +59,17 @@ def test_none_is_blank_and_objects_warn_once_per_line():
     assert all(w.severity == "warning" for w in warnings)
 
 
+def test_functions_groups_and_floats_never_print_their_repr():
+    from decimal import Decimal
+
+    from jester_api.data_prep import Group
+
+    ctx = {**CTX, "g": Group("North", [{"secret": "S"}], {}), "n": Decimal("1.50"), "i": 3, "b": True}
+    out, problems, warnings = run({"t.html": "{{ fmt.money }}|{{ g }}|{{ n }}|{{ i }}|{{ b }}"}, ctx=ctx)
+    assert problems == [] and out == "||1.50|3|True"
+    assert [w.code for w in warnings] == ["TEMPLATE_PRINTS_OBJECT"]  # once per line
+
+
 @pytest.mark.parametrize("value", ["<b>x</b>", '" onerror="alert(1)', "<script>x</script>"])
 def test_data_is_escaped(value):
     out, _, _ = run({"t.html": '<p title="{{ v }}">{{ v }}</p>'}, ctx={"v": value})

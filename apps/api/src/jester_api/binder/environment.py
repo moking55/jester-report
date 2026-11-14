@@ -3,11 +3,19 @@
 from __future__ import annotations
 
 import sys
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping
+from decimal import Decimal
 from types import TracebackType
 from typing import Any
 
-from jinja2 import FunctionLoader, StrictUndefined, TemplateNotFound, TemplateSyntaxError, UndefinedError
+from jinja2 import (
+    FunctionLoader,
+    StrictUndefined,
+    TemplateNotFound,
+    TemplateSyntaxError,
+    Undefined,
+    UndefinedError,
+)
 from jinja2.sandbox import SandboxedEnvironment, SecurityError
 
 from ..data_prep import formatters
@@ -34,21 +42,23 @@ class BindEnvironment(SandboxedEnvironment):
         self.warnings: list[Problem] = []
 
     def _finalize(self, value: Any) -> Any:
+        # allow-list: anything else (dict, list, Group, a function like `fmt.money` without parens)
+        # would print its repr - possibly with data - so it prints blank and warns instead
         if value is None:
             return ""
-        if isinstance(value, Mapping | Sequence) and not isinstance(value, str):
-            where = _caller_location(self.template_names)
-            if not any(w.file == where[0] and w.line == where[1] for w in self.warnings):
-                self.warnings.append(
-                    warning(
-                        "TEMPLATE_PRINTS_OBJECT",
-                        "prints a whole object or list; pick a field such as data.customer.name",
-                        file=where[0],
-                        line=where[1],
-                    )
+        if isinstance(value, str | int | Decimal | Undefined):  # bool is an int; Markup is a str
+            return value  # StrictUndefined raises when printed: typos and sandbox blocks stay errors
+        where = _caller_location(self.template_names)
+        if not any(w.file == where[0] and w.line == where[1] for w in self.warnings):
+            self.warnings.append(
+                warning(
+                    "TEMPLATE_PRINTS_OBJECT",
+                    "prints a whole object, list or function; pick a field such as data.customer.name",
+                    file=where[0],
+                    line=where[1],
                 )
-            return ""
-        return value
+            )
+        return ""
 
 
 def _caller_location(names: frozenset[str]) -> tuple[str | None, int | None]:

@@ -76,6 +76,29 @@ def test_commented_out_markup_is_ignored():
     assert scan("<!-- <img src='http://x/y'> <script> -->")[0] == []
 
 
+@pytest.mark.parametrize(("opener", "closer"), [("/*", "*/"), ("{#", "#}")])
+def test_data_cannot_fake_a_comment_to_hide_a_tag(opener, closer):
+    from jester_api.binder.environment import BindEnvironment, render
+
+    env = BindEnvironment({"t.html": '<p>{{ data.a }}</p><img src="{{ data.logo }}"><p>{{ data.b }}</p>'})
+    data = {"a": opener, "b": closer, "logo": "http://169.254.169.254/latest"}
+    out, _ = render(env, "t.html", {"data": data}, 10**6)
+    assert codes(scan(out)[0]) == ["RESOURCE_NOT_ALLOWED"]
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        "<p style=\"background-image: image-set('http://evil/x' 1x)\">",
+        '<p style="background: \\75 rl(http://evil/x)">',  # CSS escape for "u"
+        '<p style="background: &#117;rl(http://evil/x)">',  # html entity inside the attribute
+        "<img alt=it's src=http://evil/x>",  # unbalanced quote hides the tag from the tag regex
+    ],
+)
+def test_css_and_markup_tricks_fail_closed(html):
+    assert "RESOURCE_NOT_ALLOWED" in codes(scan(html)[0])
+
+
 def test_static_css_problems_have_lines():
     problems, _, _ = scan(
         '<link href="report.css">', files={"report.css": "a{}\nb { background: url(nope.png) }"}
