@@ -1,6 +1,6 @@
 # Implementation Plan: `auth`
 
-สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
+สถานะ: **T1–T5 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
 Spec: [SPEC-auth.md](../../SPEC-auth.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -37,11 +37,12 @@ T1 และ T2 ไม่ขึ้นกับกัน
 - [x] tests T1–T3 ผ่าน (รวม `db` บน VM), test เดิมของ template-store ผ่านหลังย้าย migration, ruff สะอาด
 
 ### Phase 2: session และ API key
-- [ ] T4: `login` (rate limit ต่อ username+IP, dummy hash, rehash), `logout`, `authenticate` (session ต่ออายุ + API key), `change_password`
-- [ ] T5: API key (`create`/`list`/`revoke`, `lastUsedAt` นาทีละครั้ง), `reset_password` + `python -m jester_api.auth reset-password`, เพิ่ม `PUT /v1/auth/password` ใน contract
+- [x] T4: `login` (rate limit ต่อ username+IP, dummy hash, rehash), `logout`, `authenticate` (session ต่ออายุ + API key), `change_password`
+- [x] T5: API key (`create`/`list`/`revoke`, `lastUsedAt` นาทีละครั้ง), `reset_password` + `python -m jester_api.auth reset-password`, เพิ่ม `PUT /v1/auth/password` ใน contract
 
 ### Checkpoint B
-- [ ] Success criteria 1–5 ของ spec ผ่าน; ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] Success criteria 1–5 ของ spec ผ่าน
+- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
 
 ## Risks and Mitigations
 

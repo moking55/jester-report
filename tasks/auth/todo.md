@@ -65,12 +65,12 @@ DB: `JESTER_TEST_DATABASE_URL=postgresql://jester:jester-dev@127.0.0.1:5432/jest
 **Description:** `login` (นับผิดต่อ username+IP 5 ครั้ง/15 นาที → `RATE_LIMITED`; ไม่มีผู้ใช้ก็ verify กับ dummy hash; rehash เมื่อ `needs_rehash`; ลบ session หมดอายุของคนนั้น), `logout`, `authenticate` (`jrs_` → ตรวจ + ต่ออายุเมื่อเหลือ < 6 ชม. ไม่เกิน 7 วัน; `jrk_` → API key ที่ยังไม่เพิกถอน), `change_password` (รหัสเดิมผิด → `UNAUTHORIZED` และนับในเกณฑ์เดียวกัน; สำเร็จ → เพิกถอน session อื่น)
 
 **Acceptance criteria:**
-- [ ] ผิดครั้งที่ 6 จาก IP เดียวใน 15 นาที → `RATE_LIMITED` แม้รหัสถูก; IP อื่น login ได้; ครบ 15 นาทีแล้ว login ได้
-- [ ] ใช้ session ตอนเหลือ 5 ชม. → expires ใหม่ = +12 ชม. (เขียน DB); ตอนเหลือ 8 ชม. → ไม่เขียน; ต่อเกิน 7 วันไม่ได้; หมดอายุ → `UNAUTHORIZED`
-- [ ] หลังเปลี่ยนรหัส: session อื่นใช้ไม่ได้, session นี้ใช้ได้, รหัสใหม่ login ได้; ข้อความ error ไม่มี password/token
+- [x] ผิดครั้งที่ 6 จาก IP เดียวใน 15 นาที → `RATE_LIMITED` แม้รหัสถูก; IP อื่น login ได้; ครบ 15 นาทีแล้ว login ได้
+- [x] ใช้ session ตอนเหลือ 5 ชม. → expires ใหม่ = +12 ชม. (เขียน DB); ตอนเหลือ 8 ชม. → ไม่เขียน; ต่อเกิน 7 วันไม่ได้; หมดอายุ → `UNAUTHORIZED`
+- [x] หลังเปลี่ยนรหัส: session อื่นใช้ไม่ได้, session นี้ใช้ได้, รหัสใหม่ login ได้; ข้อความ error ไม่มี password/token
 
 **Verification:**
-- [ ] `uv run pytest tests/auth/test_sessions.py -m db -q`
+- [x] `uv run pytest tests/auth/test_sessions.py -m db -q`
 
 **Dependencies:** T3
 **Files likely touched:** `auth/service.py`, `tests/auth/test_sessions.py`
@@ -81,12 +81,12 @@ DB: `JESTER_TEST_DATABASE_URL=postgresql://jester:jester-dev@127.0.0.1:5432/jest
 **Description:** `create_api_key` (คืน secret ครั้งเดียว), `list_api_keys` (ไม่มี secret, มี revoked), `revoke_api_key`; `lastUsedAt` เขียนไม่บ่อยกว่านาทีละครั้งใน `authenticate`; `reset_password` + `auth/__main__.py` (`reset-password <username>` อ่าน `DATABASE_URL`, พิมพ์รหัสใหม่ครั้งเดียว); เพิ่ม `PUT /v1/auth/password` ใน `public-api.yaml`
 
 **Acceptance criteria:**
-- [ ] secret ไม่อยู่ใน DB (มีแค่ sha256) และไม่อยู่ใน `list_api_keys`; เพิกถอนแล้ว `authenticate` → `UNAUTHORIZED`
-- [ ] เรียก `authenticate` ด้วย key เดิม 3 ครั้งภายใน 1 นาที → เขียน `last_used_at` ครั้งเดียว
-- [ ] `reset_password` → รหัสใหม่ login ได้, รหัสเดิมไม่ได้, ทุก session ถูกเพิกถอน; คำสั่ง `python -m jester_api.auth reset-password` ทำงานกับ DB จริง
+- [x] secret ไม่อยู่ใน DB (มีแค่ sha256) และไม่อยู่ใน `list_api_keys`; เพิกถอนแล้ว `authenticate` → `UNAUTHORIZED`
+- [x] เรียก `authenticate` ด้วย key เดิม 3 ครั้งภายใน 1 นาที → เขียน `last_used_at` ครั้งเดียว
+- [x] `reset_password` → รหัสใหม่ login ได้, รหัสเดิมไม่ได้, ทุก session ถูกเพิกถอน; คำสั่ง `python -m jester_api.auth reset-password` ทำงานกับ DB จริง
 
 **Verification:**
-- [ ] `uv run pytest tests/auth -m db -q --cov=jester_api.auth` ≥ 90%
+- [x] `uv run pytest tests/auth -m db -q --cov=jester_api.auth` ≥ 90%
 
 **Dependencies:** T4
 **Files likely touched:** `auth/{service,__main__}.py`, `tests/auth/test_api_keys.py`, `tests/auth/test_reset.py`, `openapi/public-api.yaml`
@@ -94,5 +94,5 @@ DB: `JESTER_TEST_DATABASE_URL=postgresql://jester:jester-dev@127.0.0.1:5432/jest
 
 ### Checkpoint B
 
-- [ ] Success criteria 1–5 ของ spec ผ่าน
+- [x] Success criteria 1–5 ของ spec ผ่าน (32 tests db บน VM, coverage auth 99%)
 - [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
