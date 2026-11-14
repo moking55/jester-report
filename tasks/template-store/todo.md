@@ -111,4 +111,4 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 ### Checkpoint B
 
 - [x] Success criteria 1–5 ของ spec ผ่าน (404 tests รวม db/storage บน VM, coverage template_store 97%)
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (review แล้ว แก้ข้อ 1: NUL ในไฟล์ข้อความเป็น INPUT_INVALID)

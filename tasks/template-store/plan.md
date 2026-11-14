@@ -1,6 +1,6 @@
 # Implementation Plan: `template-store`
 
-สถานะ: **T1–T6 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
+สถานะ: **เสร็จ — Checkpoint B ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-template-store.md](../../SPEC-template-store.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -44,7 +44,7 @@ T2, T3 ไม่ต้องใช้ DB ทำคู่กับ T1 ได้
 
 ### Checkpoint B
 - [x] Success criteria 1–5 ของ spec ผ่าน
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (review แล้ว แก้ข้อ 1: NUL ในไฟล์ข้อความเป็น INPUT_INVALID)
 
 ## Risks and Mitigations
 

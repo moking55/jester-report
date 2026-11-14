@@ -307,6 +307,8 @@ class TemplateStore:
         self, template_id: str, name: str, content: str, expected_revision: int, by: str
     ) -> int:
         _check(TEXT_FILE, name, "file")
+        if "\x00" in content:  # PostgreSQL text cannot hold NUL; psycopg would raise a bare DataError
+            raise StoreError("INPUT_INVALID", "text files cannot contain NUL characters")
         if len(content.encode("utf-8")) > MAX_TEXT_BYTES:
             raise StoreError("PAYLOAD_TOO_LARGE", "a text file is at most 1 MB")
         async with self._db.connection() as conn, conn.transaction():
