@@ -80,13 +80,13 @@
 **Description:** `bind(definition, files, assets, prepared)` รวม T2–T4: render template/header/footer (คืน error ของทุกไฟล์ในครั้งเดียว), ห่อ, ตรวจ resource, คืน `BindResult`; test ด้วย fixture 3 แบบ + sample จาก `prepare`
 
 **Acceptance criteria:**
-- [ ] fixture 3 แบบ bind ผ่าน: `3,210.00`, `สามพันสองร้อยสิบบาทถ้วน`, ชื่อบริษัทใน header, `pageNumber` ใน footer, `report.css` ใน `files`, `logo.png` ใน `asset_names`
-- [ ] ทุกแถวของ "กติกาค่าที่หายไป" ให้ผลตามตารางผ่าน `prepare` → `bind`
-- [ ] SSRF ผ่าน data (รวม `|safe`) ถูกจับ; bind ซ้ำได้ bytes เดิม
-- [ ] ขีดจำกัด 20 MB เป็นขนาดรวมของทุกไฟล์ (ส่ง budget ที่เหลือต่อจากไฟล์ก่อน)
+- [x] fixture 3 แบบ bind ผ่าน: `3,210.00`, `สามพันสองร้อยสิบบาทถ้วน`, ชื่อบริษัทใน header, `pageNumber` ใน footer, `report.css` ใน `files`, `logo.png` ใน `asset_names`
+- [x] ทุกแถวของ "กติกาค่าที่หายไป" ให้ผลตามตารางผ่าน `prepare` → `bind`
+- [x] SSRF ผ่าน data (รวม `|safe`) ถูกจับ; bind ซ้ำได้ bytes เดิม
+- [x] ขีดจำกัด 20 MB เป็นขนาดรวมของทุกไฟล์ (ส่ง budget ที่เหลือต่อจากไฟล์ก่อน)
 
 **Verification:**
-- [ ] `uv run pytest tests/binder -q --cov=jester_api.binder` ≥ 90%
+- [x] `uv run pytest tests/binder -q --cov=jester_api.binder` ≥ 90%
 
 **Dependencies:** T1–T4
 **Files likely touched:** `binder/{__init__,bind}.py`, `tests/binder/test_bind.py`
@@ -97,13 +97,13 @@
 **Description:** (ตัดสินแล้วจาก review Phase 1: allow-list ของ engine เป็นข้อบังคับในทุกกรณี ไม่ใช่แค่ทางถอย เพราะ regex ของ binder จับ CSS/markup แปลก ๆ ได้ไม่ครบทุกแบบ) ตรวจ `gotenberg --help` ใน `jester/gotenberg:9.4.1-th1`; เพิ่ม args `--chromium-disable-javascript`, `--chromium-allow-list` (และ `--chromium-deny-private-ips` ถ้ามี); รัน spike SP-A/B/C ซ้ำบน VM; เพิ่ม live test ของ binder (marker `engine`); บันทึก args ใน infra และ SPEC-engine-client.md
 
 **Acceptance criteria:**
-- [ ] 500 แถว 19 หน้า: เลขหน้า 1/19…19/19 ครบ, หัวตารางซ้ำทุกหน้า (poppler); SP-A/B/C ผ่านเหมือนเดิม
-- [ ] HTML ที่มี `<img src="http://…">` ส่งตรงเข้า engine (ข้าม binder) ถูกปฏิเสธ
-- [ ] live: fixture ใบเสนอราคาได้ยอดและไทยครบ, TH Sarabun New ทั้ง body และ header/footer
-- [ ] ถ้าเลขหน้าหาย: เปิด JS ไว้ ใช้แค่ allow-list และบันทึกเหตุผล
+- [x] 500 แถว 19 หน้า: เลขหน้า 1/19…19/19 ครบ, หัวตารางซ้ำทุกหน้า (poppler); SP-A/B/C ผ่านเหมือนเดิม
+- [x] HTML ที่มี `<img src="http://…">` ส่งตรงเข้า engine (ข้าม binder) ถูกปฏิเสธ
+- [x] live: fixture ใบเสนอราคาได้ยอดและไทยครบ, TH Sarabun New ทั้ง body และ header/footer
+- [x] ถ้าเลขหน้าหาย: เปิด JS ไว้ ใช้แค่ allow-list และบันทึกเหตุผล (ไม่ต้องใช้: เลขหน้าครบ 19/19 เมื่อปิด JS)
 
 **Verification:**
-- [ ] `JESTER_ENGINE_URL=... uv run pytest -m engine -q` และ manifest ของ spike ใน `spikes/m0/evidence`
+- [x] `GOTENBERG_URL=... uv run pytest -m engine -q` และ manifest ของ spike ใน `spikes/m0/evidence`
 
 **Dependencies:** T5; VM `10.0.1.29`
 **Files likely touched:** `infra/gotenberg/*`, `SPEC-engine-client.md`, `spikes/m0/*`, `tests/binder/test_bind_engine.py`
@@ -111,5 +111,5 @@
 
 ### Checkpoint B
 
-- [ ] Success criteria 1–6 ของ spec ผ่าน
+- [x] Success criteria 1–6 ของ spec ผ่าน (367 tests รวม live 4 ตัว, coverage binder 99%, spike รอบ 3)
 - [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป

@@ -66,6 +66,23 @@ SP-B (6 variations) และ SP-C (2 variations) ผ่านทุก check �
 - ต้นทุน: ต้อง build และดูแล image `jester/gotenberg` เอง (rebuild เมื่อ Gotenberg ออกเวอร์ชันใหม่) และแจก GPL notice ของ TH Sarabun New ไปกับ image
 - Image ทางการ (`gotenberg/gotenberg:9.4.1`) ยังอยู่บน VM ใช้ย้อนกลับได้
 
+## รอบที่ 3: engine แบบปิด JavaScript และ allow-list (14 พ.ย. 2026, SPEC-binder)
+
+Image เดิม `jester/gotenberg:9.4.1-th1` เพิ่ม args `--api-start-timeout=90s --chromium-disable-javascript=true --chromium-allow-list=^file:///tmp/.* --chromium-deny-private-ips=true --chromium-deny-public-ips=true` (flag ทั้งหมดยืนยันจาก `gotenberg --help` ของ 9.4.1) รัน SP-A/B/C 1 รอบ manifest ที่ `evidence/sp-*-hardened-manifest.json`
+
+| ตรวจ | ผล |
+| --- | --- |
+| SP-A/B/C (poppler) | เท่ารอบ 2 ทุก variant (`fallback-noto` fail ตามคาด) |
+| 500 แถว 19 หน้า: เลขหน้าใน footer | 19/19 หน้า (`หน้าN/19`, poppler ทีละหน้า) |
+| 500 แถว: หัวตารางซ้ำ | 19/19 หน้า |
+| JavaScript ใน body | ไม่ทำงาน (ข้อความที่ script จะเขียนไม่ปรากฏ) |
+| `<img>`/CSS `url()` ไป 169.254.169.254, 10.x, IP ภายนอก, `file:///etc/passwd` | engine บล็อกทุกกรณี (log `outbound request blocked by the Chromium filters`) |
+| `data:` URI | ยังแสดงได้ |
+
+ข้อสังเกต:
+- **URL ที่ถูกบล็อกไม่ทำให้ render fail:** ได้ PDF ที่รูปหายไปเฉย ๆ แม้มี `failOnResourceLoadingFailed` การตรวจของ `binder` จึงยังจำเป็นเพื่อให้ผู้ใช้เห็นปัญหา
+- **ต้องใช้ `--api-start-timeout`:** ค่า default 30 วินาทีทำให้ container หยุดเองระหว่าง Chromium กำลังเปิด
+
 ## การตัดสินใจ (ปิดครบแล้ว)
 
 | # | เรื่อง | ทางเลือก | ผลกระทบ |

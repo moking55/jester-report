@@ -1,6 +1,6 @@
 # Implementation Plan: `binder`
 
-สถานะ: **Phase 1 เสร็จ (T1–T4) — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
+สถานะ: **T1–T6 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
 Spec: [SPEC-binder.md](../../SPEC-binder.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -40,11 +40,12 @@ T1–T4 ไม่ขึ้นกับกัน (ไฟล์แยก); T6 ต�
 - [x] tests T1–T4 ผ่าน, ruff สะอาด, test เดิมทั้งหมดยังผ่าน
 
 ### Phase 2: รวมและยืนยันกับ engine จริง
-- [ ] T5: `bind()` — รวมทุกขั้น, fixture 3 แบบ, ตารางค่าที่หาย, escape, SSRF, determinism
-- [ ] T6: args ป้องกันของ engine + spike ซ้ำ + live test ของ binder
+- [x] T5: `bind()` — รวมทุกขั้น, fixture 3 แบบ, ตารางค่าที่หาย, escape, SSRF, determinism
+- [x] T6: args ป้องกันของ engine + spike ซ้ำ + live test ของ binder
 
 ### Checkpoint B
-- [ ] Success criteria 1–6 ของ spec ผ่าน; ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] Success criteria 1–6 ของ spec ผ่าน
+- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
 
 ## Risks and Mitigations
 

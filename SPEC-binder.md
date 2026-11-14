@@ -123,6 +123,7 @@ Render หยุดที่ error แรกของแต่ละไฟล์
   - SP-A/B/C ผ่านทุก check เหมือนเดิม
   - URL ภายนอกและในเครือข่ายภายในถูก engine ปฏิเสธ แม้ไม่ผ่านการตรวจของ `binder`
 - ถ้าเลขหน้าหายเมื่อปิด JS: เปิด JS ไว้ และใช้แค่ allow-list
+- **ผลจริง (14 พ.ย. 2026, spike รอบ 3):** ผ่านทุกเงื่อนไข เลขหน้า 19/19 จึงปิด JS ได้ ข้อควรรู้: URL ที่ engine บล็อกไม่ทำให้ render fail (ได้ PDF ที่รูปหาย) จึงต้องมีการตรวจของ `binder` เป็นด่านแรกเสมอ; ต้องเพิ่ม `--api-start-timeout=90s` ไม่งั้น container หยุดเองตอนเปิด
 - กระทบ `infra/` (args ของ container) และ SPEC-engine-client.md (บันทึก args); การแบ่งหน้าทั้งหมดใน v1 ยังเป็น CSS + Chromium (หัวตารางซ้ำ, `break-*`, เลขหน้า) ไม่ใช้ JS ของ template
 
 ## Tech Stack
@@ -135,7 +136,7 @@ Python ≥3.11, `jinja2` (มีแล้ว, ใช้ `jinja2.sandbox.Sandboxe
 cd apps/api
 uv run ruff check . && uv run ruff format --check .
 uv run pytest tests/binder tests/data_prep -q --cov=jester_api.binder --cov-report=term-missing
-uv run pytest tests/binder -q -m engine   # live: bind fixture แล้ว render กับ jester/gotenberg จริง (ต้องมี JESTER_ENGINE_URL)
+uv run pytest tests/binder -q -m engine   # live: bind fixture แล้ว render กับ jester/gotenberg จริง (ต้องมี GOTENBERG_URL)
 ```
 
 ## Project Structure
