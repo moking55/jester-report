@@ -111,4 +111,4 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 ### Checkpoint B
 
 - [x] Success criteria 1–5 ของ spec ผ่าน (25 tests db + live บน compose ของ VM, coverage public_api 93%)
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (review แล้ว แก้ข้อ 1–2: healthcheck ของ rustfs, คำเตือนรหัส DB)

@@ -1,6 +1,6 @@
 # Implementation Plan: `public-api`
 
-สถานะ: **T1–T6 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
+สถานะ: **เสร็จ — Checkpoint B ผ่าน** (15 พฤศจิกายน 2026)
 Spec: [SPEC-public-api.md](../../SPEC-public-api.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -47,7 +47,7 @@ T2–T4 ขึ้นกับ T1 แต่ไม่ขึ้นกับกั�
 
 ### Checkpoint B
 - [x] Success criteria 1–5 ของ spec ผ่าน
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (review แล้ว แก้ข้อ 1–2: healthcheck ของ rustfs, คำเตือนรหัส DB)
 
 ## Risks and Mitigations
 

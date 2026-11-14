@@ -21,7 +21,7 @@ services:
     ports: ["${JESTER_API_PORT:-8000}:8000"]
     depends_on:
       postgres: { condition: service_healthy }
-      rustfs: { condition: service_started }
+      rustfs: { condition: service_healthy }
       gotenberg: { condition: service_started }
     restart: unless-stopped
 
@@ -44,6 +44,10 @@ services:
       RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
       RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
     volumes: [rustfs-data:/data]
+    healthcheck:  # the api creates its bucket at start-up, so it must wait until storage answers
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:9000/health"]
+      interval: 5s
+      retries: 20
     restart: unless-stopped
 
   gotenberg:
