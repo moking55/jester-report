@@ -1,4 +1,14 @@
 from .runs import Caller, Retention, Run
-from .service import RenderError, RenderOutcome, RenderService, RenderSettings
+from .service import Health, RenderError, RenderOutcome, RenderService, RenderSettings, ValidationResult
 
-__all__ = ["Caller", "RenderError", "RenderOutcome", "RenderService", "RenderSettings", "Retention", "Run"]
+__all__ = [
+    "Caller",
+    "Health",
+    "RenderError",
+    "RenderOutcome",
+    "RenderService",
+    "RenderSettings",
+    "Retention",
+    "Run",
+    "ValidationResult",
+]

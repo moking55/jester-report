@@ -1,33 +1,13 @@
-import io
-
 import httpx
 import respx
-from pypdf import PdfWriter
-from pypdf.generic import DictionaryObject, NameObject
 
 from jester_api.engine_client import EngineClient
 from jester_api.render_service.fonts import EngineFonts
 
+from .conftest import pdf_with_font
+
 BASE = "http://engine.test"
 INSTALLED = {"TH Sarabun New": "THSarabunNew", "Noto Sans Thai": "NotoSansThai-Regular"}
-
-
-def pdf_with_font(base_font: str) -> bytes:
-    writer = PdfWriter()
-    page = writer.add_blank_page(100, 100)
-    font = DictionaryObject(
-        {
-            NameObject("/Type"): NameObject("/Font"),
-            NameObject("/Subtype"): NameObject("/Type0"),
-            NameObject("/BaseFont"): NameObject(f"/ABCDEF+{base_font}"),
-        }
-    )
-    page[NameObject("/Resources")] = DictionaryObject(
-        {NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})}
-    )
-    out = io.BytesIO()
-    writer.write(out)
-    return out.getvalue()
 
 
 def engine_answer(request: httpx.Request) -> httpx.Response:

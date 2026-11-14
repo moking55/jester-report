@@ -518,3 +518,11 @@ class TemplateStore:
 
     async def asset_bytes(self, sha256: str) -> bytes:
         return await self._blobs.get(sha256)
+
+    async def storage_up(self) -> bool:
+        """For /v1/health: can object storage be asked anything right now?"""
+        try:
+            await self._blobs.exists("0" * 64)
+            return True
+        except Exception:  # any failure means "down" for health; the cause is in the storage logs
+            return False

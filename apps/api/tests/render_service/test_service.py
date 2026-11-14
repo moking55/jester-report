@@ -1,51 +1,15 @@
 import asyncio
-import uuid
 
 import httpx
 import pytest
-import respx
 
-from jester_api.auth import Principal, User
 from jester_api.engine_client import EngineClient
 from jester_api.render_service import RenderError, RenderService, RenderSettings
-from jester_api.template_store import MemoryBlobStore, TemplateStore
 
-from .test_fonts import pdf_with_font
+from .conftest import ALICE, BASE, KEY, PARAMS, SAMPLE, pdf_with_font
 
 pytestmark = pytest.mark.db
-BASE = "http://engine.test"
-ALICE = Principal("user", "alice", user=User(uuid.uuid4(), "alice", None, None))  # type: ignore[arg-type]
-KEY = Principal("api_key", "api-key:erp", api_key_id=uuid.uuid4())
-PARAMS = {"quoteId": "Q-1", "docDate": "2026-11-14"}
-SAMPLE = {
-    "company": {"name": "บริษัท ตัวอย่าง จำกัด"},
-    "customer": {"name": "ลูกค้า"},
-    "discount": "100.70",
-    "items": [{"id": "QL01", "description": "x", "qty": 2, "unitPrice": "1250.50"}],
-}
 ENDLESS = "{% for i in range(100000) %}{% for j in range(100000) %}{% endfor %}{% endfor %}"
-
-
-@pytest.fixture
-def engine_route():
-    with respx.mock(base_url=BASE, assert_all_called=False) as mock:
-        mock.get("/health").mock(return_value=httpx.Response(200, json={"status": "up"}))
-        mock.get("/version").mock(return_value=httpx.Response(200, text="9.4.1"))
-        yield mock.post("/forms/chromium/convert/html").mock(
-            return_value=httpx.Response(
-                200, content=pdf_with_font("THSarabunNew"), headers={"Gotenberg-Trace": "t1"}
-            )
-        )
-
-
-@pytest.fixture
-async def setup(pool, clock, engine_route):
-    blobs = MemoryBlobStore()
-    store = TemplateStore(pool, blobs)
-    await store.create("quote", "Q", "quotation", "alice")
-    await store.publish("quote", 1, None, "alice")
-    async with EngineClient(BASE) as engine:
-        yield store, RenderService(store, engine, pool, RenderSettings(bind_timeout_s=3), clock), blobs
 
 
 async def failure(awaitable) -> RenderError:
@@ -104,11 +68,13 @@ async def test_font_gone_from_engine_is_502(setup, engine_route):
     assert (err.code, err.http_status) == ("FONT_MISSING", 502)
 
 
-async def test_endless_template_times_out(setup):
-    store, service, _ = setup
+async def test_endless_template_times_out(setup, pool, clock):
+    store, _, _ = setup
     await store.put_file("quote", "template.html", ENDLESS, 1, "alice")
     await store.publish("quote", 2, None, "alice")
-    err = await failure(service.render("quote", 2, PARAMS, SAMPLE, ALICE))
+    async with EngineClient(BASE) as engine:
+        quick = RenderService(store, engine, pool, RenderSettings(bind_timeout_s=3), clock)
+        err = await failure(quick.render("quote", 2, PARAMS, SAMPLE, ALICE))
     assert (err.code, err.http_status, err.retryable) == ("RENDER_TIMEOUT", 504, True)
 
 

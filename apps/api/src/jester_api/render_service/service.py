@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import dataclasses
 import hashlib
 import io
+import json
 import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator, Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from decimal import Decimal
 from typing import Any, Literal
 
 from psycopg_pool import AsyncConnectionPool
@@ -23,10 +26,10 @@ from ..report_definition import DefinitionInput, load_definition
 from ..report_definition.lint import engine_font_candidates
 from ..report_definition.loader import ReportDefinition
 from ..report_definition.model import parse_report_json
-from ..report_definition.problems import Problem
+from ..report_definition.problems import Problem, error, has_errors
 from ..template_store import StoredDefinition, StoreError, TemplateStore
 from .fonts import EngineFonts
-from .runs import Caller, NewRun, Runs, canonical_sha256
+from .runs import Caller, NewRun, Retention, Run, Runs, canonical_sha256
 from .worker import WorkerTimeout, run_in_worker
 
 
@@ -186,6 +189,8 @@ class RenderService:
         self, stored: StoredDefinition, params: Mapping[str, Any], data: Any, meta: Mapping[str, Any]
     ) -> tuple[Bound, list[Problem]]:
         definition, problems = await self._definition(stored)
+        if definition is None and stored.version is None:  # the user's own draft: fix and retry
+            raise RenderError("DRAFT_INVALID", 422, "the draft does not validate", problems=problems)
         if definition is None:
             # a published version that no longer loads, e.g. a font was removed from the engine
             code = "FONT_MISSING" if any(p.code == "FONT_MISSING" for p in problems) else "RENDER_FAILED"
@@ -367,6 +372,108 @@ class RenderService:
             )
         )
 
+    # ---- preview and validate --------------------------------------------------------------------------
+    async def preview(
+        self,
+        template_id: str,
+        params: Mapping[str, Any] | None,
+        data: Any | None,
+        sample_file: str | None,
+        caller: Principal,
+    ) -> RenderOutcome:
+        """The draft through the same pipeline as render, with a DRAFT watermark; no data = a sample file."""
+        if data is None:
+            stored = await self._resolve(template_id, "draft")
+            data = _load_sample(stored.files, sample_file or "sample.json")
+        return await self._run(
+            "preview", template_id, "draft", dict(params or {}), data, caller, None, None, watermark=True
+        )
+
+    async def validate(self, template_id: str) -> ValidationResult:
+        """load_definition plus a trial bind of every sample, for the draft at one revision."""
+        async with self._slot():
+            stored = await self._resolve(template_id, "draft")
+            definition, problems = await self._definition(stored)
+            if definition is not None:
+                params = placeholder_params(definition)
+                for sample_name in definition.report.data.samples:
+                    problems += await self._trial_bind(stored, definition, sample_name, params)
+        return ValidationResult(not has_errors(problems), stored.revision or 0, problems)
+
+    async def _trial_bind(
+        self, stored: StoredDefinition, definition: ReportDefinition, sample_name: str, params: dict[str, Any]
+    ) -> list[Problem]:
+        data = json.loads(stored.files[sample_name], parse_float=Decimal)  # load_definition checked it parses
+        meta = {"templateId": stored.template_id, "version": None, "renderedAt": self._now().isoformat()}
+        try:
+            result = await run_in_worker(
+                definition,
+                stored.files,
+                stored.assets,
+                params,
+                data,
+                meta,
+                timeout_s=self._settings.bind_timeout_s,
+            )
+        except WorkerTimeout:
+            return [
+                error(
+                    "RENDER_TIMEOUT",
+                    f"rendering {sample_name} took longer than {self._settings.bind_timeout_s:g} s",
+                    file="template.html",
+                )
+            ]
+        # data problems point into the sample, so say which sample
+        return [p if p.file else dataclasses.replace(p, file=sample_name) for p in result.problems]
+
+    # ---- runs, retention, health -----------------------------------------------------------------------
+    async def list_runs(
+        self, template_id: str | None, status: str | None, limit: int = 50, before: str | None = None
+    ) -> tuple[list[Run], str | None]:
+        return await self._runs.list(template_id, status, limit, before)
+
+    async def get_run(self, run_id: str) -> Run:
+        run = await self._runs.get(run_id)
+        if run is None:
+            raise RenderError("NOT_FOUND", 404, "run not found")
+        return run
+
+    async def last_runs(self, template_ids: list[str]) -> dict[str, Run]:
+        return await self._runs.last(template_ids)
+
+    async def retention(self, preview_days: int | None = None) -> Retention:
+        try:
+            return await self._runs.retention(preview_days)
+        except ValueError as exc:
+            raise RenderError("INPUT_INVALID", 422, str(exc)) from None
+
+    async def set_retention(self, days: int | None, set_by: str) -> Retention:
+        try:
+            return await self._runs.set_retention(days, set_by)
+        except ValueError as exc:
+            raise RenderError("INPUT_INVALID", 422, str(exc)) from None
+
+    async def health(self) -> Health:
+        try:
+            async with self._db.connection() as conn:
+                await conn.execute("SELECT 1")
+            database = "up"
+        except Exception:  # any failure is "down" for health; details are in the database logs
+            database = "down"
+        storage = "up" if await self._store.storage_up() else "down"
+        try:
+            engine = await self._engine.health()
+            engine_status, engine_version = ("up" if engine.up else "down"), engine.version
+        except EngineError:
+            engine_status, engine_version = "down", None
+        if database == "down":
+            status = "down"
+        elif storage == "down" or engine_status == "down":
+            status = "degraded"
+        else:
+            status = "up"
+        return Health(status, database, storage, engine_status, engine_version)
+
 
 _WATERMARK = (
     '<div aria-hidden="true" style="position: fixed; top: 40%; left: 0; width: 100%; text-align: center; '
@@ -380,3 +487,56 @@ def _with_watermark(index_html: bytes) -> bytes:
     text = index_html.decode("utf-8")
     cut = text.rfind("</body>")
     return (text[:cut] + _WATERMARK + text[cut:] if cut != -1 else text + _WATERMARK).encode("utf-8")
+
+
+@dataclass(frozen=True)
+class ValidationResult:
+    valid: bool
+    revision: int
+    problems: list[Problem]
+
+
+@dataclass(frozen=True)
+class Health:
+    status: Literal["up", "degraded", "down"]
+    database: str
+    object_storage: str
+    engine: str
+    engine_version: str | None
+
+
+# trial binds of samples need params; required ones without a default get a stand-in of the right type
+_PLACEHOLDERS: dict[str, Any] = {
+    "string": "SAMPLE",
+    "integer": 1,
+    "decimal": Decimal("1"),
+    "boolean": False,
+    "date": "2000-01-01",
+}
+
+
+def placeholder_params(definition: ReportDefinition) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for name, spec in definition.report.parameters.items():
+        if spec.required:
+            out[name] = (spec.values or [""])[0] if spec.type == "enum" else _PLACEHOLDERS[spec.type]
+    return out
+
+
+def _load_sample(files: Mapping[str, str], name: str) -> Any:
+    if name not in files:
+        raise RenderError(
+            "INPUT_INVALID",
+            422,
+            f"{name} is not in the draft",
+            problems=[error("FILE_MISSING", f"{name} is not in the draft")],
+        )
+    try:
+        return json.loads(files[name], parse_float=Decimal)
+    except json.JSONDecodeError as exc:
+        raise RenderError(
+            "INPUT_INVALID",
+            422,
+            f"{name} is not valid JSON",
+            problems=[error("JSON_INVALID", exc.msg, file=name, line=exc.lineno, column=exc.colno)],
+        ) from None
