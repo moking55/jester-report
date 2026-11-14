@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from jester_api.data_prep import prepare
-from jester_api.report_definition import DefinitionInput, load_definition
+from jester_api.report_definition import AssetInfo, DefinitionInput, load_definition
 
 from .conftest import FONTS, sample
 
@@ -300,3 +300,37 @@ def test_nullable_child_list_is_accepted_and_null_means_empty():
     data["orders"][0]["details"] = None
     p = prepare(loaded.definition, {}, data, {}).prepared
     assert len(p.lists["orders"][0]["details"]) == 0 and p.lists["orders"][0]["total"] == 0
+
+
+def _nullable(name, *path):
+    """Fixture definition whose field at `path` (through properties/items) also accepts null."""
+    from .conftest import fixture_files
+
+    files = fixture_files(name)
+    schema = json.loads(files["data.schema.json"])
+    node = schema
+    for part in path:
+        node = node["items"] if part == "[]" else node["properties"][part]
+    node["type"] = [node["type"], "null"]
+    files["data.schema.json"] = json.dumps(schema)
+    return load_definition(
+        DefinitionInput(files, {"logo.png": AssetInfo("image/png", "ab" * 32)}, FONTS)
+    ).definition
+
+
+def test_one_bad_row_gives_one_problem_not_a_cascade():
+    quotation = _nullable("quotation", "items", "[]", "unitPrice")
+    data = sample("quotation")
+    data["items"][1]["unitPrice"] = None  # computed amount fails; subtotal/net/vat/grand must not repeat it
+    problems = prepare(quotation, QUOTE_PARAMS, data, {}).problems
+    assert [(p.code, p.pointer) for p in problems] == [("VALUE_MISSING", "/data/items/1")]
+
+    sales = _nullable("sales-grouped", "records", "[]", "amount")
+    data = sample("sales-grouped")
+    data["records"][1]["amount"] = None  # group subtotal fails; grand must not repeat it
+    assert [p.code for p in prepare(sales, SALES_PARAMS, data, {}).problems] == ["VALUE_MISSING"]
+
+    purchase_order = _nullable("purchase-order", "orders", "[]", "details", "[]", "amount")
+    data = sample("purchase-order")
+    data["orders"][0]["details"][0]["amount"] = None  # order total fails; grand must not repeat it
+    assert [p.code for p in prepare(purchase_order, {}, data, {}).problems] == ["VALUE_MISSING"]

@@ -112,8 +112,10 @@ class _Builder:
         types = field_types(item_schema)
         rows: list[Row] = []
         seen: dict[Any, str] = {}
+        list_start = len(self.problems)
         for i, raw in enumerate(items):
             row_ptr = f"{data_ptr}{spec.path}/{i}"
+            row_start = len(self.problems)
             row = fill_missing(convert_numbers(raw, types), item_schema)
             ident = row.get(spec.id)
             if ident is None:
@@ -134,10 +136,13 @@ class _Builder:
                 view = self.build(f"{key}.{child_name}", child, raw, f"{def_ptr}/lists/{child_name}", row_ptr)
                 row[child_name] = view
                 children[child_name] = view.rows
-            self._eval_set(f"{def_ptr}/totals", Env(row, children), row, row_ptr)
+            # a failed field or child list already has its problem; totals over it would only repeat it
+            if len(self.problems) == row_start:
+                self._eval_set(f"{def_ptr}/totals", Env(row, children), row, row_ptr)
             rows.append(row)
         rows = self._sort(spec, rows, data_ptr)
-        groups = self._group(spec, rows, def_ptr, f"{data_ptr}{spec.path}") if spec.groupBy else []
+        clean = len(self.problems) == list_start
+        groups = self._group(spec, rows, def_ptr, f"{data_ptr}{spec.path}", clean) if spec.groupBy else []
         return ListView(rows, groups)
 
     def _sort(self, spec: ListSpec, rows: list[Row], data_ptr: str) -> list[Row]:
@@ -155,14 +160,14 @@ class _Builder:
             return rows
         return sorted(rows, key=lambda r: tuple(_sort_key(r[f]) for f in fields))
 
-    def _group(self, spec: ListSpec, rows: list[Row], def_ptr: str, list_ptr: str) -> list[Group]:
+    def _group(self, spec: ListSpec, rows: list[Row], def_ptr: str, list_ptr: str, calc: bool) -> list[Group]:
         assert spec.groupBy is not None
         groups: list[Group] = []
         for row in rows:
             if not groups or groups[-1].key != row.get(spec.groupBy.key):
                 groups.append(Group(row.get(spec.groupBy.key), [], {}))
             groups[-1].rows.append(row)
-        for g in groups:
+        for g in groups if calc else ():
             self._eval_set(f"{def_ptr}/groupBy/totals", Env(g.totals, {"": g.rows}), g.totals, list_ptr)
         return groups
 

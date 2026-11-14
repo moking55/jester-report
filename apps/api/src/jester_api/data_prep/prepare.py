@@ -106,8 +106,11 @@ def prepare(
     if has_errors(problems):
         return PrepareResult(None, _capped(problems))
     lists, list_problems = build_lists(definition, data)
+    problems += list_problems
+    if has_errors(problems):  # report totals over failed rows would only repeat those problems
+        return PrepareResult(None, _capped(problems))
     totals, total_problems = _report_totals(definition, data, lists)
-    problems += list_problems + total_problems
+    problems += total_problems
     if has_errors(problems):
         return PrepareResult(None, _capped(problems))
     view_data = fill_missing(data, definition.data.schema)
