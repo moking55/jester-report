@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jester Studio · Suriyan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Sarabun:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* Theme "Suriyan" — modern business. Every value below comes from the 16 tokens in SPEC-studio.md;
+   the settings screen edits them live to show that components read tokens only. */
+:root{
+  --color-background:#f5f6f8;
+  --color-surface:#ffffff;
+  --color-surfaceAlt:#f1f3f6;
+  --color-border:#e3e7ed;
+  --color-text:#18212d;
+  --color-textMuted:#5d6878;
+  --color-primary:#d9730d;
+  --color-onPrimary:#ffffff;
+  --color-danger:#d0342c;
+  --color-warning:#b7791f;
+  --color-success:#1f8a4c;
+  --font-family:"Noto Sans Thai";
+  --font-size:14px;
+  --radius:8px;
+  --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08); /* soft */
+  --density:1; /* comfortable = 1, compact = .75 */
+}
+/* derived values: computed from tokens, never set by users */
+:root{
+  --sp:calc(8px * var(--density));
+  --tint-primary:color-mix(in srgb,var(--color-primary) 12%,var(--color-surface));
+  --tint-danger:color-mix(in srgb,var(--color-danger) 12%,var(--color-surface));
+  --tint-warning:color-mix(in srgb,var(--color-warning) 14%,var(--color-surface));
+  --tint-success:color-mix(in srgb,var(--color-success) 12%,var(--color-surface));
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--color-background);color:var(--color-text);
+  font:var(--font-size)/1.55 var(--font-family),"Noto Sans Thai",system-ui,sans-serif;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,Consolas,monospace;font-size:.88em}
+h1{font-size:1.6em;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font-size:1.1em;font-weight:600;margin:0}
+.muted{color:var(--color-textMuted)}
+.spacer{flex:1}
+
+/* app frame: sidebar + top bar + content, full screen, no card around the page */
+.app{position:fixed;inset:0;display:grid;grid-template-columns:232px minmax(0,1fr);grid-template-rows:56px minmax(0,1fr)}
+.side{grid-row:1/3;background:var(--color-surface);border-right:1px solid var(--color-border);display:flex;flex-direction:column;padding:calc(var(--sp)*2) calc(var(--sp)*1.5)}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;padding:0 8px calc(var(--sp)*3)}
+.sun{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle,var(--color-primary) 0 42%,transparent 44%),
+  conic-gradient(from 0deg,var(--color-primary) 0 8deg,transparent 8deg 22.5deg,var(--color-primary) 22.5deg 30.5deg,transparent 30.5deg 45deg,var(--color-primary) 45deg 53deg,transparent 53deg 67.5deg,var(--color-primary) 67.5deg 75.5deg,transparent 75.5deg 90deg,var(--color-primary) 90deg 98deg,transparent 98deg 112.5deg,var(--color-primary) 112.5deg 120.5deg,transparent 120.5deg 135deg,var(--color-primary) 135deg 143deg,transparent 143deg 157.5deg,var(--color-primary) 157.5deg 165.5deg,transparent 165.5deg 180deg,var(--color-primary) 180deg 188deg,transparent 188deg 202.5deg,var(--color-primary) 202.5deg 210.5deg,transparent 210.5deg 225deg,var(--color-primary) 225deg 233deg,transparent 233deg 247.5deg,var(--color-primary) 247.5deg 255.5deg,transparent 255.5deg 270deg,var(--color-primary) 270deg 278deg,transparent 278deg 292.5deg,var(--color-primary) 292.5deg 300.5deg,transparent 300.5deg 315deg,var(--color-primary) 315deg 323deg,transparent 323deg 337.5deg,var(--color-primary) 337.5deg 345.5deg,transparent 345.5deg 360deg);
+  -webkit-mask:radial-gradient(circle,#000 0 70%,transparent 71%);mask:radial-gradient(circle,#000 0 70%,transparent 71%)}
+.brand small{display:block;font-weight:500;font-size:.75em;color:var(--color-textMuted)}
+.navgroup{font-size:.72em;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-textMuted);padding:calc(var(--sp)*1.5) 10px var(--sp)}
+.navitem{display:flex;align-items:center;gap:10px;width:100%;border:0;background:none;text-align:left;padding:calc(var(--sp)*1.1) 10px;border-radius:var(--radius);color:var(--color-textMuted);font-weight:500}
+.navitem:hover{background:var(--color-surfaceAlt);color:var(--color-text)}
+.navitem[aria-current="page"]{background:var(--tint-primary);color:var(--color-primary);font-weight:600}
+.navitem .ic{width:18px;text-align:center}
+.side .foot{margin-top:auto;font-size:.8em;color:var(--color-textMuted);padding:0 10px}
+
+.top{display:flex;align-items:center;gap:calc(var(--sp)*2);padding:0 calc(var(--sp)*3);background:var(--color-surface);border-bottom:1px solid var(--color-border)}
+.crumbs{display:flex;gap:8px;align-items:center;color:var(--color-textMuted)}
+.crumbs b{color:var(--color-text);font-weight:600}
+.search{width:260px;border:1px solid var(--color-border);background:var(--color-surfaceAlt);border-radius:var(--radius);padding:6px 12px;color:var(--color-textMuted)}
+.avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:.78em;font-weight:600;background:var(--color-text);color:var(--color-surface)}
+
+.main{overflow:auto;min-height:0}
+.screen{display:none}
+.screen.active{display:block}
+.page-pad{padding:calc(var(--sp)*4) calc(var(--sp)*5);max-width:1240px}
+.head{display:flex;align-items:flex-end;gap:calc(var(--sp)*2);margin-bottom:calc(var(--sp)*3)}
+.head p{margin:4px 0 0}
+
+/* primitives */
+.btn{border:1px solid var(--color-border);background:var(--color-surface);border-radius:var(--radius);padding:calc(var(--sp)*.9) calc(var(--sp)*1.8);font-weight:500;white-space:nowrap}
+.btn:hover{background:var(--color-surfaceAlt)}
+.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-onPrimary);font-weight:600}
+.btn.primary:hover{filter:brightness(.95)}
+.btn.ghost{border-color:transparent;background:none;color:var(--color-textMuted)}
+.btn.small{padding:calc(var(--sp)*.5) calc(var(--sp)*1.2);font-size:.88em}
+.btn:focus-visible,.navitem:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.panel{background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:.8em;font-weight:600;white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.ok{background:var(--tint-success);color:var(--color-success)}
+.badge.warn{background:var(--tint-warning);color:var(--color-warning)}
+.badge.err{background:var(--tint-danger);color:var(--color-danger)}
+.badge.info{background:var(--tint-primary);color:var(--color-primary)}
+.badge.plain{background:var(--color-surfaceAlt);color:var(--color-textMuted)}
+.badge.plain::before{display:none}
+
+/* catalog */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:calc(var(--sp)*2);margin-bottom:calc(var(--sp)*3)}
+.stat{padding:calc(var(--sp)*2) calc(var(--sp)*2.5)}
+.stat .n{font-size:1.7em;font-weight:600;margin-top:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:calc(var(--sp)*2)}
+.card{padding:calc(var(--sp)*2.5);display:flex;flex-direction:column;gap:calc(var(--sp)*1.5)}
+.card:hover{border-color:color-mix(in srgb,var(--color-primary) 40%,var(--color-border))}
+.card .t{display:flex;gap:12px;align-items:flex-start}
+.doc{width:38px;height:46px;border-radius:6px;flex:none;background:var(--color-surfaceAlt);border:1px solid var(--color-border);position:relative}
+.doc::after{content:"PDF";position:absolute;left:4px;right:4px;bottom:5px;font-size:9px;font-weight:700;text-align:center;border-radius:3px;background:var(--color-primary);color:var(--color-onPrimary)}
+.kv{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.88em;color:var(--color-textMuted)}
+.card .actions{display:flex;gap:8px;margin-top:auto;padding-top:calc(var(--sp)*1.5);border-top:1px solid var(--color-border)}
+.card.new{border:1.5px dashed var(--color-border);box-shadow:none;align-items:center;justify-content:center;text-align:center;color:var(--color-textMuted);min-height:210px;background:transparent}
+.card.new b{color:var(--color-text);font-size:1.05em}
+
+/* workspace */
+.ws{display:grid;grid-template-columns:var(--w-files,240px) minmax(0,var(--w-ed,1fr)) minmax(0,var(--w-pv,1fr));grid-template-rows:auto minmax(0,1fr) var(--h-bottom,240px);height:calc(100vh - 56px)}
+.files,.pane{position:relative}
+/* drag handles: 8px hit area, 2px line shown on hover/drag/focus */
+.gutter{position:absolute;z-index:5;touch-action:none}
+.gutter.v{top:0;bottom:0;width:8px;cursor:col-resize}
+.gutter.h{left:0;right:0;height:8px;top:-4px;cursor:row-resize}
+.gutter::after{content:"";position:absolute;background:var(--color-primary);opacity:0;transition:opacity .12s}
+.gutter.v::after{top:0;bottom:0;left:3px;width:2px}
+.gutter.h::after{left:0;right:0;top:3px;height:2px}
+.gutter:hover::after,.gutter.drag::after,.gutter:focus-visible::after{opacity:1}
+.gutter:focus-visible{outline:none}
+.g-split{left:-4px}
+body.resizing{user-select:none}
+body.resizing.col{cursor:col-resize}body.resizing.row{cursor:row-resize}
+.wsbar{grid-column:1/4;display:flex;align-items:center;gap:calc(var(--sp)*1.5);padding:calc(var(--sp)*1.5) calc(var(--sp)*3);background:var(--color-surface);border-bottom:1px solid var(--color-border)}
+.wsbar h2{font-size:1.15em}
+.files{grid-row:2/4;background:var(--color-surface);border-right:1px solid var(--color-border);overflow:auto;padding:calc(var(--sp)*1.5)}
+.ftitle{font-size:.72em;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--color-textMuted);padding:var(--sp) 8px}
+.file{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;text-align:left;padding:calc(var(--sp)*.75) 8px;border-radius:calc(var(--radius) - 2px);color:var(--color-text)}
+.file:hover{background:var(--color-surfaceAlt)}
+.file[aria-current="true"]{background:var(--tint-primary);color:var(--color-primary);font-weight:600}
+.file .n{margin-left:auto;font-size:.75em;font-weight:700;color:var(--color-onPrimary);background:var(--color-danger);border-radius:999px;padding:0 7px}
+.verbox{margin-top:calc(var(--sp)*2);padding:calc(var(--sp)*1.5);border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surfaceAlt);font-size:.9em}
+.verbox .row{display:flex;justify-content:space-between;padding:3px 0}
+.pane{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--color-surface)}
+.pane + .pane{border-left:1px solid var(--color-border)}
+.phead{display:flex;align-items:center;gap:10px;padding:calc(var(--sp)*1.1) calc(var(--sp)*2);border-bottom:1px solid var(--color-border);font-weight:600;min-height:46px}
+.phead select{border:1px solid var(--color-border);border-radius:calc(var(--radius) - 2px);padding:3px 8px;background:var(--color-surface);font-weight:400}
+pre.code{margin:0;flex:1;overflow:auto;padding:calc(var(--sp)*1.5) 0;counter-reset:ln;background:var(--color-surface);font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12.5px;line-height:1.7}
+pre.code .l{display:block;white-space:pre;padding-right:16px;position:relative}
+pre.code .l::before{counter-increment:ln;content:counter(ln);display:inline-block;width:44px;padding-right:14px;text-align:right;color:var(--color-textMuted);opacity:.6}
+pre.code .l.err{background:var(--tint-danger)}
+pre.code .l.err::after{content:"●";position:absolute;left:6px;color:var(--color-danger);font-size:10px;top:1px}
+.tk-k{color:#2f5aa8}.tk-s{color:#1f7a45}.tk-j{color:var(--color-primary);font-weight:600}.tk-c{color:var(--color-textMuted);font-style:italic}
+.pdfarea{flex:1;overflow:auto;background:var(--color-surfaceAlt);display:flex;flex-direction:column;align-items:center;gap:18px;padding:calc(var(--sp)*3)}
+.sheet{width:min(100%,420px);aspect-ratio:210/297;background:#fff;color:#222;box-shadow:0 4px 18px rgba(16,24,40,.12);padding:26px 26px 16px;font-family:Sarabun,sans-serif;font-size:9.5px;display:flex;flex-direction:column;position:relative}
+.sheet .hd{display:flex;justify-content:space-between;border-bottom:1.5px solid #222;padding-bottom:8px;margin-bottom:10px}
+.sheet h3{margin:0;font-size:15px}
+.sheet table{width:100%;border-collapse:collapse;margin:8px 0}
+.sheet th{background:#f2f2f2;text-align:left;padding:4px;font-weight:600}
+.sheet td{padding:4px;border-bottom:1px solid #eee}
+.sheet .r{text-align:right;font-variant-numeric:tabular-nums}
+.sheet .tot{margin-left:auto;width:55%}.sheet .tot td{border:0;padding:2px 4px}
+.sheet .grand td{font-weight:600;border-top:1.5px solid #222}
+.sheet .ft{margin-top:auto;display:flex;justify-content:space-between;color:#888;font-size:8px;border-top:1px solid #eee;padding-top:5px}
+.wm{position:absolute;inset:0;display:grid;place-items:center;font-size:64px;font-weight:700;color:rgba(200,0,0,.08);transform:rotate(-28deg);pointer-events:none}
+.bottom{grid-column:2/4;border-top:1px solid var(--color-border);border-left:0 !important}
+.tabs{display:flex;gap:calc(var(--sp)*2.5);padding:0 calc(var(--sp)*2);border-bottom:1px solid var(--color-border)}
+.tab{border:0;background:none;padding:calc(var(--sp)*1.2) 2px;color:var(--color-textMuted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--color-text);border-bottom-color:var(--color-primary);font-weight:600}
+.tabbody{flex:1;overflow:auto;padding:calc(var(--sp)*1.5) calc(var(--sp)*2)}
+.prob{display:flex;gap:12px;align-items:flex-start;width:100%;border:0;background:none;text-align:left;padding:calc(var(--sp)*1) calc(var(--sp)*1.2);border-radius:calc(var(--radius) - 2px)}
+.prob:hover{background:var(--color-surfaceAlt)}
+.prob .where{margin-left:auto;flex:none;color:var(--color-textMuted)}
+table.data{width:100%;border-collapse:collapse;font-size:.92em}
+table.data th{text-align:left;font-weight:600;color:var(--color-textMuted);font-size:.85em;text-transform:uppercase;letter-spacing:.04em;padding:calc(var(--sp)*1) calc(var(--sp)*1.5);border-bottom:1px solid var(--color-border)}
+table.data td{padding:calc(var(--sp)*1.2) calc(var(--sp)*1.5);border-bottom:1px solid var(--color-border)}
+table.data tr:last-child td{border-bottom:0}
+table.data .r{text-align:right;font-variant-numeric:tabular-nums}
+table.data tbody tr:hover{background:var(--color-surfaceAlt)}
+dl.prov{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0}
+dl.prov dt{color:var(--color-textMuted)}
+.tree{font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.8}
+.tree .key{color:var(--color-textMuted)}.tree .val{color:var(--color-text);font-weight:500}
+
+/* history */
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:calc(var(--sp)*2)}
+.toolbar select,.toolbar input{border:1px solid var(--color-border);border-radius:var(--radius);padding:6px 10px;background:var(--color-surface)}
+.retention{display:flex;align-items:center;gap:14px;padding:calc(var(--sp)*1.5) calc(var(--sp)*2);margin-bottom:calc(var(--sp)*2)}
+
+/* settings */
+.settings{display:grid;grid-template-columns:200px minmax(0,1fr);gap:calc(var(--sp)*4)}
+.subnav .navitem{padding:calc(var(--sp)*.9) 10px}
+.themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:calc(var(--sp)*1.5);margin:calc(var(--sp)*2) 0 calc(var(--sp)*3)}
+.themecard{padding:calc(var(--sp)*1.5);text-align:left;cursor:pointer;background:var(--color-surface)}
+.themecard[aria-pressed="true"]{outline:2px solid var(--color-primary);outline-offset:-1px}
+.swatch{display:flex;gap:4px;margin:8px 0}
+.swatch i{width:22px;height:22px;border-radius:5px;border:1px solid rgba(0,0,0,.08)}
+.editor{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:calc(var(--sp)*3)}
+.tokens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:calc(var(--sp)*1.5) calc(var(--sp)*2.5);padding:calc(var(--sp)*2.5)}
+.tok{display:flex;flex-direction:column;gap:4px;font-size:.9em}
+.tok span{font-weight:500}
+.tok code{color:var(--color-textMuted);font-size:.78em}
+.tok .in{display:flex;align-items:center;gap:8px;border:1px solid var(--color-border);border-radius:var(--radius);padding:4px 8px;background:var(--color-surface)}
+.tok input[type=color]{width:26px;height:26px;border:0;padding:0;background:none}
+.tok input[type=text],.tok select,.tok input[type=range]{border:0;background:none;flex:1;min-width:0}
+.preview{padding:calc(var(--sp)*2.5);display:flex;flex-direction:column;gap:calc(var(--sp)*1.5)}
+.err-msg{color:var(--color-danger);font-size:.85em}
+
+/* dialog */
+.overlay{position:fixed;inset:0;background:rgba(15,20,30,.45);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.overlay.open{display:flex}
+.dialog{width:min(560px,100%);max-height:90vh;overflow:auto;border-radius:calc(var(--radius) + 4px);background:var(--color-surface);box-shadow:0 20px 50px rgba(16,24,40,.25)}
+.dialog .dh{display:flex;align-items:center;padding:calc(var(--sp)*2) calc(var(--sp)*3);border-bottom:1px solid var(--color-border)}
+.dialog .db{padding:calc(var(--sp)*2) calc(var(--sp)*3)}
+.dialog .df{display:flex;justify-content:flex-end;gap:8px;padding:calc(var(--sp)*2) calc(var(--sp)*3);border-top:1px solid var(--color-border);background:var(--color-surfaceAlt)}
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:calc(var(--sp)*1.8)}
+.field label{font-weight:600;font-size:.9em}
+.field input,.field select{border:1px solid var(--color-border);border-radius:var(--radius);padding:7px 10px;background:var(--color-surface)}
+.curl{background:var(--color-text);color:var(--color-surface);border-radius:var(--radius);padding:12px 14px;white-space:pre-wrap;font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.6}
+.note{position:fixed;right:16px;bottom:16px;z-index:30;background:var(--color-text);color:var(--color-surface);padding:8px 14px;border-radius:999px;font-size:.8em;opacity:.9}
+
+@media (max-width:900px){
+  body{overflow:auto}
+  .app{position:static;grid-template-columns:1fr;grid-template-rows:auto auto 1fr}
+  .side{grid-row:auto;flex-direction:row;flex-wrap:wrap;gap:4px;padding:8px 16px}
+  .brand{padding:0 8px 0 0}.navgroup,.side .foot{display:none}.navitem{width:auto}
+  .top .search,.crumbs{display:none}
+  .page-pad{padding:16px}
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ws{grid-template-columns:1fr;grid-template-rows:auto auto 440px 480px 260px;height:auto}
+  .files{grid-row:auto;border-right:0}
+  .gutter{display:none}
+  .bottom{grid-column:auto}
+  .pane + .pane{border-left:0;border-top:1px solid var(--color-border)}
+  .settings,.editor{grid-template-columns:1fr}
+  .tokens{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <div class="brand"><span class="sun" aria-hidden="true"></span><div>Jester Studio<small>รายงานภาษาไทย</small></div></div>
+    <div class="navgroup">งาน</div>
+    <button class="navitem" data-go="catalog" aria-current="page"><span class="ic">▤</span>รายงาน</button>
+    <button class="navitem" data-go="workspace"><span class="ic">✎</span>Workspace</button>
+    <button class="navitem" data-go="history"><span class="ic">◷</span>ประวัติ Render</button>
+    <div class="navgroup">ระบบ</div>
+    <button class="navitem" data-go="settings"><span class="ic">⚙</span>ตั้งค่า</button>
+    <div class="foot">Engine 9.4.1 · <span style="color:var(--color-success)">● ออนไลน์</span><br>API v0.1 · theme Suriyan</div>
+  </aside>
+
+  <header class="top">
+    <div class="crumbs" id="crumbs">Jester <span>/</span> <b>รายงาน</b></div>
+    <span class="spacer"></span>
+    <div class="search">ค้นหารายงาน…</div>
+    <span class="badge ok">Engine พร้อม</span>
+    <div class="avatar" title="alice">AL</div>
+  </header>
+
+  <main class="main">
+    <!-- catalog -->
+    <section class="screen active" id="catalog">
+      <div class="page-pad">
+        <div class="head">
+          <div><h1>รายงาน</h1><p class="muted">template ทั้งหมดของทีม · publish แล้วระบบภายนอกเรียก <code>POST /v1/render</code> ได้</p></div>
+          <span class="spacer"></span>
+          <button class="btn primary" id="newBtn">+ สร้างรายงาน</button>
+        </div>
+        <div class="stats">
+          <div class="panel stat"><div class="muted">รายงานทั้งหมด</div><div class="n">3</div></div>
+          <div class="panel stat"><div class="muted">Render วันนี้</div><div class="n">128</div></div>
+          <div class="panel stat"><div class="muted">อัตราสำเร็จ 7 วัน</div><div class="n">99.2%</div></div>
+          <div class="panel stat"><div class="muted">API key ที่ใช้งาน</div><div class="n">2</div></div>
+        </div>
+        <div class="grid">
+          <article class="panel card">
+            <div class="t"><span class="doc"></span><div><h2>ใบเสนอราคา</h2><div class="kv"><code>quotation</code><span>A4 แนวตั้ง</span></div></div></div>
+            <div class="kv"><span class="badge info">published v3</span><span class="badge plain">draft แก้แล้ว</span></div>
+            <div class="kv"><span>Render ล่าสุด: <span style="color:var(--color-success)">สำเร็จ</span> · 2 นาทีที่แล้ว</span></div>
+            <div class="actions"><button class="btn primary small" data-go="workspace">เปิด</button><button class="btn small" data-render>Render…</button></div>
+          </article>
+          <article class="panel card">
+            <div class="t"><span class="doc"></span><div><h2>สรุปยอดขายตามภูมิภาค</h2><div class="kv"><code>sales-by-region</code><span>A4 แนวนอน</span></div></div></div>
+            <div class="kv"><span class="badge info">published v1</span><span class="badge err">validate ไม่ผ่าน 2</span></div>
+            <div class="kv"><span>Render ล่าสุด: <span style="color:var(--color-danger)">INPUT_INVALID</span> · 1 ชม.</span></div>
+            <div class="actions"><button class="btn primary small" data-go="workspace">เปิด</button><button class="btn small" data-render>Render…</button></div>
+          </article>
+          <article class="panel card">
+            <div class="t"><span class="doc"></span><div><h2>ใบสั่งซื้อ (master-detail)</h2><div class="kv"><code>purchase-order</code><span>A4 แนวตั้ง</span></div></div></div>
+            <div class="kv"><span class="badge plain">ยังไม่ publish</span></div>
+            <div class="kv"><span>ยังไม่เคย render</span></div>
+            <div class="actions"><button class="btn primary small" data-go="workspace">เปิด</button><button class="btn small" disabled>Render…</button></div>
+          </article>
+          <button class="panel card new" id="newCard"><b>+ รายงานใหม่</b><span>เริ่มจาก ใบเสนอราคา · grouped table · master-detail · เปล่า</span></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- workspace -->
+    <section class="screen" id="workspace">
+      <div class="ws">
+        <div class="wsbar">
+          <h2>ใบเสนอราคา</h2><span class="badge plain">draft r12</span><span class="badge info">published v3</span>
+          <span class="spacer"></span>
+          <span class="muted" style="font-size:.88em">บันทึกแล้ว · 10:42</span>
+          <button class="btn" id="validateBtn">Validate</button>
+          <button class="btn" id="previewBtn">Preview</button>
+          <button class="btn primary">Publish v4</button>
+        </div>
+        <aside class="files">
+          <div class="ftitle">ไฟล์</div>
+          <button class="file" data-file="report">report.json</button>
+          <button class="file" data-file="template" aria-current="true">template.html <span class="n">1</span></button>
+          <button class="file" data-file="header">header.html</button>
+          <button class="file" data-file="footer">footer.html</button>
+          <button class="file" data-file="css">report.css</button>
+          <button class="file" data-file="schema">data.schema.json</button>
+          <button class="file" data-file="sample">sample.json</button>
+          <div class="ftitle" style="margin-top:8px">Assets</div>
+          <button class="file" data-file="asset">logo.png</button>
+          <div class="verbox">
+            <div class="row"><b>Versions</b><button class="btn ghost small">ทั้งหมด</button></div>
+            <div class="row"><span>v3 <span class="badge info" style="padding:0 6px">published</span></span><span class="muted">12 พ.ย.</span></div>
+            <div class="row"><span>v2</span><span class="muted">8 พ.ย.</span></div>
+            <div class="row"><span>v1</span><span class="muted">2 พ.ย.</span></div>
+          </div>
+        </aside>
+        <div class="pane">
+          <!-- lives in the editor pane: .files scrolls and would clip/scroll a handle placed inside it -->
+          <div class="gutter v g-split" data-resize="files" role="separator" aria-orientation="vertical" aria-label="ปรับความกว้างรายการไฟล์" tabindex="0"></div>
+          <div class="phead"><span id="fname">template.html</span><span class="spacer"></span><span class="muted" style="font-weight:400;font-size:.85em">Jinja · HTML</span></div>
+          <pre class="code" id="code"></pre>
+        </div>
+        <div class="pane" id="pvPane">
+          <div class="gutter v g-split" data-resize="split" role="separator" aria-orientation="vertical" aria-label="ปรับสัดส่วน editor กับ preview" tabindex="0"></div>
+          <div class="phead">PDF Preview <select aria-label="ข้อมูลตัวอย่าง"><option>sample.json</option></select><span class="spacer"></span><span class="badge ok" id="pv">ล่าสุด · 1.1 วิ</span></div>
+          <div class="pdfarea">
+            <div class="sheet">
+              <div class="wm">DRAFT</div>
+              <div class="hd"><div><b>บริษัท ตัวอย่าง จำกัด</b><br>123 ถนนสุขุมวิท กรุงเทพฯ 10110</div><div style="text-align:right"><h3>ใบเสนอราคา</h3>เลขที่ Q-DEMO-001<br>วันที่ 12 พฤศจิกายน 2569</div></div>
+              <div>เรียน <b>บริษัท ลูกค้า จำกัด</b></div>
+              <table><thead><tr><th>รหัส</th><th>รายการ</th><th class="r">จำนวน</th><th class="r">ราคา/หน่วย</th><th class="r">จำนวนเงิน</th></tr></thead>
+                <tbody><tr><td>QL01</td><td>บริการติดตั้งระบบรายงาน</td><td class="r">2</td><td class="r">1,250.50</td><td class="r">2,501.00</td></tr>
+                <tr><td>QL02</td><td>ค่าอบรมผู้ใช้งาน</td><td class="r">3</td><td class="r">199.90</td><td class="r">599.70</td></tr></tbody></table>
+              <table class="tot"><tr><td>รวม</td><td class="r">3,100.70</td></tr><tr><td>ส่วนลด</td><td class="r">-100.70</td></tr><tr><td>ภาษีมูลค่าเพิ่ม 7%</td><td class="r">210.00</td></tr><tr class="grand"><td>ยอดสุทธิ</td><td class="r">3,210.00</td></tr></table>
+              <div style="margin-top:10px;color:#555">(สามพันสองร้อยสิบบาทถ้วน)</div>
+              <div class="ft"><span>บริษัท ตัวอย่าง จำกัด</span><span>หน้า 1/1</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="pane bottom">
+          <div class="gutter h" data-resize="bottom" role="separator" aria-orientation="horizontal" aria-label="ปรับความสูงแผงล่าง" tabindex="0"></div>
+          <div class="tabs" id="tabs">
+            <button class="tab" aria-selected="true" data-tab="problems">Problems (2)</button>
+            <button class="tab" aria-selected="false" data-tab="data">Prepared data</button>
+            <button class="tab" aria-selected="false" data-tab="prov">Provenance</button>
+          </div>
+          <div class="tabbody" id="tabbody"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- history -->
+    <section class="screen" id="history">
+      <div class="page-pad">
+        <div class="head"><div><h1>ประวัติ Render</h1><p class="muted">ทุก render และ preview · ไม่เก็บ params, data หรือ PDF — เก็บแค่ hash และ provenance</p></div></div>
+        <div class="panel retention">
+          <span class="badge plain">นโยบายเก็บ</span>
+          <span><b>เก็บตลอด</b> <span class="muted">· ยังไม่มีใครตั้งนโยบาย · 4,812 รายการ</span></span>
+          <span class="spacer"></span>
+          <button class="btn small" id="retBtn">ตั้งนโยบาย…</button>
+        </div>
+        <div class="toolbar">
+          <select><option>ทุกรายงาน</option><option>ใบเสนอราคา</option></select>
+          <select><option>ทุกผล</option><option>สำเร็จ</option><option>ล้มเหลว</option></select>
+          <span class="spacer"></span><span class="muted" style="font-size:.88em">ใหม่สุดก่อน</span>
+        </div>
+        <div class="panel" style="overflow:auto">
+          <table class="data">
+            <thead><tr><th>เวลา</th><th>รายงาน</th><th>Version</th><th>ผู้เรียก</th><th>ผล</th><th class="r">หน้า</th><th class="r">เวลา</th><th></th></tr></thead>
+            <tbody>
+              <tr><td>15 พ.ย. 10:42</td><td>ใบเสนอราคา</td><td>v3</td><td>api-key:erp-prod</td><td><span class="badge ok">สำเร็จ</span></td><td class="r">1</td><td class="r">1.1 วิ</td><td><button class="btn ghost small">รายละเอียด</button></td></tr>
+              <tr><td>15 พ.ย. 10:40</td><td>ใบเสนอราคา</td><td>draft r12</td><td>alice</td><td><span class="badge info">preview</span></td><td class="r">1</td><td class="r">1.3 วิ</td><td><button class="btn ghost small">รายละเอียด</button></td></tr>
+              <tr><td>15 พ.ย. 09:31</td><td>สรุปยอดขาย</td><td>v1</td><td>api-key:erp-prod</td><td><span class="badge err">INPUT_INVALID</span></td><td class="r">—</td><td class="r">0.2 วิ</td><td><button class="btn ghost small">ดู problems</button></td></tr>
+              <tr><td>15 พ.ย. 09:02</td><td>สรุปยอดขาย</td><td>v1</td><td>api-key:bi</td><td><span class="badge warn">RENDER_TIMEOUT</span></td><td class="r">—</td><td class="r">10.0 วิ</td><td><button class="btn ghost small">รายละเอียด</button></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- settings -->
+    <section class="screen" id="settings">
+      <div class="page-pad">
+        <div class="head"><div><h1>ตั้งค่า</h1><p class="muted">ทุกคนในทีมมีสิทธิ์เท่ากัน</p></div></div>
+        <div class="settings">
+          <nav class="subnav">
+            <button class="navitem">ผู้ใช้</button>
+            <button class="navitem">API keys</button>
+            <button class="navitem">รหัสผ่านของฉัน</button>
+            <button class="navitem" aria-current="page">Theme</button>
+          </nav>
+          <div>
+            <h2>Theme</h2>
+            <p class="muted" style="margin:4px 0 0">ใช้ร่วมกันทั้งทีม · แต่ละคนเลือก theme ของตัวเองได้ · ค่าเริ่มต้นของระบบ: <b>Suriyan</b></p>
+            <div class="themes" id="themes">
+              <button class="panel themecard" data-theme="classic"><b>Classic</b> <span class="badge plain">ในตัว</span><div class="swatch"><i style="background:#c8ecff"></i><i style="background:#1e90d6"></i><i style="background:#8fd64b"></i><i style="background:#12324a"></i></div><span class="muted" style="font-size:.85em">Aero · enterprise</span></button>
+              <button class="panel themecard" data-theme="suriyan" aria-pressed="true"><b>Suriyan</b> <span class="badge plain">ในตัว</span><div class="swatch"><i style="background:#f5f6f8"></i><i style="background:#d9730d"></i><i style="background:#1f8a4c"></i><i style="background:#18212d"></i></div><span class="muted" style="font-size:.85em">modern business · ค่าเริ่มต้น</span></button>
+              <button class="panel themecard" data-theme="brand"><b>แบรนด์บริษัท</b> <span class="badge info">สร้างโดย alice</span><div class="swatch"><i style="background:#f7f8fb"></i><i style="background:#2457c5"></i><i style="background:#1f8a4c"></i><i style="background:#141c2b"></i></div><span class="muted" style="font-size:.85em">ทำสำเนาจาก Suriyan</span></button>
+            </div>
+            <div class="editor">
+              <div class="panel">
+                <div class="phead">แก้ token <span class="badge plain" style="font-weight:500">ทำสำเนา Suriyan เพื่อแก้</span><span class="spacer"></span><button class="btn small">Import JSON</button><button class="btn small" id="exportBtn">Export JSON</button></div>
+                <div class="tokens" id="tokens"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;padding:0 20px 20px"><button class="btn" id="resetBtn">คืนค่า Suriyan</button><button class="btn primary">บันทึกเป็น theme ใหม่</button></div>
+              </div>
+              <div class="panel preview">
+                <b>ตัวอย่าง (สด)</b>
+                <p class="muted" style="margin:0">หน้าทั้งหน้าเปลี่ยนตามค่าที่แก้ — ทุก component อ่านจาก token เท่านั้น</p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary small">ปุ่มหลัก</button><button class="btn small">ปุ่มรอง</button></div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge ok">สำเร็จ</span><span class="badge warn">เตือน</span><span class="badge err">ผิดพลาด</span></div>
+                <div class="field" style="margin:0"><label>ช่องกรอก</label><input value="Q-DEMO-001"></div>
+                <p class="err-msg" id="tokErr" style="margin:0"></p>
+                <p class="muted" style="font-size:.8em;margin:0">server รับเฉพาะ token 16 ตัวนี้และรูปแบบค่าที่กำหนด — ไม่รับ CSS ดิบ</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- render dialog -->
+<div class="overlay" id="renderDlg" role="dialog" aria-modal="true" aria-labelledby="rdTitle">
+  <div class="dialog">
+    <div class="dh"><h2 id="rdTitle">Render · ใบเสนอราคา</h2><span class="spacer"></span><button class="btn ghost" data-close aria-label="ปิด">✕</button></div>
+    <div class="db">
+      <div class="field"><label>Version</label><select><option>published (v3)</option><option>v2</option><option>v1</option></select></div>
+      <div class="field"><label>quoteId *</label><input value="Q-DEMO-001"></div>
+      <div class="field"><label>docDate *</label><input type="date" value="2026-11-15"></div>
+      <div class="field"><label>Data</label><select><option>sample.json</option><option>อัปโหลดไฟล์ JSON…</option></select></div>
+      <div class="field"><label>เรียกจากระบบอื่น</label>
+        <div class="curl">curl -X POST https://api.example.com/v1/render \
+  -H "Authorization: Bearer jrk_…" \
+  -H "Content-Type: application/json" \
+  -d '{"template":{"id":"quotation","version":"published"},
+       "params":{"quoteId":"Q-DEMO-001","docDate":"2026-11-15"},
+       "data":{…}}' -o quotation.pdf</div></div>
+    </div>
+    <div class="df"><button class="btn" data-close>ยกเลิก</button><button class="btn primary" data-close>Render PDF</button></div>
+  </div>
+</div>
+
+<!-- retention dialog -->
+<div class="overlay" id="retDlg" role="dialog" aria-modal="true" aria-labelledby="rtTitle">
+  <div class="dialog">
+    <div class="dh"><h2 id="rtTitle">นโยบายเก็บประวัติ</h2><span class="spacer"></span><button class="btn ghost" data-close aria-label="ปิด">✕</button></div>
+    <div class="db">
+      <div class="field"><label>เก็บย้อนหลัง</label><select id="retDays"><option value="">เก็บตลอด (ค่าเริ่มต้น)</option><option value="30">30 วัน</option><option value="90" selected>90 วัน</option><option value="365">365 วัน</option></select></div>
+      <div class="panel" style="padding:12px 14px;box-shadow:none;background:var(--tint-warning);border-color:transparent">
+        <b id="retCount">จะลบประวัติ 1,204 รายการที่เก่ากว่า 90 วัน</b><br><span class="muted">ลบแล้วกู้คืนไม่ได้ · ตั้งโดย alice</span>
+      </div>
+    </div>
+    <div class="df"><button class="btn" data-close>ยกเลิก</button><button class="btn primary" data-close>ยืนยันและลบ</button></div>
+  </div>
+</div>
+
+<div class="note">Draft · theme Suriyan · ข้อมูลตัวอย่าง</div>
+
+<script>
+// ---- navigation
+const crumbNames={catalog:'รายงาน',workspace:'รายงาน / ใบเสนอราคา',history:'ประวัติ Render',settings:'ตั้งค่า / Theme'};
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('active',s.id===id));
+  document.querySelectorAll('.side .navitem').forEach(b=>b.setAttribute('aria-current',b.dataset.go===id?'page':'false'));
+  document.getElementById('crumbs').innerHTML='Jester <span>/</span> <b>'+crumbNames[id]+'</b>';
+}
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(b.dataset.go)));
+
+// ---- editor (static highlight)
+const files={
+template:[
+'<span class="tk-c">{# ใบเสนอราคา · Jinja #}</span>',
+'&lt;link rel="stylesheet" href="report.css"&gt;',
+'&lt;img src="logo.png" alt=""&gt;',
+'&lt;h1&gt;ใบเสนอราคา&lt;/h1&gt;',
+'&lt;p&gt;เลขที่ <span class="tk-j">{{ params.quoteId }}</span> · วันที่ <span class="tk-j">{{ fmt.thai_date(params.docDate) }}</span>&lt;/p&gt;',
+'&lt;table&gt;',
+'  &lt;thead&gt;&lt;tr&gt;&lt;th&gt;รหัส&lt;/th&gt;&lt;th&gt;รายการ&lt;/th&gt;&lt;th&gt;จำนวนเงิน&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;',
+'  <span class="tk-j">{% for item in lists.items %}</span>',
+'  &lt;tr&gt;&lt;td&gt;<span class="tk-j">{{ item.id }}</span>&lt;/td&gt;&lt;td&gt;<span class="tk-j">{{ item.description }}</span>&lt;/td&gt;&lt;td&gt;<span class="tk-j">{{ fmt.money(item.amont) }}</span>&lt;/td&gt;&lt;/tr&gt;',
+'  <span class="tk-j">{% endfor %}</span>',
+'  &lt;tr&gt;&lt;td colspan="2"&gt;ยอดสุทธิ&lt;/td&gt;&lt;td&gt;<span class="tk-j">{{ fmt.money(totals.grand) }}</span>&lt;/td&gt;&lt;/tr&gt;',
+'&lt;/table&gt;',
+'&lt;p&gt;(<span class="tk-j">{{ fmt.baht_text(totals.grand) }}</span>)&lt;/p&gt;'],
+report:['{','  <span class="tk-k">"schemaVersion"</span>: 1,','  <span class="tk-k">"name"</span>: <span class="tk-s">"ใบเสนอราคา"</span>,','  <span class="tk-k">"fonts"</span>: { <span class="tk-k">"body"</span>: [<span class="tk-s">"TH Sarabun New"</span>] },','  <span class="tk-k">"lists"</span>: { <span class="tk-k">"items"</span>: { <span class="tk-k">"path"</span>: <span class="tk-s">"/items"</span>, <span class="tk-k">"id"</span>: <span class="tk-s">"id"</span>,','      <span class="tk-k">"computed"</span>: { <span class="tk-k">"amount"</span>: <span class="tk-s">"round(qty * unitPrice, 2)"</span> } } },','  <span class="tk-k">"totals"</span>: { <span class="tk-k">"subtotal"</span>: <span class="tk-s">"sum(items.amount)"</span>, <span class="tk-k">"vat"</span>: <span class="tk-s">"round(net * 0.07, 2)"</span> }','}'],
+header:['&lt;style&gt;body { font-family: "TH Sarabun New"; font-size: 12px; }&lt;/style&gt;','&lt;div&gt;<span class="tk-j">{{ data.company.name }}</span>&lt;/div&gt;'],
+footer:['&lt;div class="r"&gt;หน้า &lt;span class="pageNumber"&gt;&lt;/span&gt;/&lt;span class="totalPages"&gt;&lt;/span&gt;&lt;/div&gt;'],
+css:['body { font-family: "TH Sarabun New"; font-size: 16pt; }','thead { display: table-header-group; }','.n { text-align: right; }'],
+schema:['{','  <span class="tk-k">"type"</span>: <span class="tk-s">"object"</span>,','  <span class="tk-k">"required"</span>: [<span class="tk-s">"company"</span>, <span class="tk-s">"items"</span>],','  …','}'],
+sample:['{','  <span class="tk-k">"company"</span>: { <span class="tk-k">"name"</span>: <span class="tk-s">"บริษัท ตัวอย่าง จำกัด"</span> },','  <span class="tk-k">"items"</span>: [ { <span class="tk-k">"id"</span>: <span class="tk-s">"QL01"</span>, <span class="tk-k">"qty"</span>: 2, <span class="tk-k">"unitPrice"</span>: <span class="tk-s">"1250.50"</span> }, … ]','}'],
+asset:['<span class="tk-c">logo.png · image/png · 12 KB · sha256 3fa1…9c0e</span>']
+};
+const errLines={template:[9]};
+const codeEl=document.getElementById('code');
+function showFile(f){
+  codeEl.innerHTML=files[f].map((l,i)=>'<span class="l'+((errLines[f]||[]).includes(i+1)?' err':'')+'">'+(l||' ')+'</span>').join('');
+  document.getElementById('fname').textContent={template:'template.html',report:'report.json',header:'header.html',footer:'footer.html',css:'report.css',schema:'data.schema.json',sample:'sample.json',asset:'logo.png'}[f];
+  document.querySelectorAll('.file').forEach(b=>b.setAttribute('aria-current',b.dataset.file===f?'true':'false'));
+}
+document.querySelectorAll('.file').forEach(b=>b.addEventListener('click',()=>showFile(b.dataset.file)));
+showFile('template');
+
+// ---- bottom tabs
+const tabs={
+problems:'<button class="prob" data-goto="template"><span class="badge err">error</span><span><b>TEMPLATE_UNDEFINED</b> — <code>item.amont</code> ไม่มีในข้อมูลของ <code>lists.items</code> · หมายถึง <code>amount</code>?</span><span class="where mono">template.html:9</span></button>'+
+         '<button class="prob"><span class="badge warn">warning</span><span><b>TEMPLATE_PRINTS_OBJECT</b> — พิมพ์ object ทั้งก้อน เลือก field เช่น <code>data.customer.name</code></span><span class="where mono">header.html:2</span></button>',
+data:'<div class="tree"><div><span class="key">params.quoteId</span> = <span class="val">"Q-DEMO-001"</span></div><div><span class="key">lists.items[0].amount</span> = <span class="val">"2501.00"</span> <span class="key">· round(qty * unitPrice, 2)</span></div><div><span class="key">lists.items[1].amount</span> = <span class="val">"599.70"</span></div><div><span class="key">totals.subtotal</span> = <span class="val">"3100.70"</span></div><div><span class="key">totals.vat</span> = <span class="val">"210.00"</span></div><div><span class="key">totals.grand</span> = <span class="val">"3210.00"</span></div></div>',
+prov:'<dl class="prov mono"><dt>run</dt><dd>019a8f2c3b1e4d · preview · alice</dd><dt>template</dt><dd>draft r12 · sha256 9c1e…a07b</dd><dt>data</dt><dd>sha256 51d0…e3c2 (ไม่เก็บตัวข้อมูล)</dd><dt>engine</dt><dd>9.4.1 · jester/gotenberg:9.4.1-th1</dd><dt>options</dt><dd>A4 · failOnResourceLoadingFailed=true · failOnConsoleExceptions=true</dd><dt>output</dt><dd>1 หน้า · sha256 e77b…0c41</dd></dl>'
+};
+const tabbody=document.getElementById('tabbody');
+function setTab(t){
+  tabbody.innerHTML=tabs[t];
+  document.querySelectorAll('#tabs .tab').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===t?'true':'false'));
+  tabbody.querySelectorAll('[data-goto]').forEach(b=>b.addEventListener('click',()=>showFile(b.dataset.goto)));
+}
+document.querySelectorAll('#tabs .tab').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab)));
+setTab('problems');
+document.getElementById('previewBtn').addEventListener('click',()=>{const pv=document.getElementById('pv');pv.className='badge warn';pv.textContent='กำลัง render…';setTimeout(()=>{pv.className='badge ok';pv.textContent='ล่าสุด · 1.1 วิ'},900)});
+document.getElementById('validateBtn').addEventListener('click',()=>setTab('problems'));
+
+// ---- resizable workspace: drag, arrow keys (Shift = bigger step), double-click resets; sizes remembered per browser
+const ws=document.querySelector('.ws'),filesEl=ws.querySelector('.files'),edPane=ws.querySelector('.pane'),pvPane=document.getElementById('pvPane'),bottomEl=ws.querySelector('.bottom');
+const WS_VARS=['--w-files','--w-ed','--w-pv','--h-bottom'];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function setVar(k,v){ws.style.setProperty(k,v);try{localStorage.setItem('jester.ws'+k,v)}catch{}}
+function resizeTo(kind,x,y){
+  const r=ws.getBoundingClientRect();
+  if(kind==='files') setVar('--w-files',Math.round(clamp(x-r.left,160,440))+'px');
+  else if(kind==='bottom') setVar('--h-bottom',Math.round(clamp(r.bottom-y,120,r.height*.65))+'px');
+  else{ // editor/preview split kept as a ratio so it survives window resizes
+    const left=edPane.getBoundingClientRect().left,total=edPane.offsetWidth+pvPane.offsetWidth;
+    const w=Math.round(clamp(x-left,280,total-280));setVar('--w-ed',w+'fr');setVar('--w-pv',(total-w)+'fr');
+  }
+}
+function edgeOf(kind){
+  if(kind==='files') return {x:filesEl.getBoundingClientRect().right};
+  if(kind==='split') return {x:pvPane.getBoundingClientRect().left};
+  return {y:bottomEl.getBoundingClientRect().top};
+}
+WS_VARS.forEach(k=>{try{const v=localStorage.getItem('jester.ws'+k);if(v)ws.style.setProperty(k,v)}catch{}});
+ws.querySelectorAll('.gutter').forEach(g=>{
+  const kind=g.dataset.resize,axis=kind==='bottom'?'row':'col';
+  g.addEventListener('pointerdown',e=>{g.setPointerCapture(e.pointerId);g.classList.add('drag');document.body.classList.add('resizing',axis);e.preventDefault()});
+  g.addEventListener('pointermove',e=>{if(g.hasPointerCapture(e.pointerId))resizeTo(kind,e.clientX,e.clientY)});
+  const end=()=>{g.classList.remove('drag');document.body.classList.remove('resizing','row','col')};
+  g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
+  g.addEventListener('dblclick',()=>{const ks=kind==='files'?['--w-files']:kind==='split'?['--w-ed','--w-pv']:['--h-bottom'];
+    ks.forEach(k=>{ws.style.removeProperty(k);try{localStorage.removeItem('jester.ws'+k)}catch{}})});
+  g.addEventListener('keydown',e=>{
+    const step=e.shiftKey?64:16,p=edgeOf(kind);
+    const d={ArrowLeft:-step,ArrowRight:step,ArrowUp:-step,ArrowDown:step}[e.key];
+    if(d===undefined||(axis==='col')!==(e.key==='ArrowLeft'||e.key==='ArrowRight'))return;
+    e.preventDefault();resizeTo(kind,(p.x??0)+d,(p.y??0)+d);
+  });
+});
+
+// ---- dialogs
+function wire(dlg){dlg.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>dlg.classList.remove('open')));dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.classList.remove('open')})}
+const rd=document.getElementById('renderDlg'),rt=document.getElementById('retDlg');wire(rd);wire(rt);
+document.querySelectorAll('[data-render]').forEach(b=>b.addEventListener('click',()=>rd.classList.add('open')));
+document.getElementById('retBtn').addEventListener('click',()=>rt.classList.add('open'));
+document.getElementById('retDays').addEventListener('change',e=>{const d=e.target.value;document.getElementById('retCount').textContent=d?('จะลบประวัติ '+({30:'3,950',90:'1,204',365:'0'}[d])+' รายการที่เก่ากว่า '+d+' วัน'):'ไม่มีการลบ · เก็บประวัติทั้งหมด'});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){rd.classList.remove('open');rt.classList.remove('open')}});
+['newBtn','newCard'].forEach(id=>document.getElementById(id).addEventListener('click',()=>alert('ฟอร์มสร้างรายงาน: id, ชื่อ, starter (ใบเสนอราคา · grouped table · master-detail · เปล่า)')));
+
+// ---- theme tokens: the same 16 tokens and value rules as SPEC-studio.md
+const SURIYAN={'color.background':'#f5f6f8','color.surface':'#ffffff','color.surfaceAlt':'#f1f3f6','color.border':'#e3e7ed','color.text':'#18212d','color.textMuted':'#5d6878','color.primary':'#d9730d','color.onPrimary':'#ffffff','color.danger':'#d0342c','color.warning':'#b7791f','color.success':'#1f8a4c','font.family':'Noto Sans Thai','font.size':14,'radius':8,'shadow':'soft','density':'comfortable'};
+const CLASSIC={'color.background':'#c8ecff','color.surface':'#f4fbff','color.surfaceAlt':'#e2f2fc','color.border':'#9cc6e2','color.text':'#12324a','color.textMuted':'#4a6a80','color.primary':'#1e90d6','color.onPrimary':'#ffffff','color.danger':'#c0281c','color.warning':'#a26a00','color.success':'#2e8b23','font.family':'Sarabun','font.size':14,'radius':4,'shadow':'strong','density':'compact'};
+const BRAND={...SURIYAN,'color.background':'#f7f8fb','color.primary':'#2457c5','color.text':'#141c2b'};
+const LABELS={'color.background':'พื้นหลัง','color.surface':'พื้นผิว','color.surfaceAlt':'พื้นผิวรอง','color.border':'เส้นขอบ','color.text':'ข้อความ','color.textMuted':'ข้อความรอง','color.primary':'สีหลัก','color.onPrimary':'ข้อความบนสีหลัก','color.danger':'ผิดพลาด','color.warning':'เตือน','color.success':'สำเร็จ','font.family':'ฟอนต์','font.size':'ขนาดตัวอักษร','radius':'ความโค้งมุม','shadow':'เงา','density':'ความหนาแน่น'};
+const SHADOWS={none:'none',soft:'0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08)',strong:'0 4px 14px rgba(16,24,40,.18)'};
+const HEX=/^#[0-9a-fA-F]{6}$/;
+let current={...SURIYAN};
+function apply(t){
+  const r=document.documentElement.style;
+  for(const [k,v] of Object.entries(t)){
+    if(k.startsWith('color.')){ if(HEX.test(v)) r.setProperty('--'+k.replace('.','-'),v); }
+  }
+  r.setProperty('--font-family','"'+t['font.family']+'"');
+  r.setProperty('--font-size',t['font.size']+'px');
+  r.setProperty('--radius',t['radius']+'px');
+  r.setProperty('--shadow',SHADOWS[t['shadow']]);
+  r.setProperty('--density',t['density']==='compact'?'.75':'1');
+}
+function renderTokens(){
+  const box=document.getElementById('tokens');box.innerHTML='';
+  for(const k of Object.keys(SURIYAN)){
+    const v=current[k];let input;
+    if(k.startsWith('color.')) input='<input type="color" value="'+v+'" data-k="'+k+'"><input type="text" value="'+v+'" data-k="'+k+'" data-hex>';
+    else if(k==='font.family') input='<select data-k="'+k+'">'+['TH Sarabun New','Sarabun','Noto Sans Thai','system-ui'].map(o=>'<option'+(o===v?' selected':'')+'>'+o+'</option>').join('')+'</select>';
+    else if(k==='font.size') input='<input type="range" min="12" max="18" value="'+v+'" data-k="'+k+'"><span>'+v+'px</span>';
+    else if(k==='radius') input='<input type="range" min="0" max="16" value="'+v+'" data-k="'+k+'"><span>'+v+'px</span>';
+    else input='<select data-k="'+k+'">'+(k==='shadow'?['none','soft','strong']:['compact','comfortable']).map(o=>'<option'+(o===v?' selected':'')+'>'+o+'</option>').join('')+'</select>';
+    box.insertAdjacentHTML('beforeend','<label class="tok"><span>'+LABELS[k]+'</span><code>'+k+'</code><div class="in">'+input+'</div></label>');
+  }
+  box.querySelectorAll('[data-k]').forEach(el=>el.addEventListener('input',()=>{
+    const k=el.dataset.k;let v=el.value;const err=document.getElementById('tokErr');
+    if(k.startsWith('color.')){
+      if(!HEX.test(v)){err.textContent=k+': ต้องเป็นสีแบบ #RRGGBB เท่านั้น';return}
+      err.textContent='';box.querySelectorAll('[data-k="'+k+'"]').forEach(o=>{if(o!==el)o.value=v});
+    }
+    if(k==='font.size'||k==='radius'){v=Number(v);el.nextElementSibling.textContent=v+'px'}
+    current[k]=v;apply(current);
+  }));
+}
+renderTokens();apply(current);
+document.getElementById('resetBtn').addEventListener('click',()=>{current={...SURIYAN};renderTokens();apply(current)});
+document.getElementById('exportBtn').addEventListener('click',()=>alert(JSON.stringify({name:'สำเนาของ Suriyan',tokens:current},null,2)));
+document.querySelectorAll('.themecard').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('.themecard').forEach(o=>o.setAttribute('aria-pressed',o===c?'true':'false'));
+  current={...({classic:CLASSIC,suriyan:SURIYAN,brand:BRAND}[c.dataset.theme])};renderTokens();apply(current);
+}));
+</script>
+</body>
+</html>
