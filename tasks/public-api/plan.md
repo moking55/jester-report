@@ -1,6 +1,6 @@
 # Implementation Plan: `public-api`
 
-สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
+สถานะ: **T1–T6 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
 Spec: [SPEC-public-api.md](../../SPEC-public-api.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -41,12 +41,13 @@ T2–T4 ขึ้นกับ T1 แต่ไม่ขึ้นกับกั�
 - [x] tests T1–T3 ผ่าน (db), ruff สะอาด
 
 ### Phase 2: render และการส่งมอบ
-- [ ] T4: route render (Decimal, header, Content-Disposition), preview, validate, runs, retention (ประกาศก่อน `/v1/runs/{runId}`)
-- [ ] T5: test contract (route ครบ/เกิน, response ผ่าน schema) + flow เต็ม setup → render ด้วย API key (engine จำลอง)
-- [ ] T6: `apps/api/Dockerfile`, `infra/compose.yaml`, `infra/.env.example`; `docker compose up` บน VM → health up และ flow เต็มกับของจริง
+- [x] T4: route render (Decimal, header, Content-Disposition), preview, validate, runs, retention (ประกาศก่อน `/v1/runs/{runId}`)
+- [x] T5: test contract (route ครบ/เกิน, response ผ่าน schema) + flow เต็ม setup → render ด้วย API key (engine จำลอง)
+- [x] T6: `apps/api/Dockerfile`, `infra/compose.yaml`, `infra/.env.example`; `docker compose up` บน VM → health up และ flow เต็มกับของจริง
 
 ### Checkpoint B
-- [ ] Success criteria 1–5 ของ spec ผ่าน; ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] Success criteria 1–5 ของ spec ผ่าน
+- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
 
 ## Risks and Mitigations
 

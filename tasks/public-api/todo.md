@@ -65,12 +65,12 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 **Description:** `POST /v1/render` (body Decimal, header `Jester-Run-Id`/`Jester-Template-Version`/`Content-Disposition`), `draft/preview`, `draft/validate`, `/v1/runs` (+ cursor), `/v1/runs/retention` GET/PUT ประกาศก่อน `/v1/runs/{runId}`
 
 **Acceptance criteria:**
-- [ ] `1250.5` ใน body ถึง data-prep เป็น `Decimal("1250.5")` (ไม่ผ่าน float)
-- [ ] ชื่อไฟล์ไทย → `filename*=UTF-8''…` ถูกต้อง; ชื่อผิด pattern → 422
-- [ ] `GET /v1/runs/retention` ไม่ถูกตีความเป็น runId; error ของ render-service ได้ status/`runId`/`retryable` ตาม contract
+- [x] `1250.5` ใน body ถึง data-prep เป็น `Decimal("1250.5")` (ไม่ผ่าน float)
+- [x] ชื่อไฟล์ไทย → `filename*=UTF-8''…` ถูกต้อง; ชื่อผิด pattern → 422
+- [x] `GET /v1/runs/retention` ไม่ถูกตีความเป็น runId; error ของ render-service ได้ status/`runId`/`retryable` ตาม contract
 
 **Verification:**
-- [ ] `uv run pytest tests/public_api/test_render_runs.py -m db -q`
+- [x] `uv run pytest tests/public_api/test_render_runs.py -m db -q`
 
 **Dependencies:** T1
 **Files likely touched:** `routes/{render,runs}.py`, `tests/public_api/test_render_runs.py`
@@ -81,12 +81,12 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 **Description:** test ที่โหลด `public-api.yaml` แล้วเทียบ path+method กับ route ของ app (ครบ, ไม่เกิน, route ที่ต้อง login มี dependency) และตรวจ response ของ flow ด้วย schema ของ contract; flow setup → login → template จาก starter → แก้ไฟล์ → validate → publish → API key → render → ดู run
 
 **Acceptance criteria:**
-- [ ] route ไม่ตรง contract → test ล้ม (ลองลบ route หนึ่งแล้ว test ต้องล้ม)
-- [ ] ทุก response ใน flow ผ่าน schema ของ contract
-- [ ] coverage `public_api` ≥ 90%
+- [x] route ไม่ตรง contract → test ล้ม (ลองลบ route หนึ่งแล้ว test ต้องล้ม)
+- [x] ทุก response ใน flow ผ่าน schema ของ contract
+- [x] coverage `public_api` ≥ 90%
 
 **Verification:**
-- [ ] `uv run pytest tests/public_api -m db -q --cov=jester_api.public_api`
+- [x] `uv run pytest tests/public_api -m db -q --cov=jester_api.public_api`
 
 **Dependencies:** T2, T3, T4
 **Files likely touched:** `tests/public_api/{test_contract,test_flow}.py`, `openapi/public-api.yaml` (เพิ่ม `/v1/openapi.yaml`, 428)
@@ -97,12 +97,12 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 **Description:** `apps/api/Dockerfile` (3.12-slim, `uv sync --frozen --no-dev`, user ไม่ใช่ root, `uvicorn --workers $JESTER_API_WORKERS`), `.dockerignore`, `infra/compose.yaml` (api :8000 เท่านั้นที่เปิด; postgres, rustfs, gotenberg ใน network ภายใน), `infra/.env.example`; รันบน VM
 
 **Acceptance criteria:**
-- [ ] `docker build` ผ่าน; image ไม่มี dev dependency และไม่รันเป็น root
-- [ ] `docker compose up` บน VM → `/v1/health` = up; setup token อยู่ใน log ของ api
-- [ ] flow เต็มด้วย HTTP จริงจากเครื่อง dev ผ่าน tunnel ได้ PDF; พอร์ต 5432/9000/3000 ของ stack นี้ไม่เปิดออกนอก
+- [x] `docker build` ผ่าน; image ไม่มี dev dependency และไม่รันเป็น root
+- [x] `docker compose up` บน VM → `/v1/health` = up; setup token อยู่ใน log ของ api
+- [x] flow เต็มด้วย HTTP จริงจากเครื่อง dev ผ่าน tunnel ได้ PDF; พอร์ต 5432/9000/3000 ของ stack นี้ไม่เปิดออกนอก
 
 **Verification:**
-- [ ] script flow ใน `tests/public_api/test_live.py` (marker `live_stack`) กับ `JESTER_TEST_API_URL`
+- [x] script flow ใน `tests/public_api/test_live.py` (marker `live_stack`) กับ `JESTER_TEST_API_URL`
 
 **Dependencies:** T5; VM `10.0.1.29`
 **Files likely touched:** `apps/api/{Dockerfile,.dockerignore}`, `infra/{compose.yaml,.env.example,README.md}`, `tests/public_api/test_live.py`
@@ -110,5 +110,5 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 
 ### Checkpoint B
 
-- [ ] Success criteria 1–5 ของ spec ผ่าน
+- [x] Success criteria 1–5 ของ spec ผ่าน (25 tests db + live บน compose ของ VM, coverage public_api 93%)
 - [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
