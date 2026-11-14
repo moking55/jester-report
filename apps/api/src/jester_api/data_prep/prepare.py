@@ -16,7 +16,7 @@ from ..report_definition.problems import Problem, error, has_errors, pointer
 from ..report_definition.refs import field_types
 from .evaluate import CalcError, Env, evaluate
 from .formatters import FORMATTERS
-from .lists import ListView, build_lists, convert_numbers
+from .lists import ListView, build_lists, convert_numbers, fill_missing
 from .params import check_params
 
 MAX_PROBLEMS = 50
@@ -25,7 +25,7 @@ MAX_PROBLEMS = 50
 @dataclass(frozen=True)
 class Prepared:
     params: dict[str, Any]
-    data: Any
+    data: Any  # caller's data, copied, with declared-but-missing properties filled in
     lists: dict[str, ListView]
     totals: dict[str, Decimal]
     meta: Mapping[str, Any]
@@ -110,4 +110,5 @@ def prepare(
     problems += list_problems + total_problems
     if has_errors(problems):
         return PrepareResult(None, _capped(problems))
-    return PrepareResult(Prepared(checked_params, data, lists, totals, dict(meta), FORMATTERS), problems)
+    view_data = fill_missing(data, definition.data.schema)
+    return PrepareResult(Prepared(checked_params, view_data, lists, totals, dict(meta), FORMATTERS), problems)

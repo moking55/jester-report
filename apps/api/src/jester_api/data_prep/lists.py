@@ -59,6 +59,36 @@ def convert_numbers(raw: Mapping[str, Any], types: Mapping[str, bool]) -> Row:
     return {k: to_number(v) if types.get(k) else v for k, v in raw.items()}
 
 
+def _types(schema: Mapping[str, Any]) -> list[Any]:
+    kind = schema.get("type")
+    return kind if isinstance(kind, list) else [kind]
+
+
+def _empty(schema: Any) -> Any:
+    """Value for a declared property the caller did not send: blank object skeleton, [] or None."""
+    if not isinstance(schema, Mapping):
+        return None
+    if isinstance(schema.get("properties"), Mapping):
+        return {k: _empty(s) for k, s in schema["properties"].items()}
+    return [] if "array" in _types(schema) else None
+
+
+def fill_missing(value: Any, schema: Any) -> Any:
+    """Copy of `value` with every declared-but-missing property filled in, at every depth (SPEC-binder)."""
+    if not isinstance(schema, Mapping):
+        return value
+    props = schema.get("properties")
+    if isinstance(value, Mapping) and isinstance(props, Mapping):
+        out = {k: fill_missing(v, props.get(k)) for k, v in value.items()}
+        for k, s in props.items():
+            if k not in out:
+                out[k] = _empty(s)
+        return out
+    if isinstance(value, list) and isinstance(schema.get("items"), Mapping):
+        return [fill_missing(v, schema["items"]) for v in value]
+    return value
+
+
 @dataclass
 class _Builder:
     definition: ReportDefinition
@@ -80,12 +110,13 @@ class _Builder:
     def build(self, key: str, spec: ListSpec, parent: Any, def_ptr: str, data_ptr: str) -> ListView:
         raw_items = _resolve(parent, spec.path)
         items = raw_items if isinstance(raw_items, list) else []
-        types = field_types(self.definition.data.lists[key])
+        item_schema = self.definition.data.lists[key]
+        types = field_types(item_schema)
         rows: list[Row] = []
         seen: dict[Any, str] = {}
         for i, raw in enumerate(items):
             row_ptr = f"{data_ptr}{spec.path}/{i}"
-            row = convert_numbers(raw, types)
+            row = fill_missing(convert_numbers(raw, types), item_schema)
             ident = row.get(spec.id)
             if ident is None:
                 self.problems.append(

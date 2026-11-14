@@ -209,3 +209,57 @@ def test_master_detail_specimens(case, purchase_order):
         k: D(v) for k, v in case["expected_totals"].items()
     }
     assert p.totals["grand"] == D(case["expected_grand"])
+
+
+# ---- declared-but-missing properties are filled (SPEC-binder "กติกาค่าที่หายไป") ------------------------------
+def test_missing_optional_properties_are_filled_at_every_depth():
+    schema = copy.deepcopy(SPECIMEN_SCHEMA)
+    item = schema["properties"]["records"]["items"]["properties"]
+    item["note"] = {"type": "string"}
+    item["extra"] = {"type": "object", "properties": {"tags": {"type": "array"}}}
+    schema["properties"]["shipTo"] = {
+        "type": "object",
+        "properties": {
+            "address": {"type": "string"},
+            "geo": {"type": "object", "properties": {"lat": {"type": "string"}}},
+            "lines": {"type": "array", "items": {"type": "string"}},
+        },
+    }
+    schema["properties"]["memo"] = {"type": ["string", "null"]}
+    files = {
+        "report.json": json.dumps(SPECIMEN_REPORT),
+        "data.schema.json": json.dumps(schema),
+        "sample.json": json.dumps({"records": []}),
+        "template.html": "<p></p>",
+    }
+    definition = load_definition(DefinitionInput(files, {}, FONTS)).definition
+    data = {"records": [{"id": "a", "region": "N", "amount": "1", "note": "kept"}], "memo": None}
+    before = copy.deepcopy(data)
+
+    p = prepare(definition, {}, data, {}).prepared
+
+    assert p.data["shipTo"] == {"address": None, "geo": {"lat": None}, "lines": []}
+    assert p.data["memo"] is None
+    row = p.lists["records"][0]
+    assert row["note"] == "kept" and row["extra"] == {"tags": []} and row["amt"] == D("1")
+    assert data == before  # caller's data untouched
+
+
+def test_filling_does_not_change_totals(quotation, sales, purchase_order):
+    assert prepare(quotation, QUOTE_PARAMS, sample("quotation"), {}).prepared.totals["grand"] == D("3210.00")
+    assert prepare(sales, SALES_PARAMS, sample("sales-grouped"), {}).prepared.totals["grand"] == D("2400.00")
+    assert prepare(purchase_order, {}, sample("purchase-order"), {}).prepared.totals["grand"] == D("350.00")
+
+
+def test_child_list_rows_are_filled():
+    from .conftest import fixture_files
+
+    files = fixture_files("purchase-order")
+    schema = json.loads(files["data.schema.json"])
+    schema["properties"]["orders"]["items"]["properties"]["details"]["items"]["properties"]["note"] = {
+        "type": "string"
+    }
+    files["data.schema.json"] = json.dumps(schema)
+    definition = load_definition(DefinitionInput(files, {}, FONTS)).definition
+    p = prepare(definition, {}, sample("purchase-order"), {}).prepared
+    assert [d["note"] for d in p.lists["orders"][0]["details"]] == [None, None]

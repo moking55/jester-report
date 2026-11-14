@@ -39,7 +39,7 @@ Module id: `data-prep` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ�
 @dataclass(frozen=True)
 class Prepared:
     params: dict[str, Any]            # ค่าหลังตรวจ + default ที่ประกาศไว้; date คงเป็น "YYYY-MM-DD"
-    data: Any                         # data เดิมของผู้เรียก (สำหรับ field ที่ไม่ได้อยู่ใน list)
+    data: Any                         # สำเนา data ของผู้เรียก + property ที่ประกาศแต่ไม่ได้ส่งมา (ดูด้านล่าง)
     lists: dict[str, ListView]
     totals: dict[str, Decimal]
     meta: Mapping[str, Any]           # ส่งผ่านจากผู้เรียก
@@ -69,6 +69,8 @@ class Group:
 
 Row = dict[str, Any]                # field เดิม + computed + list totals; list ลูกเป็น ListView
 ```
+
+**Property ที่ประกาศแต่ไม่ได้ส่งมา** (เพิ่มตาม SPEC-binder, ผู้ใช้อนุมัติ 14 พ.ย. 2026): ทั้งใน `data` และในแถวของทุก list (รวม list ลูก) เติมในสำเนา: object → โครงว่างตาม `properties` ซ้อนทุกชั้น, array → `[]`, อื่น ๆ → `None` เพื่อให้ template แสดงค่าว่างแทน error; schema ที่ไม่มี `properties` ตรง ๆ (เช่น `oneOf`, `$ref`) ไม่เติม
 
 ตัวเลขใน row ทุกตัวที่ data schema ระบุว่าเป็นตัวเลข (`integer`/`number`/`string`+`format: decimal`) แปลงเป็น `Decimal` ส่วน field อื่นคงชนิดเดิม
 
