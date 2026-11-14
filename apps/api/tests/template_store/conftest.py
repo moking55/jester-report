@@ -22,3 +22,15 @@ def db_url():
     yield f"{base}{sep}options=-csearch_path%3D{schema}"
     with psycopg.connect(base, autocommit=True) as conn:
         conn.execute(f"DROP SCHEMA {schema} CASCADE")
+
+
+@pytest.fixture
+async def store(db_url):
+    from psycopg_pool import AsyncConnectionPool
+
+    from jester_api.template_store import MemoryBlobStore, TemplateStore, migrate
+
+    async with AsyncConnectionPool(db_url, min_size=1, max_size=4, open=False) as pool:
+        async with pool.connection() as conn:
+            await migrate(conn)
+        yield TemplateStore(pool, MemoryBlobStore())

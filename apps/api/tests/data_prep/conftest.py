@@ -5,12 +5,13 @@ import pytest
 
 from jester_api.report_definition import AssetInfo, DefinitionInput, load_definition
 
-FIXTURES = Path(__file__).parents[1] / "report_definition" / "fixtures"
+FIXTURES = Path(__file__).parents[2] / "src" / "jester_api" / "template_store" / "starters"
+TEXT = (".html", ".json", ".css")
 FONTS = frozenset({"TH Sarabun New", "Noto Sans Thai"})
 
 
 def fixture_files(name: str) -> dict[str, str]:
-    return {p.name: p.read_text(encoding="utf-8") for p in (FIXTURES / name).iterdir()}
+    return {p.name: p.read_text(encoding="utf-8") for p in (FIXTURES / name).iterdir() if p.suffix in TEXT}
 
 
 def load_fixture(name: str, report_changes: dict | None = None):

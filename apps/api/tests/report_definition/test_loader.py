@@ -5,13 +5,13 @@ import pytest
 
 from jester_api.report_definition import AssetInfo, DefinitionInput, load_definition
 
-FIXTURES = Path(__file__).parent / "fixtures"
+FIXTURES = Path(__file__).parents[2] / "src" / "jester_api" / "template_store" / "starters"
 FONTS = frozenset({"TH Sarabun New", "Noto Sans Thai"})
 ASSETS = {"logo.png": AssetInfo("image/png", "ab" * 32)}
 
 
 def files_of(name):
-    return {p.name: p.read_text(encoding="utf-8") for p in (FIXTURES / name).iterdir()}
+    return {p.name: p.read_text(encoding="utf-8") for p in (FIXTURES / name).iterdir() if p.suffix != ".png"}
 
 
 def load(files, assets=ASSETS, fonts=FONTS):

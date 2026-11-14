@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 from .data_schema import DataSchema, check_data
@@ -27,11 +28,22 @@ class DefinitionResult:
     sha256: str
 
 
+def content_sha256(file_hashes: Mapping[str, str], asset_hashes: Mapping[str, str]) -> str:
+    """Hash over (name, sha256) of every text file and asset, independent of order.
+
+    template-store keeps a hash per file, so it can compute this without reading the contents.
+    """
+    lines = [f"f\0{name}\0{sha}" for name, sha in file_hashes.items()]
+    lines += [f"a\0{name}\0{sha}" for name, sha in asset_hashes.items()]
+    return hashlib.sha256("\n".join(sorted(lines)).encode()).hexdigest()
+
+
 def definition_sha256(inp: DefinitionInput) -> str:
     """Hash over (name, content hash) of every file and asset, independent of dict order."""
-    lines = [f"f\0{name}\0{hashlib.sha256(text.encode()).hexdigest()}" for name, text in inp.files.items()]
-    lines += [f"a\0{name}\0{asset.sha256}" for name, asset in inp.assets.items()]
-    return hashlib.sha256("\n".join(sorted(lines)).encode()).hexdigest()
+    return content_sha256(
+        {name: hashlib.sha256(text.encode()).hexdigest() for name, text in inp.files.items()},
+        {name: asset.sha256 for name, asset in inp.assets.items()},
+    )
 
 
 def load_definition(inp: DefinitionInput) -> DefinitionResult:
