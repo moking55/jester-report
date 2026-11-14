@@ -1,6 +1,6 @@
 # Implementation Plan: `render-service`
 
-สถานะ: **ร่าง รออนุมัติ** (14 พฤศจิกายน 2026)
+สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-render-service.md](../../SPEC-render-service.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -31,12 +31,12 @@ T1–T3 ไม่ขึ้นกับกัน
 ## Task List
 
 ### Phase 1: ชิ้นส่วน
-- [ ] T1: `worker.py` — `run_in_worker` ใน process ใหม่ต่องาน, timeout + kill, exception เป็น problem, comment ต่อยอดเป็น pool
-- [ ] T2: `fonts.py` — probe ฟอนต์ของ engine + cache, engine ล่ม → `None`
-- [ ] T3: `0003_runs.sql` + `runs.py` — บันทึก/อ่าน run, canonical hash, cursor, retention (ค่าเริ่มต้นเก็บตลอด)
+- [x] T1: `worker.py` — `run_in_worker` ใน process ใหม่ต่องาน, timeout + kill, exception เป็น problem, comment ต่อยอดเป็น pool
+- [x] T2: `fonts.py` — probe ฟอนต์ของ engine + cache, engine ล่ม → `None`
+- [x] T3: `0003_runs.sql` + `runs.py` — บันทึก/อ่าน run, canonical hash, cursor, retention (ค่าเริ่มต้นเก็บตลอด)
 
 ### Checkpoint A
-- [ ] tests T1–T3 ผ่าน (T3 บน db), ruff สะอาด
+- [x] tests T1–T3 ผ่าน (T3 บน db), ruff สะอาด
 
 ### Phase 2: service
 - [ ] T4: `service.py` — `render`: resolve version, cache definition/asset, worker, engine, provenance, map error ทุกแถวของตาราง, คิว
