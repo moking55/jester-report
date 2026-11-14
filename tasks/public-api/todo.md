@@ -11,12 +11,12 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 **Description:** เพิ่ม `fastapi`, `uvicorn[standard]`; `Settings.from_env()`; `create_app(settings, services=None)` + lifespan (pool, migrate, พิมพ์ setup token, bucket); exception handler กลาง → problem+json; middleware จำกัดขนาด (นับระหว่างรับ) และ log JSON; dependency ตัวตน (`session_caller`, `render_caller`, IP ของผู้ใช้จริงจาก `X-Jester-Client-IP` เมื่อ `X-Jester-Studio-Key` ตรง); `GET /v1/health`, `GET /v1/openapi.yaml`; ปิด `/docs`, `/redoc`, `/openapi.json`
 
 **Acceptance criteria:**
-- [ ] body เกินขีดจำกัด (ทั้งมีและไม่มี `Content-Length`) → 413 problem+json
-- [ ] `/docs` → 404; `/v1/openapi.yaml` คืนไฟล์ contract; health ตอบตาม `Health` schema
-- [ ] client IP: ค่าลับตรง → ใช้ header; ผิด/ไม่มี → ใช้ IP ของ connection (เทียบแบบ constant-time)
+- [x] body เกินขีดจำกัด (ทั้งมีและไม่มี `Content-Length`) → 413 problem+json
+- [x] `/docs` → 404; `/v1/openapi.yaml` คืนไฟล์ contract; health ตอบตาม `Health` schema
+- [x] client IP: ค่าลับตรง → ใช้ header; ผิด/ไม่มี → ใช้ IP ของ connection (เทียบแบบ constant-time)
 
 **Verification:**
-- [ ] `uv run pytest tests/public_api/test_app.py -q`
+- [x] `uv run pytest tests/public_api/test_app.py -q`
 
 **Dependencies:** None
 **Files likely touched:** `public_api/{__init__,settings,app,security,problems}.py`, `routes/health.py`, `tests/public_api/test_app.py`, `pyproject.toml`
@@ -27,12 +27,12 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 **Description:** route `/v1/setup` (GET/POST), `/v1/auth/login|logout|me|password`, `/v1/users` (+ `{userId}`), `/v1/api-keys` (+ `{keyId}`) ตาม contract; login/password ใช้ IP ของผู้ใช้จริง
 
 **Acceptance criteria:**
-- [ ] setup → session; ซ้ำ → 409 `SETUP_COMPLETED`; token ผิด → 403
-- [ ] login ผิด 5 ครั้งจาก IP เดียว (ผ่าน `X-Jester-Client-IP` + ค่าลับ) → 429; header IP ที่ไม่มีค่าลับไม่ทำให้หลบ limit ได้
-- [ ] สร้าง API key → `secret` ครั้งเดียว; API key เรียก `/v1/users` → 401; ลบคนสุดท้าย → 409
+- [x] setup → session; ซ้ำ → 409 `SETUP_COMPLETED`; token ผิด → 403
+- [x] login ผิด 5 ครั้งจาก IP เดียว (ผ่าน `X-Jester-Client-IP` + ค่าลับ) → 429; header IP ที่ไม่มีค่าลับไม่ทำให้หลบ limit ได้
+- [x] สร้าง API key → `secret` ครั้งเดียว; API key เรียก `/v1/users` → 401; ลบคนสุดท้าย → 409
 
 **Verification:**
-- [ ] `uv run pytest tests/public_api/test_auth_routes.py -m db -q`
+- [x] `uv run pytest tests/public_api/test_auth_routes.py -m db -q`
 
 **Dependencies:** T1
 **Files likely touched:** `routes/{setup_auth,users_keys}.py`, `tests/public_api/test_auth_routes.py`
@@ -43,12 +43,12 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 **Description:** route templates (list/create/get/rename + `lastRun` จาก render-service), draft (get, files PUT/DELETE, assets POST multipart/DELETE, reset), versions (list, publish, get), published alias; `If-Match` → expected revision; publish = validate ที่ revision นั้นก่อน แล้ว publish
 
 **Acceptance criteria:**
-- [ ] ไม่มี `If-Match` → 428; revision ไม่ตรง → 412 `REVISION_CONFLICT`
-- [ ] publish draft ที่ validate ไม่ผ่าน → 422 `DRAFT_INVALID` พร้อม problems; ผ่าน → 201 `Version`
-- [ ] อัปโหลด `.png` ที่เป็น HTML → 415; asset ซ้ำ → 409; ไฟล์ใหญ่ → 413
+- [x] ไม่มี `If-Match` → 428; revision ไม่ตรง → 412 `REVISION_CONFLICT`
+- [x] publish draft ที่ validate ไม่ผ่าน → 422 `DRAFT_INVALID` พร้อม problems; ผ่าน → 201 `Version`
+- [x] อัปโหลด `.png` ที่เป็น HTML → 415; asset ซ้ำ → 409; ไฟล์ใหญ่ → 413
 
 **Verification:**
-- [ ] `uv run pytest tests/public_api/test_templates.py -m db -q`
+- [x] `uv run pytest tests/public_api/test_templates.py -m db -q`
 
 **Dependencies:** T1
 **Files likely touched:** `routes/{templates,draft,versions}.py`, `tests/public_api/test_templates.py`
@@ -56,7 +56,7 @@ DB: `JESTER_TEST_DATABASE_URL=… uv run pytest tests/public_api -m db -q` (ผ�
 
 ### Checkpoint A
 
-- [ ] tests T1–T3 ผ่าน (db), ruff สะอาด
+- [x] tests T1–T3 ผ่าน (db), ruff สะอาด
 
 ## Phase 2: render และการส่งมอบ
 

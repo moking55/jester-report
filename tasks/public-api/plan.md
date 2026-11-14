@@ -1,6 +1,6 @@
 # Implementation Plan: `public-api`
 
-สถานะ: **ร่าง รออนุมัติ** (14 พฤศจิกายน 2026)
+สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-public-api.md](../../SPEC-public-api.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -33,12 +33,12 @@ T2–T4 ขึ้นกับ T1 แต่ไม่ขึ้นกับกั�
 ## Task List
 
 ### Phase 1: โครงและ route
-- [ ] T1: `settings`, `create_app` + lifespan, error handler, middleware ขนาด/log, ตัวตน (+ ค่าลับ Studio), `/v1/health`, `/v1/openapi.yaml`, ปิด docs อัตโนมัติ; dependency `fastapi`, `uvicorn[standard]`
-- [ ] T2: route setup, auth (login/logout/me/password), users, api-keys
-- [ ] T3: route templates, draft (files/assets/reset), versions (publish ต้อง validate ผ่านที่ revision เดียวกัน), published alias
+- [x] T1: `settings`, `create_app` + lifespan, error handler, middleware ขนาด/log, ตัวตน (+ ค่าลับ Studio), `/v1/health`, `/v1/openapi.yaml`, ปิด docs อัตโนมัติ; dependency `fastapi`, `uvicorn[standard]`
+- [x] T2: route setup, auth (login/logout/me/password), users, api-keys
+- [x] T3: route templates, draft (files/assets/reset), versions (publish ต้อง validate ผ่านที่ revision เดียวกัน), published alias
 
 ### Checkpoint A
-- [ ] tests T1–T3 ผ่าน (db), ruff สะอาด
+- [x] tests T1–T3 ผ่าน (db), ruff สะอาด
 
 ### Phase 2: render และการส่งมอบ
 - [ ] T4: route render (Decimal, header, Content-Disposition), preview, validate, runs, retention (ประกาศก่อน `/v1/runs/{runId}`)
