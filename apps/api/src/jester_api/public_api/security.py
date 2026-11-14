@@ -45,3 +45,19 @@ def client_ip(request: Request) -> str:
 # route parameters: `caller: SessionCaller` / `caller: RenderCaller`
 SessionCaller = Annotated[Principal, Depends(session_caller)]
 RenderCaller = Annotated[Principal, Depends(render_caller)]
+
+
+def expected_revision(request: Request) -> int:
+    """`If-Match: "12"` (or 12, or W/"12") -> 12; missing is 428, anything else 422."""
+    from .problems import ApiError
+
+    raw = request.headers.get("If-Match")
+    if raw is None:
+        raise ApiError("REVISION_REQUIRED", "send If-Match with the draft revision you are changing")
+    value = raw.strip().removeprefix("W/").strip('"')
+    if not value.isdigit():
+        raise ApiError("INPUT_INVALID", "If-Match must be a draft revision number")
+    return int(value)
+
+
+Revision = Annotated[int, Depends(expected_revision)]
