@@ -478,7 +478,7 @@ paths:
                 file: { type: string, format: binary }
             encoding:
               file:
-                contentType: image/png, image/jpeg, image/svg+xml, font/ttf, font/otf, font/woff2
+                contentType: image/png, image/jpeg, image/svg+xml, font/ttf, font/otf
       responses:
         '201':
           description: Stored (content-addressed by sha256; uploading the same bytes is a no-op)
@@ -860,7 +860,7 @@ components:
     AssetName:
       type: string
       description: Basename only; must not collide with text files or index/header/footer.html
-      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|ttf|otf|woff2)$'
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|ttf|otf)$'
 
     ErrorCode:
       type: string

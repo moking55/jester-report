@@ -4,6 +4,7 @@ version = "0.0.1"
 description = "Jester Report Server API"
 requires-python = ">=3.11"
 dependencies = [
+  "fonttools>=4.50",
   "httpx>=0.27",
   "jinja2>=3.1.6",
   "jsonschema>=4.26.0",
@@ -31,7 +32,11 @@ packages = ["src/jester_api"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
-markers = ["engine: needs a real Gotenberg at GOTENBERG_URL"]
+markers = [
+  "engine: needs a real Gotenberg at GOTENBERG_URL",
+  "db: needs PostgreSQL at JESTER_TEST_DATABASE_URL",
+  "storage: needs S3-compatible storage at JESTER_TEST_S3_ENDPOINT",
+]
 
 [tool.ruff]
 line-length = 110
