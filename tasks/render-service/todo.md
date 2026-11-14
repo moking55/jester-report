@@ -110,4 +110,4 @@ DB/engine: `JESTER_TEST_DATABASE_URL=… JESTER_TEST_S3_ENDPOINT=… GOTENBERG_U
 ### Checkpoint B
 
 - [x] Success criteria 1–5 ของ spec ผ่าน (32 tests db + 3 live บน VM, coverage render_service 94%)
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (review แล้ว แก้ข้อ 1: worker ใช้ forkserver บน Linux ทดสอบบน VM แล้ว)

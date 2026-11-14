@@ -3,7 +3,7 @@
 A template can loop for ever (nested range() loops write no output, so binder's size limit never trips),
 and asyncio cannot stop CPU work. So every job runs in its own process and is killed at the timeout.
 
-shortcut: one new process per job costs ~10-50 ms on Linux (fork) and ~1 s on Windows (spawn, dev only).
+shortcut: one new process per job costs ~10-50 ms on Linux (forkserver) and ~1 s on Windows (spawn, dev only).
 When throughput matters more, switch `_run_blocking` to a process pool (e.g. concurrent.futures with
 max_tasks_per_child, or a pool that is rebuilt when a worker is killed); `run_in_worker` keeps its
 signature, so the service does not change.
@@ -12,6 +12,7 @@ signature, so the service does not change.
 from __future__ import annotations
 
 import asyncio
+import functools
 import multiprocessing
 import sys
 from collections.abc import Mapping
@@ -60,9 +61,16 @@ def _child(conn: Any, *args: Any) -> None:
     conn.close()
 
 
+@functools.cache
 def _context() -> Any:
-    # fork is fast and needs no pickling; Windows only has spawn (development machines)
-    return multiprocessing.get_context("spawn" if sys.platform == "win32" else "fork")
+    if sys.platform == "win32":  # development machines: spawn is all Windows has
+        return multiprocessing.get_context("spawn")
+    # Not plain fork: the API process always has other threads (this call itself runs in one), and a
+    # child forked while another thread holds a lock (logging, malloc) can hang until the timeout.
+    # forkserver forks from a clean single-threaded server; preloading this module keeps each start fast.
+    ctx = multiprocessing.get_context("forkserver")
+    ctx.set_forkserver_preload([__name__])
+    return ctx
 
 
 def _run_blocking(timeout_s: float, args: tuple[Any, ...]) -> WorkerResult:
