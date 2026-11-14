@@ -93,7 +93,7 @@ trial bind ไม่ใช่ฟังก์ชันแยก: `public-api` เ
    ```
    CSS พื้นฐานอยู่ก่อน CSS ของผู้เขียน ผู้เขียน override ได้
 4. **header/footer:** เติม `<style>` นำหน้า: `font-family` ตาม `fonts.headerFooter` (ชื่อฟอนต์ระบบเท่านั้น ไม่มี `@font-face` ตาม D1) และ `body { box-sizing: border-box; }` (ผลรอบ 2 ของ spike) `<span class="pageNumber">` และ `totalPages` ผ่านไปถึง Gotenberg ตามเดิม
-5. **ตรวจเอกสารที่ได้** (index, header, footer และ CSS ที่ถูกอ้าง) ด้วย regex ชุดเดียวกับ lint ของ `report-definition`:
+5. **ตรวจเอกสารที่ได้** (index, header, footer และ CSS ที่ถูกอ้าง) แบบ allow-list ที่เข้มกว่า lint: ทุก attribute ที่ทำให้ engine โหลด (`src`, `srcset`, `poster`, `data`, `href` นอก `<a>`, `xlink:href` ฯลฯ ทั้งแบบมี/ไม่มี quote และหลังถอด entity), `url()` และ `@import` ต้องเป็นชื่อไฟล์ใน draft หรือ asset ตรงตัว:
    - resource เป็น URL ภายนอก (`http:`, `https:`, `//`, `file:` ฯลฯ) → `RESOURCE_NOT_ALLOWED`
    - resource ไม่ใช่ไฟล์ใน draft หรือ asset → `RESOURCE_NOT_ALLOWED`
    - `data:` URI ยอมให้ผ่าน (โหลดจาก memory ไม่ออกเครือข่าย)
@@ -153,7 +153,7 @@ apps/api/tests/binder/
 infra/gotenberg/   → args ใหม่ของ engine (หลัง spike ผ่าน)
 ```
 
-regex ของ resource/tfoot ใน `report_definition/lint.py` จะถูกเปลี่ยนเป็น public เพื่อใช้ร่วมกัน (ไม่เปลี่ยนพฤติกรรม)
+`EXTERNAL` และ `mask` ใน `report_definition/lint.py` เปลี่ยนเป็น public เพื่อใช้ร่วมกัน (ไม่เปลี่ยนพฤติกรรมของ lint)
 
 ## Code Style
 

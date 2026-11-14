@@ -31,10 +31,10 @@ _REFS = re.compile(
     r"""<link\b[^>]*?\bhref\s*=\s*["']([^"']*)["']|\bsrc\s*=\s*["']([^"']*)["']|url\(\s*["']?([^"')\s]+)""",
     re.I,
 )
-_EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.I)
+EXTERNAL = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.I)
 
 
-def _mask(text: str) -> str:
+def mask(text: str) -> str:
     """Blank out comments but keep line numbers."""
     return _COMMENTS.sub(lambda m: re.sub(r"[^\n]", " ", m.group()), text)
 
@@ -88,7 +88,7 @@ def _check_html(name: str, text: str, known: set[str]) -> list[Problem]:
 
 
 def _check_text(name: str, text: str, known: set[str], fonts: frozenset[str] | None) -> list[Problem]:
-    masked = _mask(text)
+    masked = mask(text)
     problems: list[Problem] = []
     for m in _TFOOT.finditer(masked):
         problems.append(
@@ -104,7 +104,7 @@ def _check_text(name: str, text: str, known: set[str], fonts: frozenset[str] | N
         if not target or target.startswith(("data:", "#")) or "{{" in target or "{%" in target:
             continue
         where = {"file": name, "line": _line(masked, m.start())}
-        if _EXTERNAL.match(target):
+        if EXTERNAL.match(target):
             problems.append(error("EXTERNAL_URL", f"external reference {target!r} is not allowed", **where))
         elif target not in known:
             problems.append(error("FILE_MISSING", f"{target!r} is not in the draft or its assets", **where))
