@@ -41,6 +41,7 @@ markers = [
   "engine: needs a real Gotenberg at GOTENBERG_URL",
   "db: needs PostgreSQL at JESTER_TEST_DATABASE_URL",
   "storage: needs S3-compatible storage at JESTER_TEST_S3_ENDPOINT",
+  "live_stack: needs the whole compose stack at JESTER_TEST_API_URL",
 ]
 
 [tool.ruff]

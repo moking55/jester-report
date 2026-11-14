@@ -1,0 +1,66 @@
+# Jester report server: api + PostgreSQL + RustFS + Gotenberg. Studio will be added as a fifth service.
+#   cp infra/.env.example infra/.env   # then put real secrets in infra/.env
+#   docker compose -f infra/compose.yaml up -d --build
+#   docker compose -f infra/compose.yaml logs api     # the first-run setup token is printed here
+# Only the api port is published. Put your reverse proxy (TLS) in front of it.
+name: jester
+
+services:
+  api:
+    build: ../apps/api
+    image: jester/api:0.0.1
+    environment:
+      DATABASE_URL: postgresql://jester:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/.env}@postgres:5432/jester
+      JESTER_S3_ENDPOINT: http://rustfs:9000
+      JESTER_S3_BUCKET: jester-assets
+      JESTER_S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in infra/.env}
+      JESTER_S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in infra/.env}
+      GOTENBERG_URL: http://gotenberg:3000
+      JESTER_STUDIO_KEY: ${JESTER_STUDIO_KEY:?set JESTER_STUDIO_KEY in infra/.env}
+      JESTER_API_WORKERS: ${JESTER_API_WORKERS:-2}
+    ports: ["${JESTER_API_PORT:-8000}:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      rustfs: { condition: service_started }
+      gotenberg: { condition: service_started }
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine@sha256:f377d590e5474681d4d7838635031a2b50647923b7abfa803ce9b5ff35d5c663
+    environment:
+      POSTGRES_USER: jester
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: jester
+    volumes: [postgres-data:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jester -d jester"]
+      interval: 5s
+      retries: 20
+    restart: unless-stopped
+
+  rustfs:
+    image: rustfs/rustfs:1.0.4@sha256:ed9210d6411d77ffceb70d94b964a3cb7d225983368bc25bebe01e995293dcc2
+    environment:
+      RUSTFS_ACCESS_KEY: ${S3_ACCESS_KEY}
+      RUSTFS_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes: [rustfs-data:/data]
+    restart: unless-stopped
+
+  gotenberg:
+    build: ./gotenberg
+    image: jester/gotenberg:9.4.1-th1
+    # flags explained in infra/gotenberg/README.md (spike M0 round 3)
+    command:
+      - gotenberg
+      - --api-start-timeout=90s
+      - --chromium-auto-start=true
+      - --chromium-start-timeout=60s
+      - --chromium-disable-javascript=true
+      - --chromium-allow-list=^file:///tmp/.*
+      - --chromium-deny-private-ips=true
+      - --chromium-deny-public-ips=true
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  rustfs-data:

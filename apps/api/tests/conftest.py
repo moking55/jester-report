@@ -11,6 +11,7 @@ LIVE_MARKERS = {
     "engine": "GOTENBERG_URL",
     "db": "JESTER_TEST_DATABASE_URL",
     "storage": "JESTER_TEST_S3_ENDPOINT",
+    "live_stack": "JESTER_TEST_API_URL",
 }
 
 

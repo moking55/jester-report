@@ -5,3 +5,6 @@ __pycache__/
 .ruff_cache/
 .coverage
 spikes/m0/out/
+
+# real secrets for docker compose (copy from infra/.env.example)
+infra/.env
