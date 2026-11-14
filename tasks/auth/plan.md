@@ -1,6 +1,6 @@
 # Implementation Plan: `auth`
 
-สถานะ: **ร่าง รออนุมัติ** (14 พฤศจิกายน 2026)
+สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-auth.md](../../SPEC-auth.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -29,12 +29,12 @@ T1 และ T2 ไม่ขึ้นกับกัน
 ## Task List
 
 ### Phase 1: พื้นฐาน
-- [ ] T1: ย้าย migration runner ไป `jester_api/db/` และปรับ template-store/test ให้ใช้ที่ใหม่
-- [ ] T2: `passwords.py` (scrypt + thread + semaphore + needs_rehash) และ `tokens.py` (สร้าง/ sha256/ prefix)
-- [ ] T3: `0002_auth.sql` + setup (`prepare_setup`, `setup_required`, `complete_setup`) + ผู้ใช้ (`list_users`, `create_user`, `delete_user`)
+- [x] T1: ย้าย migration runner ไป `jester_api/db/` และปรับ template-store/test ให้ใช้ที่ใหม่
+- [x] T2: `passwords.py` (scrypt + thread + semaphore + needs_rehash) และ `tokens.py` (สร้าง/ sha256/ prefix)
+- [x] T3: `0002_auth.sql` + setup (`prepare_setup`, `setup_required`, `complete_setup`) + ผู้ใช้ (`list_users`, `create_user`, `delete_user`)
 
 ### Checkpoint A
-- [ ] tests T1–T3 ผ่าน (รวม `db` บน VM), test เดิมของ template-store ผ่านหลังย้าย migration, ruff สะอาด
+- [x] tests T1–T3 ผ่าน (รวม `db` บน VM), test เดิมของ template-store ผ่านหลังย้าย migration, ruff สะอาด
 
 ### Phase 2: session และ API key
 - [ ] T4: `login` (rate limit ต่อ username+IP, dummy hash, rehash), `logout`, `authenticate` (session ต่ออายุ + API key), `change_password`
