@@ -4,7 +4,7 @@
 | --- | --- |
 | [gotenberg/](gotenberg/README.md) | `jester/gotenberg` image (Gotenberg 9.4.1 + TH Sarabun New) and its hardened run flags |
 | [compose.dev.yaml](compose.dev.yaml) | PostgreSQL + RustFS for development and the `db` / `storage` tests |
-| [compose.yaml](compose.yaml) | The server: api + PostgreSQL + RustFS + Gotenberg (Studio will be added) |
+| [compose.yaml](compose.yaml) | The server: studio + api + PostgreSQL + RustFS + Gotenberg |
 
 ## Run the server
 
@@ -15,8 +15,10 @@ docker compose -f infra/compose.yaml logs api   # copy the first-run setup token
 curl http://localhost:8000/v1/health
 ```
 
-Only the api port (`JESTER_API_PORT`, default 8000) is published; PostgreSQL, RustFS and Gotenberg stay on the
-compose network. Put your reverse proxy (TLS) in front of the api. `infra/.env` holds real secrets and is
+Only Studio (`JESTER_STUDIO_PORT`, default 3000) and the api (`JESTER_API_PORT`, default 8000) are published;
+PostgreSQL, RustFS and Gotenberg stay on the compose network. Put your reverse proxy (TLS) in front of both.
+Studio's session cookie is `Secure`, so open Studio over HTTPS (or set `JESTER_COOKIE_SECURE=false` to try it
+over plain http). `infra/.env` holds real secrets and is
 git-ignored. The contract is served at `/v1/openapi.yaml`.
 
 ## Dev stack

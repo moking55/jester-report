@@ -1,11 +1,26 @@
-# Jester report server: api + PostgreSQL + RustFS + Gotenberg. Studio will be added as a fifth service.
+# Jester report server: studio + api + PostgreSQL + RustFS + Gotenberg.
 #   cp infra/.env.example infra/.env   # then put real secrets in infra/.env
 #   docker compose -f infra/compose.yaml up -d --build
 #   docker compose -f infra/compose.yaml logs api     # the first-run setup token is printed here
-# Only the api port is published. Put your reverse proxy (TLS) in front of it.
+# Only the studio and api ports are published. Put your reverse proxy (TLS) in front of them.
 name: jester
 
 services:
+  studio:
+    build: ../apps/studio
+    image: jester/studio:0.0.1
+    environment:
+      JESTER_API_URL: http://api:8000
+      JESTER_STUDIO_KEY: ${JESTER_STUDIO_KEY:?set JESTER_STUDIO_KEY in infra/.env}
+      # 1 only behind a proxy that appends the browser IP to X-Forwarded-For
+      JESTER_TRUST_PROXY: ${JESTER_TRUST_PROXY:-0}
+      # false only when Studio is served over plain http (tests); browsers drop Secure cookies there
+      JESTER_COOKIE_SECURE: ${JESTER_COOKIE_SECURE:-true}
+    ports: ["${JESTER_STUDIO_PORT:-3000}:3000"]
+    depends_on:
+      api: { condition: service_started }
+    restart: unless-stopped
+
   api:
     build: ../apps/api
     image: jester/api:0.0.1

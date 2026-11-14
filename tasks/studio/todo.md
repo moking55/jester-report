@@ -27,13 +27,14 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Description:** `apps/studio` ด้วย Next.js (App Router, TS) เวอร์ชัน pin; ESLint (`no-restricted-imports` สำหรับ state library และ `lib/api` ใน client); `npm run gen:api` (openapi-typescript); `lib/api.ts` (`server-only`, header ครบ, `ApiProblem`, 401), `lib/session.ts` (cookie httpOnly), client IP (`JESTER_TRUST_PROXY`); `styles/tokens.css` (classic จาก mockup, suriyan) + `lib/theme.ts` (ตรวจ token แล้วสร้าง `<style>`); Vitest; `Dockerfile` (standalone, non-root) + service `studio` ใน `infra/compose.yaml`
 
 **Acceptance criteria:**
-- [ ] `npm run build`/lint/typecheck/test ผ่าน; import `zustand` หรือ `lib/api` ใน client component → lint ล้ม
-- [ ] `lib/api` ส่ง `Authorization`, `X-Jester-Studio-Key`, `X-Jester-Client-IP`; problem+json → `ApiProblem` (Vitest)
-- [ ] `lib/theme` ตัดค่าที่ไม่ผ่าน regex (test ด้วย `;}`, `</style>`); image build ได้และไม่รันเป็น root
+- [x] `npm run build`/lint/typecheck/test ผ่าน; import `zustand` หรือ `lib/api` ใน client component → lint ล้ม
+- [x] `lib/api` ส่ง `Authorization`, `X-Jester-Studio-Key`, `X-Jester-Client-IP`; problem+json → `ApiProblem` (Vitest)
+- [x] `lib/theme` ตัดค่าที่ไม่ผ่าน regex (test ด้วย `;}`, `</style>`); image build ได้และไม่รันเป็น root
 
 **Verification:**
-- [ ] `npm run lint && npm run typecheck && npm test && npm run build`
+- [x] `npm run lint && npm run typecheck && npm test && npm run build`
 
+**ผล:** Next 16.4.3, React 19.3.1, TypeScript 5.9.3 (6.x ชน peer ของ openapi-typescript), ESLint 9.39.5 (eslint-plugin-react ยังไม่รองรับ 10); image 297MB รันเป็น uid 1000 (build บน VM)
 **Dependencies:** T1
 **Files likely touched:** `apps/studio/{package.json,next.config.ts,eslint.config.mjs,Dockerfile}`, `lib/{api,session,theme,types.gen}.ts`, `styles/tokens.css`, `infra/compose.yaml`
 **Estimated scope:** M

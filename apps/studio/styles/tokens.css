@@ -1,0 +1,53 @@
+/* Design tokens (SPEC-studio.md). The root layout overrides these with the active theme's checked tokens;
+   these values (theme "classic") apply only when the api cannot be reached. Components read tokens only. */
+:root {
+  --color-background: #c8ecff;
+  --color-surface: #f4fbff;
+  --color-surfaceAlt: #e2f2fc;
+  --color-border: #9cc6e2;
+  --color-text: #12324a;
+  --color-textMuted: #4a6a80;
+  --color-primary: #1e90d6;
+  --color-onPrimary: #ffffff;
+  --color-danger: #c0281c;
+  --color-warning: #a26a00;
+  --color-success: #2e8b23;
+  --font-family: "Sarabun";
+  --font-size: 14px;
+  --radius: 4px;
+  --shadow: 0 4px 14px rgba(16, 24, 40, 0.18);
+  --density: 0.75;
+
+  /* derived from tokens, never set by a theme */
+  --sp: calc(8px * var(--density));
+  --tint-primary: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  --tint-danger: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  --tint-warning: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+  --tint-success: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text);
+  font: var(--font-size) / 1.55 var(--font-family), "Noto Sans Thai", system-ui, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}

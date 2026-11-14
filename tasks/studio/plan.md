@@ -36,7 +36,7 @@ T4, T5, T6 ขึ้นกับ T3 แต่แตะไฟล์คนละ�
 
 ### Phase 1: backend ที่ต้องเพิ่ม + โครง Studio
 - [x] T1: backend — `POST draft/prepared`, theme store (`0004_themes.sql`, built-in 2 แบบ, ตรวจ token), 6 endpoint ของ theme; contract + pytest
-- [ ] T2: studio scaffold — Next.js (pin), ESLint rules, `gen:api`, `lib/api.ts` + session cookie + client IP, `tokens.css` (classic, suriyan) + ใส่ theme ใน layout, Vitest, Dockerfile, service `studio` ใน compose
+- [x] T2: studio scaffold — Next.js (pin), ESLint rules, `gen:api`, `lib/api.ts` + session cookie + client IP, `tokens.css` (classic, suriyan) + ใส่ theme ใน layout, Vitest, Dockerfile, service `studio` ใน compose
 - [ ] T3: หน้า setup, login, logout, shell (header/status bar ตาม mockup), 401 → login, เลือก theme ส่วนตัว (cookie)
 
 ### Checkpoint A
