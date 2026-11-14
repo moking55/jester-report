@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import MAX_PREC, ROUND_HALF_UP, Context, Decimal, InvalidOperation, localcontext
 from types import SimpleNamespace
 from typing import Any
 
@@ -25,6 +25,8 @@ MONTHS = [
     "พฤศจิกายน",
     "ธันวาคม",
 ]
+# formatting only rounds to a few places, so it must never fail or lose digits on long numbers
+EXACT = Context(prec=MAX_PREC, rounding=ROUND_HALF_UP)
 MONTHS_SHORT = [
     "ม.ค.",
     "ก.พ.",
@@ -70,7 +72,7 @@ def _date(value: Any) -> date:
 def number(value: Any, places: int = 0) -> str:
     if value is None:
         return ""
-    q = _decimal(value).quantize(Decimal(1).scaleb(-places), rounding=ROUND_HALF_UP)
+    q = _decimal(value).quantize(Decimal(1).scaleb(-places), context=EXACT)
     if q == 0:
         q = abs(q)  # no "-0.00"
     return f"{q:,.{places}f}"
@@ -119,9 +121,10 @@ def _words(n: int, has_higher: bool = False) -> str:
 def baht_text(value: Any) -> str:
     if value is None:
         return ""
-    amount = _decimal(value).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    with localcontext(EXACT):
+        amount = _decimal(value).quantize(Decimal("0.01"))
+        baht, satang = divmod(int(abs(amount) * 100), 100)
     sign = "ลบ" if amount < 0 else ""
-    baht, satang = divmod(int(abs(amount) * 100), 100)
     if baht == 0 and satang == 0:
         return "ศูนย์บาทถ้วน"
     text = (_words(baht) + "บาท") if baht else ""

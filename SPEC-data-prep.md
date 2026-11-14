@@ -78,7 +78,7 @@ Row = dict[str, Any]                # field เดิม + computed + list total
 2. **Data:** ตรวจกับ data schema ด้วย validator และ format checker เดียวกับ `report-definition` (`DATA_INVALID` + pointer `/data/...`); เจอ float ที่ใดก็ตาม → `NUMBER_IS_FLOAT`
 3. **Lists:** ดึง array ตาม `path`; `id` ซ้ำใน list เดียวกัน (ภายใน parent เดียวกันสำหรับ list ลูก) → `DUPLICATE_ID` ชี้ทั้งสองตำแหน่ง
 4. **ต่อแถว** (จากลูกขึ้นแม่): แปลงตัวเลข → `computed` ตามลำดับใน `expressions.order` → list ลูก → `totals` ของแถว
-5. **Sort และ group:** เรียงตาม `sort`; ค่า `null`/ไม่มี ใน field ที่ใช้ sort หรือ group → `VALUE_MISSING`; ตัดกลุ่มแล้วคำนวณ `groupBy.totals`
+5. **Sort และ group:** เรียงตาม `sort`; ข้อความไทยเรียงแบบพจนานุกรมอย่างง่าย คือสระหน้า (เ แ โ ใ ไ) เรียงตามพยัญชนะที่ตามมา เช่น กบ < แก้ว < ไก่ < เจริญ (ไม่ใช่ collation เต็มรูปแบบ, ไม่ใช้ ICU); ค่า `null`/ไม่มี ใน field ที่ใช้ sort หรือ group → `VALUE_MISSING`; ตัดกลุ่มแล้วคำนวณ `groupBy.totals`
 6. **Report totals** ตามลำดับใน `expressions.order["/totals"]`
 
 ถ้าขั้น 1–3 มี error ไม่ทำขั้น 4–6 (ข้อมูลยังไม่น่าเชื่อ) แต่ยังคืน error ทั้งหมดของขั้น 1–3 ในครั้งเดียว
@@ -93,6 +93,8 @@ Row = dict[str, Any]                # field เดิม + computed + list total
 | `min`/`max` ของ list ว่าง | error `EMPTY_AGGREGATE` |
 | ค่าที่ใช้ในการคำนวณเป็น `null`/ไม่มี | error `VALUE_MISSING` ชี้แถวและ field ไม่แปลงเป็น 0 (T10) |
 | หารด้วยศูนย์ | error `DIVISION_BY_ZERO` |
+| ตัวเลขยาวเกิน precision จน `round` หรือการคำนวณทำต่อไม่ได้ | error `NUMBER_TOO_LARGE` (ไม่ crash); formatter ใน template ใช้ precision ไม่จำกัด จึงไม่ตัดหลัก |
+| string ใน field ตัวเลขที่ไม่ใช่ทศนิยม (เช่น schema `["string", "number"]` ที่ไม่มี `format: decimal`) | ไม่แปลง; ถ้านำไปคำนวณ → error `VALUE_NOT_NUMERIC` |
 | `if` | คำนวณเฉพาะกิ่งที่เลือก (กิ่งที่ไม่ถูกเลือกหารศูนย์ได้ไม่ error) |
 | เปรียบเทียบ | เปรียบเทียบ `Decimal` ตรง ๆ |
 | จำนวน error ระหว่างคำนวณ | เก็บสูงสุด 50 รายการ แล้วต่อท้ายด้วย `TOO_MANY_PROBLEMS` |

@@ -98,3 +98,25 @@ def test_missing_optional_list_is_empty(quotation):
     data["items"] = []
     lists, problems = build_lists(quotation, data)
     assert problems == [] and len(lists["items"]) == 0
+
+
+def test_non_decimal_string_in_numeric_field_is_reported_not_crashed(quotation):
+    from jester_api.data_prep.lists import to_number
+
+    assert to_number("12.50") == D("12.50") and to_number(7) == D(7)
+    assert to_number("abc") == "abc" and to_number(True) is True and to_number(None) is None
+    data = sample("quotation")
+    data["items"][0]["qty"] = "abc"  # e.g. a schema typed ["string", "number"] without format: decimal
+    _, problems = build_lists(quotation, data)
+    assert [(p.code, p.pointer) for p in problems] == [("VALUE_NOT_NUMERIC", "/data/items/0")]
+
+
+def test_thai_text_sorts_in_dictionary_order(sales):
+    data = sample("sales-grouped")
+    names = ["ไก่", "เจริญ", "อุดม", "กบ", "แก้ว"]
+    data["records"] = [
+        {"id": f"S{i}", "region": n, "date": "2026-11-01", "amount": "1"} for i, n in enumerate(names)
+    ]
+    lists, problems = build_lists(sales, data)
+    assert problems == []
+    assert [g.key for g in lists["records"].groups] == ["กบ", "แก้ว", "ไก่", "เจริญ", "อุดม"]

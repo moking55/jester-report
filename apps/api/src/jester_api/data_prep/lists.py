@@ -2,18 +2,20 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any, overload
 
 from ..report_definition.loader import ReportDefinition
-from ..report_definition.model import ListSpec
+from ..report_definition.model import DECIMAL_RE, ListSpec
 from ..report_definition.problems import Problem, error, pointer
 from ..report_definition.refs import field_types
 from .evaluate import CalcError, Env, evaluate
 
 Row = dict[str, Any]
+LEADING_VOWEL = re.compile("([เ-ไ])([ก-ฮ])")
 
 
 @dataclass(frozen=True)
@@ -45,10 +47,10 @@ class ListView(Sequence[Row]):
 
 
 def to_number(value: Any) -> Any:
-    """Decimal strings and ints become Decimal; None and others are kept (schema already validated)."""
-    if isinstance(value, bool):
-        return value
-    if isinstance(value, int | str):
+    """Ints and decimal strings become Decimal; anything else is kept and the evaluator reports it."""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return Decimal(value)
+    if isinstance(value, str) and DECIMAL_RE.match(value):
         return Decimal(value)
     return value
 
@@ -122,7 +124,7 @@ class _Builder:
             )
         if missing:
             return rows
-        return sorted(rows, key=lambda r: tuple(r[f] for f in fields))
+        return sorted(rows, key=lambda r: tuple(_sort_key(r[f]) for f in fields))
 
     def _group(self, spec: ListSpec, rows: list[Row], def_ptr: str, list_ptr: str) -> list[Group]:
         assert spec.groupBy is not None
@@ -134,6 +136,11 @@ class _Builder:
         for g in groups:
             self._eval_set(f"{def_ptr}/groupBy/totals", Env(g.totals, {"": g.rows}), g.totals, list_ptr)
         return groups
+
+
+def _sort_key(value: Any) -> Any:
+    # Thai dictionary order: a leading vowel (เ แ โ ใ ไ) sorts by the consonant after it
+    return LEADING_VOWEL.sub(r"\2\1", value) if isinstance(value, str) else value
 
 
 def _resolve(parent: Any, path: str) -> Any:

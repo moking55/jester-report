@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from decimal import ROUND_HALF_UP, Context, Decimal, localcontext
+from decimal import ROUND_HALF_UP, Context, Decimal, DecimalException, localcontext
 from typing import Any
 
 from ..report_definition.expressions import BinOp, BoolOp, Call, Compare, Cond, Neg, Node, Not, Num, Ref
@@ -93,4 +93,7 @@ def _eval(node: Node | Cond, env: Env) -> Decimal | bool:
 def evaluate(node: Node, env: Env) -> Decimal:
     """Evaluate in our own decimal context; the global context is never touched."""
     with localcontext(CONTEXT):
-        return _eval(node, env)  # type: ignore[return-value]
+        try:
+            return _eval(node, env)  # type: ignore[return-value]
+        except DecimalException as exc:  # e.g. round() of a value with more digits than the precision
+            raise CalcError("NUMBER_TOO_LARGE", "number is too large to calculate") from exc

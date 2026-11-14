@@ -96,3 +96,9 @@ def test_global_decimal_context_untouched():
         assert decimal.getcontext().prec == 5
     finally:
         decimal.setcontext(before)
+
+
+def test_number_too_large_is_a_calc_error():
+    with pytest.raises(CalcError) as e:
+        ev("round(a, 2)", {"a": D("9" * 30 + ".5")})
+    assert e.value.code == "NUMBER_TOO_LARGE"

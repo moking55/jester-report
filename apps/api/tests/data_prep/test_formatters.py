@@ -108,3 +108,12 @@ def test_float_rejected_everywhere():
 def test_formatters_namespace():
     assert FORMATTERS.money(1) == "1.00"
     assert FORMATTERS.baht_text(Decimal("1")) == "หนึ่งบาทถ้วน"
+
+
+def test_long_numbers_keep_every_digit():
+    big = Decimal("1" + "0" * 29 + ".005")
+    assert money(big) == "100,000,000,000,000,000,000,000,000,000.01"
+    assert baht_text(Decimal("1" + "0" * 29)).endswith("ล้านบาทถ้วน")
+    assert baht_text(Decimal("12345678901234567890123456789.25")).endswith(
+        "ล้านสี่แสนห้าหมื่นหกพันเจ็ดร้อยแปดสิบเก้าบาทยี่สิบห้าสตางค์"
+    )
