@@ -462,6 +462,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/RevisionRequired' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
     delete:
       tags: [draft]
@@ -483,6 +484,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/RevisionRequired' }
 
   /v1/templates/{templateId}/draft/assets:
     parameters:
@@ -529,6 +531,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/RevisionRequired' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
         '415':
           description: File type not allowed
@@ -555,6 +558,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/RevisionRequired' }
 
   /v1/templates/{templateId}/draft/validate:
     parameters:
@@ -649,6 +653,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/RevisionRequired' }
         '422':
           description: Draft does not validate
           content:
@@ -733,6 +738,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
+        '428': { $ref: '#/components/responses/RevisionRequired' }
 
   /v1/runs:
     get:
@@ -814,6 +820,19 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
+  /v1/openapi.yaml:
+    get:
+      tags: [system]
+      operationId: getContract
+      summary: This contract (FastAPI's generated docs are turned off because they would not match it)
+      security: []
+      responses:
+        '200':
+          description: The OpenAPI document
+          content:
+            application/yaml:
+              schema: { type: string }
+
   /v1/health:
     get:
       tags: [system]
@@ -890,6 +909,11 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    RevisionRequired:
+      description: If-Match with the draft revision is missing
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
     RevisionConflict:
       description: Draft changed since the given revision; reload and retry
       content:
@@ -943,6 +967,7 @@ components:
         - NOT_FOUND
         - CONFLICT
         - REVISION_CONFLICT
+        - REVISION_REQUIRED
         - PAYLOAD_TOO_LARGE
         - UNSUPPORTED_MEDIA_TYPE
         - RATE_LIMITED
@@ -956,6 +981,7 @@ components:
         - RENDER_TIMEOUT
         - SERVICE_UNAVAILABLE
         - ENGINE_MISCONFIGURED
+        - INTERNAL_ERROR
     Problem:
       type: object
       description: RFC 9457 problem details plus Jester fields
