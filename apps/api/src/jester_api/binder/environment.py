@@ -113,9 +113,7 @@ def _problem(exc: Exception, name: str, env: BindEnvironment) -> Problem:
     if isinstance(exc, SecurityError):
         return error("TEMPLATE_UNSAFE", str(exc), file=file, line=line)
     if isinstance(exc, TemplateNotFound):
-        return error(
-            "TEMPLATE_ERROR", f"included template {exc.name!r} is not in the draft", file=file, line=line
-        )
+        return error("TEMPLATE_ERROR", f"template {exc.name!r} is not in the draft", file=file, line=line)
     if isinstance(exc, ValueError) and _raised_in(exc, formatters.__file__):
         return error("TEMPLATE_ERROR", f"formatter: {exc}", file=file, line=line)
     return error("TEMPLATE_ERROR", f"{type(exc).__name__} while rendering", file=file, line=line)

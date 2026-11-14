@@ -1,6 +1,6 @@
 # Implementation Plan: `binder`
 
-สถานะ: **T1–T6 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
+สถานะ: **เสร็จ — Checkpoint B ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-binder.md](../../SPEC-binder.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -45,7 +45,7 @@ T1–T4 ไม่ขึ้นกับกัน (ไฟล์แยก); T6 ต�
 
 ### Checkpoint B
 - [x] Success criteria 1–6 ของ spec ผ่าน
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (review Phase 2 แล้ว แก้ข้อ 1: template.html ที่หายเป็น problem)
 
 ## Risks and Mitigations
 

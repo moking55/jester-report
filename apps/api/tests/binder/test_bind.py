@@ -196,3 +196,13 @@ def test_caller_data_untouched():
     data = copy.deepcopy(BASE)
     missing_case("{{ data.shipTo.address }}", data)
     assert data == BASE
+
+
+def test_missing_template_html_is_a_problem_not_a_crash():
+    definition = load_fixture("quotation")
+    prepared = prepare(definition, QUOTE_PARAMS, sample("quotation"), {}).prepared
+    files = fixture_files("quotation")
+    del files["template.html"]
+    result = bind(definition, files, ASSETS, prepared)
+    assert result.bound is None
+    assert [(p.code, p.file) for p in result.problems] == [("TEMPLATE_ERROR", "template.html")]

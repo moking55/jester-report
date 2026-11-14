@@ -45,7 +45,7 @@ def bind(
     rendered: dict[str, str] = {}
     budget = MAX_OUTPUT_BYTES  # for all parts together
     for name in PARTS:
-        if name not in files:
+        if name not in files and name != "template.html":  # template.html missing is reported, not skipped
             continue
         out, found = render(env, name, context, budget)
         problems += found  # every part is rendered, so all their errors come back at once

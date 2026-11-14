@@ -112,4 +112,4 @@
 ### Checkpoint B
 
 - [x] Success criteria 1–6 ของ spec ผ่าน (367 tests รวม live 4 ตัว, coverage binder 99%, spike รอบ 3)
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (review Phase 2 แล้ว แก้ข้อ 1: template.html ที่หายเป็น problem)
