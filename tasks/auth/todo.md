@@ -95,4 +95,4 @@ DB: `JESTER_TEST_DATABASE_URL=postgresql://jester:jester-dev@127.0.0.1:5432/jest
 ### Checkpoint B
 
 - [x] Success criteria 1–5 ของ spec ผ่าน (32 tests db บน VM, coverage auth 99%)
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (ผู้ใช้ตอบ "ไปต่อ" 14 พ.ย. 2026)

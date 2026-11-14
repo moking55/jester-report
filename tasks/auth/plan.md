@@ -1,6 +1,6 @@
 # Implementation Plan: `auth`
 
-สถานะ: **T1–T5 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
+สถานะ: **เสร็จ — Checkpoint B ผ่าน** (14 พฤศจิกายน 2026)
 Spec: [SPEC-auth.md](../../SPEC-auth.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -42,7 +42,7 @@ T1 และ T2 ไม่ขึ้นกับกัน
 
 ### Checkpoint B
 - [x] Success criteria 1–5 ของ spec ผ่าน
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป (ผู้ใช้ตอบ "ไปต่อ" 14 พ.ย. 2026)
 
 ## Risks and Mitigations
 
