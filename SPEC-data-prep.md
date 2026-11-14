@@ -70,7 +70,7 @@ class Group:
 Row = dict[str, Any]                # field เดิม + computed + list totals; list ลูกเป็น ListView
 ```
 
-**Property ที่ประกาศแต่ไม่ได้ส่งมา** (เพิ่มตาม SPEC-binder, ผู้ใช้อนุมัติ 14 พ.ย. 2026): ทั้งใน `data` และในแถวของทุก list (รวม list ลูก) เติมในสำเนา: object → โครงว่างตาม `properties` ซ้อนทุกชั้น, array → `[]`, อื่น ๆ → `None` เพื่อให้ template แสดงค่าว่างแทน error; schema ที่ไม่มี `properties` ตรง ๆ (เช่น `oneOf`, `$ref`) ไม่เติม
+**Property ที่ประกาศแต่ไม่ได้ส่งมา** (เพิ่มตาม SPEC-binder, ผู้ใช้อนุมัติ 14 พ.ย. 2026): ทั้งใน `data` และในแถวของทุก list (รวม list ลูก) เติมในสำเนา (รวมค่าที่ส่งมาเป็น `null`): object → โครงว่างตาม `properties` ซ้อนทุกชั้น, array → `[]`, อื่น ๆ → `None` เพื่อให้ template แสดงค่าว่างแทน error; schema ที่ไม่มี `properties` ตรง ๆ (เช่น `oneOf`, `$ref`) ไม่เติม
 
 ตัวเลขใน row ทุกตัวที่ data schema ระบุว่าเป็นตัวเลข (`integer`/`number`/`string`+`format: decimal`) แปลงเป็น `Decimal` ส่วน field อื่นคงชนิดเดิม
 

@@ -83,6 +83,7 @@
 - [ ] fixture 3 แบบ bind ผ่าน: `3,210.00`, `สามพันสองร้อยสิบบาทถ้วน`, ชื่อบริษัทใน header, `pageNumber` ใน footer, `report.css` ใน `files`, `logo.png` ใน `asset_names`
 - [ ] ทุกแถวของ "กติกาค่าที่หายไป" ให้ผลตามตารางผ่าน `prepare` → `bind`
 - [ ] SSRF ผ่าน data (รวม `|safe`) ถูกจับ; bind ซ้ำได้ bytes เดิม
+- [ ] ขีดจำกัด 20 MB เป็นขนาดรวมของทุกไฟล์ (ส่ง budget ที่เหลือต่อจากไฟล์ก่อน)
 
 **Verification:**
 - [ ] `uv run pytest tests/binder -q --cov=jester_api.binder` ≥ 90%
@@ -93,7 +94,7 @@
 
 ### T6: engine hardening + live
 
-**Description:** ตรวจ `gotenberg --help` ใน `jester/gotenberg:9.4.1-th1`; เพิ่ม args `--chromium-disable-javascript`, `--chromium-allow-list` (และ `--chromium-deny-private-ips` ถ้ามี); รัน spike SP-A/B/C ซ้ำบน VM; เพิ่ม live test ของ binder (marker `engine`); บันทึก args ใน infra และ SPEC-engine-client.md
+**Description:** (ตัดสินแล้วจาก review Phase 1: allow-list ของ engine เป็นข้อบังคับในทุกกรณี ไม่ใช่แค่ทางถอย เพราะ regex ของ binder จับ CSS/markup แปลก ๆ ได้ไม่ครบทุกแบบ) ตรวจ `gotenberg --help` ใน `jester/gotenberg:9.4.1-th1`; เพิ่ม args `--chromium-disable-javascript`, `--chromium-allow-list` (และ `--chromium-deny-private-ips` ถ้ามี); รัน spike SP-A/B/C ซ้ำบน VM; เพิ่ม live test ของ binder (marker `engine`); บันทึก args ใน infra และ SPEC-engine-client.md
 
 **Acceptance criteria:**
 - [ ] 500 แถว 19 หน้า: เลขหน้า 1/19…19/19 ครบ, หัวตารางซ้ำทุกหน้า (poppler); SP-A/B/C ผ่านเหมือนเดิม

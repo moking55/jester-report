@@ -245,6 +245,28 @@ def test_missing_optional_properties_are_filled_at_every_depth():
     assert data == before  # caller's data untouched
 
 
+def test_explicit_null_object_and_array_become_blank():
+    schema = copy.deepcopy(SPECIMEN_SCHEMA)
+    schema["properties"]["shipTo"] = {
+        "type": ["object", "null"],
+        "properties": {
+            "address": {"type": "string"},
+            "lines": {"type": ["array", "null"], "items": {"type": "string"}},
+        },
+    }
+    files = {
+        "report.json": json.dumps(SPECIMEN_REPORT),
+        "data.schema.json": json.dumps(schema),
+        "sample.json": json.dumps({"records": []}),
+        "template.html": "<p></p>",
+    }
+    definition = load_definition(DefinitionInput(files, {}, FONTS)).definition
+    nulled = prepare(definition, {}, {"records": [], "shipTo": None}, {}).prepared
+    assert nulled.data["shipTo"] == {"address": None, "lines": []}
+    inner = prepare(definition, {}, {"records": [], "shipTo": {"address": "x", "lines": None}}, {}).prepared
+    assert inner.data["shipTo"] == {"address": "x", "lines": []}
+
+
 def test_filling_does_not_change_totals(quotation, sales, purchase_order):
     assert prepare(quotation, QUOTE_PARAMS, sample("quotation"), {}).prepared.totals["grand"] == D("3210.00")
     assert prepare(sales, SALES_PARAMS, sample("sales-grouped"), {}).prepared.totals["grand"] == D("2400.00")

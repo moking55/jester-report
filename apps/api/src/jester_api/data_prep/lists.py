@@ -77,6 +77,8 @@ def fill_missing(value: Any, schema: Any) -> Any:
     """Copy of `value` with every declared-but-missing property filled in, at every depth (SPEC-binder)."""
     if not isinstance(schema, Mapping):
         return value
+    if value is None:  # an explicit null reads like a missing optional value: blank skeleton, [] or None
+        return _empty(schema)
     props = schema.get("properties")
     if isinstance(value, Mapping) and isinstance(props, Mapping):
         out = {k: fill_missing(v, props.get(k)) for k, v in value.items()}

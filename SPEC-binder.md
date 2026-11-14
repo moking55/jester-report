@@ -64,7 +64,7 @@ trial bind ไม่ใช่ฟังก์ชันแยก: `public-api` เ
 | field ไม่บังคับที่ไม่ได้ส่งมา | ไม่มี `data.customer.taxId` | แสดงเป็น `""` | แสดงเป็น `""` |
 | object ไม่บังคับที่ไม่ได้ส่งมา | ไม่มี `data.shipTo`, template เขียน `{{ data.shipTo.address }}` | `""` (ไล่ลงไปได้ทุกชั้น) | `""` |
 | array ไม่บังคับที่ไม่ได้ส่งมา | `{% for x in data.shipTo.lines %}` | วน 0 รอบ | วน 0 รอบ |
-| ค่า `null` | `"taxId": null` | `""` | `""` |
+| ค่า `null` (ทั้ง scalar, object และ array) | `"taxId": null`, `"shipTo": null` | `""` / โครงว่าง / list ว่าง | เหมือนกัน |
 | พิมพ์ object/list ทั้งก้อน | `{{ data.customer }}` | **warning** `TEMPLATE_PRINTS_OBJECT` + แสดง `""` | แสดง `""` (warning ติดไปกับผล ไม่ขวาง PDF) |
 | ชื่อที่ schema ไม่มี (typo) | `{{ item.amont }}` | error `TEMPLATE_UNDEFINED` | error เหมือนกัน |
 
