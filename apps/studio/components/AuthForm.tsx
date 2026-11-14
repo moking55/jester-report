@@ -25,11 +25,19 @@ export function AuthForm({ action, fields, submit }: Props) {
   return (
     <form action={formAction} className={styles.form}>
       {fields.map((f) => (
-        <label key={f.name} className={styles.field}>
-          <span>{f.label}</span>
-          <input name={f.name} type={f.type ?? "text"} autoComplete={f.autoComplete} required />
-          {f.hint && <small>{f.hint}</small>}
-        </label>
+        <div key={f.name} className={styles.field}>
+          <label htmlFor={`f-${f.name}`}>{f.label}</label>
+          <input
+            id={`f-${f.name}`}
+            name={f.name}
+            type={f.type ?? "text"}
+            autoComplete={f.autoComplete}
+            defaultValue={f.type === "password" ? undefined : state.values?.[f.name]}
+            aria-describedby={f.hint ? `f-${f.name}-hint` : undefined}
+            required
+          />
+          {f.hint && <small id={`f-${f.name}-hint`}>{f.hint}</small>}
+        </div>
       ))}
       {state.error && (
         <p role="alert" className={styles.error}>

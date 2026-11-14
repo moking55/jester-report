@@ -40,7 +40,7 @@ T4, T5, T6 ขึ้นกับ T3 แต่แตะไฟล์คนละ�
 - [x] T3: หน้า setup, login, logout, shell (header/status bar ตาม mockup), 401 → login, เลือก theme ส่วนตัว (cookie)
 
 ### Checkpoint A
-- [ ] Vitest/build/lint ผ่าน; Playwright บน compose ที่ VM: setup → login → สลับ classic/suriyan → logout; ไม่มี request จาก browser ไป api
+- [x] Vitest/build/lint ผ่าน; Playwright บน compose ที่ VM: setup → login → สลับ classic/suriyan → logout; ไม่มี request จาก browser ไป api
 
 ### Phase 2: หน้าจอหลัก
 - [ ] T4: catalog (สร้างจาก starter) + workspace (ไฟล์, CodeMirror, บันทึก + 412, validate + gutter, แท็บ Problems/Prepared data/Provenance, preview ใน iframe)

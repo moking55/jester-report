@@ -26,6 +26,7 @@ describe("AuthForm", () => {
   it("submits the fields and shows the action's error", async () => {
     const action = vi.fn(async (_state: unknown, form: FormData) => ({
       error: form.get("username") === "alice" ? "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" : null,
+      values: { username: String(form.get("username")) },
     }));
     render(
       <AuthForm
@@ -43,5 +44,8 @@ describe("AuthForm", () => {
     expect((await screen.findByRole("alert")).textContent).toBe("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
     await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
     expect(screen.getByLabelText("รหัสผ่าน").getAttribute("type")).toBe("password");
+    // the username survives React's form reset; the password does not come back
+    await waitFor(() => expect((screen.getByLabelText("ชื่อผู้ใช้") as HTMLInputElement).value).toBe("alice"));
+    expect((screen.getByLabelText("รหัสผ่าน") as HTMLInputElement).value).toBe("");
   });
 });

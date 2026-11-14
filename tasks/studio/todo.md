@@ -57,7 +57,8 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 ### Checkpoint A
 
-- [ ] Vitest/build/lint ผ่าน; Playwright บน compose ที่ VM: setup → login → สลับ classic/suriyan → logout; ไม่มี request จาก browser ไป api
+- [x] Vitest/build/lint ผ่าน; Playwright บน compose ที่ VM: setup → login → สลับ classic/suriyan → logout; ไม่มี request จาก browser ไป api
+- ผล 15 พ.ย. 2026: `e2e/checkpoint-a.spec.ts` ผ่านบน stack แยก `-p jester-e2e` (volume ใหม่) ที่ VM; เจอและแก้ 2 อย่าง: hint อยู่ใน `<label>` (ย้ายเป็น `aria-describedby`), React reset form ทำให้ชื่อผู้ใช้หายหลังรหัสผิด (action คืนค่าที่ไม่ใช่รหัสผ่าน)
 
 ## Phase 2: หน้าจอหลัก
 
