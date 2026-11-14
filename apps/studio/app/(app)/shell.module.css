@@ -1,0 +1,115 @@
+/* Full-screen window: caption bar, content, status bar (design/studio-mvp.html). No card around the page. */
+.window {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.caption {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 1.2) calc(var(--sp) * 3);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow);
+  z-index: 1;
+}
+
+.appIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--color-primary);
+}
+
+.nav {
+  display: flex;
+  gap: 4px;
+  margin-left: calc(var(--sp) * 2);
+}
+
+.nav a,
+.nav span {
+  padding: calc(var(--sp) * 0.8) calc(var(--sp) * 1.5);
+  border-radius: var(--radius);
+  color: var(--color-textMuted);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav span[aria-disabled="true"] {
+  opacity: 0.55;
+}
+
+.nav a[aria-current="page"] {
+  background: var(--tint-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.caption select {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 4px 8px;
+}
+
+.user {
+  font-weight: 600;
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logout {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  padding: calc(var(--sp) * 0.7) calc(var(--sp) * 1.4);
+  cursor: pointer;
+}
+
+.logout:hover {
+  background: var(--color-surfaceAlt);
+}
+
+.body {
+  overflow: auto;
+  min-height: 0;
+}
+
+.status {
+  display: flex;
+  gap: calc(var(--sp) * 3);
+  padding: calc(var(--sp) * 0.6) calc(var(--sp) * 3);
+  background: var(--color-surfaceAlt);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}
+
+.up {
+  color: var(--color-success);
+}
+
+.down {
+  color: var(--color-danger);
+}
+
+@media (max-width: 900px) {
+  .window {
+    position: static;
+    min-height: 100vh;
+  }
+
+  .caption {
+    flex-wrap: wrap;
+  }
+}

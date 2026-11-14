@@ -44,12 +44,12 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Description:** หน้า `setup` (เมื่อ `setupRequired`), `login`, logout (Server Action), `(app)/layout` (header + status bar ตาม mockup, ตรวจ session, ใส่ theme ของผู้ใช้หรือค่าเริ่มต้น), ตัวเลือก theme ส่วนตัว (cookie)
 
 **Acceptance criteria:**
-- [ ] ยังไม่ setup → ทุกหน้าพาไป `setup`; setup แล้ว → login → catalog; 401 → login
-- [ ] login ผิด → ข้อความไทย; 429 → ข้อความให้รอ
-- [ ] สลับ classic/suriyan แล้วสีเปลี่ยนทั้งหน้า และจำหลัง reload
+- [x] ยังไม่ setup → ทุกหน้าพาไป `setup`; setup แล้ว → login → catalog; 401 → login
+- [x] login ผิด → ข้อความไทย; 429 → ข้อความให้รอ
+- [x] สลับ classic/suriyan แล้วสีเปลี่ยนทั้งหน้า และจำหลัง reload
 
 **Verification:**
-- [ ] Vitest (ฟอร์ม, action) + `npm run build`
+- [x] Vitest (ฟอร์ม, action) + `npm run build`
 
 **Dependencies:** T2
 **Files likely touched:** `app/(auth)/*`, `app/(app)/layout.tsx`, `lib/actions/auth.ts`, `components/{Shell,ThemePicker}.tsx`, tests
