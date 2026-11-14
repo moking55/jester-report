@@ -65,12 +65,12 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 **Description:** `migrations/0001_init.sql` (8 ตารางตาม spec + trigger ปฏิเสธ UPDATE/DELETE บน `versions`, `version_files`, `version_assets`); `migrate(pool)` รันไฟล์ที่ยังไม่รันใน transaction พร้อม `pg_advisory_xact_lock`; เพิ่ม dependency `psycopg[binary,pool]`
 
 **Acceptance criteria:**
-- [ ] migrate สองครั้งติดกัน → ครั้งที่สองไม่ทำอะไร
-- [ ] สอง task migrate พร้อมกันบน schema ว่าง → ไม่ error, รันครั้งเดียว
-- [ ] UPDATE/DELETE ตรงบน `version_files` ถูกปฏิเสธ
+- [x] migrate สองครั้งติดกัน → ครั้งที่สองไม่ทำอะไร
+- [x] สอง task migrate พร้อมกันบน schema ว่าง → ไม่ error, รันครั้งเดียว
+- [x] UPDATE/DELETE ตรงบน `version_files` ถูกปฏิเสธ
 
 **Verification:**
-- [ ] `uv run pytest tests/template_store/test_migrations.py -m db -q`
+- [x] `uv run pytest tests/template_store/test_migrations.py -m db -q`
 
 **Dependencies:** T1
 **Files likely touched:** `template_store/migrations/0001_init.sql`, `template_store/migrate.py`, `tests/template_store/{conftest,test_migrations}.py`, `pyproject.toml`
@@ -81,12 +81,12 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 **Description:** `TemplateStore` ส่วน templates และ draft ตาม interface ใน spec; ตรวจชื่อตาม pattern ของ contract, ขีดจำกัด (1 MB / 5 MB / 20 MB / 50 ไฟล์), ห้ามลบ `report.json`/`template.html`, revision check; starter 4 แบบ (ย้าย fixture อ้างอิงไปเป็น package data แล้วแก้ path ใน test เดิม, เพิ่ม `blank`, `logo.png` จริง)
 
 **Acceptance criteria:**
-- [ ] สอง task `put_file` ด้วย revision เดียวกันพร้อมกัน → หนึ่งสำเร็จ หนึ่ง `REVISION_CONFLICT`
-- [ ] เกินขีดจำกัดทุกแบบ → `PAYLOAD_TOO_LARGE` และ draft ไม่เปลี่ยน (revision เดิม)
-- [ ] starter ทั้ง 4 แบบ: `load_definition` + `prepare` + `bind` ด้วย sample ของตัวเองไม่มี error; test เดิมของ report-definition/data-prep/binder ผ่านด้วย path ใหม่
+- [x] สอง task `put_file` ด้วย revision เดียวกันพร้อมกัน → หนึ่งสำเร็จ หนึ่ง `REVISION_CONFLICT`
+- [x] เกินขีดจำกัดทุกแบบ → `PAYLOAD_TOO_LARGE` และ draft ไม่เปลี่ยน (revision เดิม)
+- [x] starter ทั้ง 4 แบบ: `load_definition` + `prepare` + `bind` ด้วย sample ของตัวเองไม่มี error; test เดิมของ report-definition/data-prep/binder ผ่านด้วย path ใหม่
 
 **Verification:**
-- [ ] `uv run pytest tests -q` และ `-m db`
+- [x] `uv run pytest tests -q` และ `-m db`
 
 **Dependencies:** T2, T3, T4
 **Files likely touched:** `template_store/{__init__,store,starters}.py`, `template_store/starters/**`, `tests/template_store/test_store_drafts.py`, conftest ของ test เดิม
@@ -97,12 +97,12 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 **Description:** `publish` (lock draft, เช็ก revision, version = max+1, คัดลอก, sha256 = `definition_sha256`), `list_versions`, `get_version`, `set_published`, `reset_draft`, `definition_input("draft" | "published" | n)`, `asset_bytes`
 
 **Acceptance criteria:**
-- [ ] publish พร้อมกันสองครั้งด้วย revision เดียวกัน → version 1 และ `REVISION_CONFLICT`
-- [ ] แก้ draft หลัง publish ไม่กระทบ `get_version`; `definition_input(...).sha256 == definition_sha256(DefinitionInput(...))`
-- [ ] `set_published` ไป version ก่อนหน้า แล้ว `definition_input("published")` ได้ไฟล์ของ version นั้น; reset draft ได้ไฟล์และ asset ของ version
+- [x] publish พร้อมกันสองครั้งด้วย revision เดียวกัน → version 1 และ `REVISION_CONFLICT`
+- [x] แก้ draft หลัง publish ไม่กระทบ `get_version`; `definition_input(...).sha256 == definition_sha256(DefinitionInput(...))`
+- [x] `set_published` ไป version ก่อนหน้า แล้ว `definition_input("published")` ได้ไฟล์ของ version นั้น; reset draft ได้ไฟล์และ asset ของ version
 
 **Verification:**
-- [ ] `uv run pytest tests/template_store -m db -q --cov=jester_api.template_store` ≥ 90%
+- [x] `uv run pytest tests/template_store -m db -q --cov=jester_api.template_store` ≥ 90%
 
 **Dependencies:** T5
 **Files likely touched:** `template_store/store.py`, `tests/template_store/test_store_versions.py`
@@ -110,5 +110,5 @@ DB/storage: `JESTER_TEST_DATABASE_URL=postgresql://…@localhost:5432/jester JES
 
 ### Checkpoint B
 
-- [ ] Success criteria 1–5 ของ spec ผ่าน
+- [x] Success criteria 1–5 ของ spec ผ่าน (404 tests รวม db/storage บน VM, coverage template_store 97%)
 - [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป

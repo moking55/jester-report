@@ -1,6 +1,6 @@
 # Implementation Plan: `template-store`
 
-สถานะ: **Phase 1 เสร็จ — Checkpoint A ผ่าน** (14 พฤศจิกายน 2026)
+สถานะ: **T1–T6 เสร็จ — รอผู้ใช้ที่ Checkpoint B** (14 พฤศจิกายน 2026)
 Spec: [SPEC-template-store.md](../../SPEC-template-store.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -38,12 +38,13 @@ T2, T3 ไม่ต้องใช้ DB ทำคู่กับ T1 ได้
 - [x] tests T1–T3 ผ่าน (รวม `storage` บน VM), ruff สะอาด
 
 ### Phase 2: store
-- [ ] T4: migrations + runner + schema + trigger immutable; migrate พร้อมกันสอง process ได้
-- [ ] T5: templates + draft (create/list/get/rename, get_draft, put/delete file, add/delete asset, ขีดจำกัด, revision) + starter 4 แบบ (ย้าย fixture)
-- [ ] T6: versions + render (publish, list/get version, set_published, reset_draft, definition_input, asset_bytes) + concurrency tests
+- [x] T4: migrations + runner + schema + trigger immutable; migrate พร้อมกันสอง process ได้
+- [x] T5: templates + draft (create/list/get/rename, get_draft, put/delete file, add/delete asset, ขีดจำกัด, revision) + starter 4 แบบ (ย้าย fixture)
+- [x] T6: versions + render (publish, list/get version, set_published, reset_draft, definition_input, asset_bytes) + concurrency tests
 
 ### Checkpoint B
-- [ ] Success criteria 1–5 ของ spec ผ่าน; ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
+- [x] Success criteria 1–5 ของ spec ผ่าน
+- [ ] ผู้ใช้ทบทวนก่อนเริ่ม module ถัดไป
 
 ## Risks and Mitigations
 
