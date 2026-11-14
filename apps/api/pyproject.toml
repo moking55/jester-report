@@ -4,10 +4,12 @@ version = "0.0.1"
 description = "Jester Report Server API"
 requires-python = ">=3.11"
 dependencies = [
+  "boto3>=1.34",
   "fonttools>=4.50",
   "httpx>=0.27",
   "jinja2>=3.1.6",
   "jsonschema>=4.26.0",
+  "psycopg[binary,pool]>=3.2",
   "pydantic>=2.7",
 ]
 
