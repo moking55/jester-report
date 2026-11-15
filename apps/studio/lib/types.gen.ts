@@ -304,7 +304,12 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * The asset's bytes, for Studio's preview of an image or font
+         * @description Sent with the type detected at upload, `X-Content-Type-Options: nosniff` and a sandboxing
+         *     Content-Security-Policy, so an SVG opened directly cannot run script.
+         */
+        get: operations["getDraftAsset"];
         put?: never;
         post?: never;
         /** @description Detaches the asset from the draft. Bytes stay in storage while any published version uses them. */
@@ -1694,6 +1699,35 @@ export interface operations {
                 };
             };
             428: components["responses"]["RevisionRequired"];
+        };
+    };
+    getDraftAsset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+                assetName: components["schemas"]["AssetName"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The bytes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "image/svg+xml": string;
+                    "font/ttf": string;
+                    "font/otf": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
         };
     };
     deleteDraftAsset: {
