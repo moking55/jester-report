@@ -1,0 +1,35 @@
+.node,
+.leaf {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.node > :not(summary) {
+  margin-left: 16px;
+}
+
+.node summary {
+  cursor: pointer;
+}
+
+.leaf {
+  padding-left: 14px;
+}
+
+.key {
+  color: var(--color-text);
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.key::after {
+  content: ":";
+}
+
+.string {
+  color: var(--color-success);
+}
+
+.other {
+  color: var(--color-primary);
+}

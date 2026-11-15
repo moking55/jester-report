@@ -2,7 +2,7 @@
 
 import { api } from "@/lib/api";
 import { attempt, draftPath } from "@/lib/result";
-import type { Draft, Result, ValidationResult } from "@/lib/workspace";
+import type { Draft, PreparedData, Result, Run, ValidationResult } from "@/lib/workspace";
 
 export async function loadDraft(templateId: string): Promise<Result<Draft>> {
   return attempt(() => api<Draft>(draftPath(templateId)));
@@ -10,6 +10,20 @@ export async function loadDraft(templateId: string): Promise<Result<Draft>> {
 
 export async function validateDraft(templateId: string): Promise<Result<ValidationResult>> {
   return attempt(() => api<ValidationResult>(`${draftPath(templateId)}/validate`, { method: "POST" }));
+}
+
+/** data-prep alone on the saved draft with its sample data: the view model the template receives. */
+export async function prepareDraft(templateId: string, params: Record<string, unknown>): Promise<Result<PreparedData>> {
+  return attempt(() => api<PreparedData>(`${draftPath(templateId)}/prepared`, { method: "POST", body: { params } }));
+}
+
+/** The newest run of this template (a Preview records one), for the Provenance tab. */
+export async function latestRun(templateId: string): Promise<Result<Run | null>> {
+  draftPath(templateId); // checks the id
+  return attempt(async () => {
+    const page = await api<{ items: Run[] }>(`/v1/runs?templateId=${templateId}&limit=1`);
+    return page.items[0] ?? null;
+  });
 }
 
 /** Saves one file at the revision the tab last saw; a newer revision on the server answers 412. */

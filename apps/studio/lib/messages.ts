@@ -8,7 +8,9 @@ const BY_CODE: Record<string, string> = {
   SETUP_COMPLETED: "ระบบตั้งค่าเสร็จแล้ว กรุณาเข้าสู่ระบบ",
   SERVICE_UNAVAILABLE: "ติดต่อ Jester API ไม่ได้ กรุณาลองใหม่อีกครั้ง",
   PAYLOAD_TOO_LARGE: "ไฟล์ใหญ่เกิน 1 MB",
-  INTERNAL_ERROR: "เกิดข้อผิดพลาดที่ server ดูรายละเอียดใน log ของ api",
+  DRAFT_INVALID: "draft ยังมีปัญหา แก้ตามรายการแล้วลองใหม่",
+  RENDER_TIMEOUT: "สร้าง PDF นานเกินกำหนด",
+  INTERNAL_ERROR:"เกิดข้อผิดพลาดที่ server ดูรายละเอียดใน log ของ api",
 };
 
 const FIELD: Record<string, string> = {

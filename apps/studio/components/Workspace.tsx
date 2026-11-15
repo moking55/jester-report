@@ -3,17 +3,29 @@
 import { useRef } from "react";
 import { useImmer } from "use-immer";
 
-import { loadDraft, saveFile, validateDraft } from "@/lib/actions/draft";
+import { latestRun, loadDraft, prepareDraft, saveFile, validateDraft } from "@/lib/actions/draft";
 import { problemMessage } from "@/lib/messages";
+import { defaultParams, parseParams } from "@/lib/params";
 import { failed, initialState, reloaded, saved, setDirty, validated, type Draft } from "@/lib/workspace";
 
 import { Editor, type EditorHandle } from "./Editor";
+import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
+import { RunDetails } from "./RunDetails";
 import styles from "./Workspace.module.css";
 
-export function Workspace({ draft, name }: { draft: Draft; name: string }) {
-  const [state, update] = useImmer(() => initialState(draft));
+const TABS = [
+  ["problems", "Problems"],
+  ["prepared", "Prepared data"],
+  ["provenance", "Provenance"],
+] as const;
+
+export function Workspace({ draft, name, today }: { draft: Draft; name: string; today: string }) {
+  const [state, update] = useImmer(() =>
+    initialState(draft, defaultParams(draft.files.find((f) => f.name === "report.json")?.content, today)),
+  );
   const editor = useRef<EditorHandle>(null);
+  const previewForm = useRef<HTMLFormElement>(null);
 
   /** Saves every dirty file in turn; false when one failed (412, 422, …). */
   async function saveAll(): Promise<boolean> {
@@ -47,6 +59,44 @@ export function Workspace({ draft, name }: { draft: Draft; name: string }) {
     update(result.ok ? validated(result.data) : failed(result.problem, problemMessage(result.problem)));
   }
 
+  /** Params from the box, or the box's error shown in the bar. */
+  function params(): Record<string, unknown> | null {
+    const parsed = parseParams(state.paramsText);
+    if ("params" in parsed) return parsed.params;
+    update((s) => {
+      s.error = parsed.error;
+    });
+    return null;
+  }
+
+  async function prepare() {
+    if (!params() || !(await saveAll())) return;
+    update((s) => {
+      s.tab = "prepared";
+    });
+    const result = await prepareDraft(state.templateId, params()!);
+    update((s) => {
+      if (result.ok) {
+        s.prepared = result.data;
+        s.error = null;
+      } else failed(result.problem, problemMessage(result.problem))(s);
+    });
+  }
+
+  /** The form posts into the iframe; the Route Handler answers with the PDF (or a Thai error page). */
+  async function preview() {
+    if (!params() || !(await saveAll())) return;
+    previewForm.current?.requestSubmit();
+  }
+
+  async function refreshRun() {
+    const result = await latestRun(state.templateId);
+    if (result.ok)
+      update((s) => {
+        s.run = result.data;
+      });
+  }
+
   function pick(file: string, line: number, column?: number) {
     update((s) => {
       s.active = file;
@@ -76,6 +126,9 @@ export function Workspace({ draft, name }: { draft: Draft; name: string }) {
         </button>
         <button type="button" onClick={validate} disabled={state.saving || state.conflict}>
           Validate
+        </button>
+        <button type="button" onClick={preview} disabled={state.saving || state.conflict}>
+          Preview
         </button>
       </div>
       {state.conflict && (
@@ -118,16 +171,89 @@ export function Workspace({ draft, name }: { draft: Draft; name: string }) {
             onDirty={(file, dirty) => update(setDirty(file, dirty))}
             onSave={saveAll}
           />
-          <section className={styles.bottom} aria-label="Problems">
-            <h2>
-              Problems
-              {state.problems.length > 0 && <span className={styles.count}>{state.problems.length}</span>}
-            </h2>
-            <div className={styles.panel}>
-              <ProblemList problems={state.problems} checked={state.checked} onPick={pick} />
+          <section className={styles.bottom}>
+            <div role="tablist" className={styles.tabs}>
+              {TABS.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={state.tab === id}
+                  onClick={() => {
+                    update((s) => {
+                      s.tab = id;
+                    });
+                    if (id === "provenance") refreshRun();
+                  }}
+                >
+                  {label}
+                  {id === "problems" && state.problems.length > 0 && (
+                    <span className={styles.count}>{state.problems.length}</span>
+                  )}
+                </button>
+              ))}
+              <span className={styles.spacer} />
+              {state.tab === "prepared" && (
+                <button type="button" onClick={prepare} disabled={state.saving || state.conflict}>
+                  คำนวณใหม่
+                </button>
+              )}
+            </div>
+            <div role="tabpanel" className={styles.panel}>
+              {state.tab === "problems" && <ProblemList problems={state.problems} checked={state.checked} onPick={pick} />}
+              {state.tab === "prepared" &&
+                (state.prepared ? (
+                  <>
+                    <JsonTree name="totals" value={state.prepared.totals} />
+                    <JsonTree name="params" value={state.prepared.params} />
+                    <JsonTree name="lists" value={state.prepared.lists} depth={1} />
+                    <JsonTree name="data" value={state.prepared.data} depth={1} />
+                  </>
+                ) : (
+                  <p className={styles.hint}>กด &quot;คำนวณใหม่&quot; เพื่อดูข้อมูลที่ template จะได้รับ (ใช้ sample data)</p>
+                ))}
+              {state.tab === "provenance" && <RunDetails run={state.run} />}
             </div>
           </section>
         </div>
+        <section className={styles.preview} aria-label="Preview">
+          <form
+            ref={previewForm}
+            method="post"
+            action={`/preview/${state.templateId}`}
+            target="pdf-preview"
+            className={styles.params}
+          >
+            <label htmlFor="params">params</label>
+            <input
+              id="params"
+              name="params"
+              value={state.paramsText}
+              spellCheck={false}
+              onChange={(e) => {
+                const text = e.target.value;
+                update((s) => {
+                  s.paramsText = text;
+                });
+              }}
+            />
+          </form>
+          <iframe
+            name="pdf-preview"
+            title="PDF preview"
+            className={styles.pdf}
+            onLoad={(e) => {
+              // the first load is about:blank; later loads are a preview, which records a run
+              let href = "about:blank";
+              try {
+                href = e.currentTarget.contentWindow?.location.href ?? href;
+              } catch {
+                href = "pdf"; // the browser's PDF viewer can hide its location; it is a preview all the same
+              }
+              if (href !== "about:blank") refreshRun();
+            }}
+          />
+        </section>
       </div>
     </div>
   );

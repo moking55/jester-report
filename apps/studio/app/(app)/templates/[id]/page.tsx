@@ -21,5 +21,7 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
     if (error instanceof ApiProblem && error.status === 404) notFound();
     throw error;
   }
-  return <Workspace draft={draft} name={template.name} />;
+  // today in Thailand, computed once here so server and browser render the same params box
+  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
+  return <Workspace draft={draft} name={template.name} today={today} />;
 }

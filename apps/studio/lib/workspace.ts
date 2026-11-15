@@ -7,6 +7,8 @@ export type Draft = components["schemas"]["Draft"];
 export type TextFile = components["schemas"]["TextFile"];
 export type ValidationProblem = components["schemas"]["ValidationProblem"];
 export type ValidationResult = components["schemas"]["ValidationResult"];
+export type PreparedData = components["schemas"]["PreparedData"];
+export type Run = components["schemas"]["Run"];
 
 export type Result<T> = { ok: true; data: T } | { ok: false; problem: Problem };
 
@@ -21,9 +23,13 @@ export type WorkspaceState = {
   error: string | null;
   problems: ValidationProblem[];
   checked: "never" | "valid" | "invalid"; // the last Validate, for the Problems tab
+  tab: "problems" | "prepared" | "provenance";
+  paramsText: string; // the params box shared by Preview and Prepared data
+  prepared: PreparedData | null;
+  run: Run | null;
 };
 
-export function initialState(draft: Draft): WorkspaceState {
+export function initialState(draft: Draft, paramsText = "{}"): WorkspaceState {
   const names = draft.files.map((f) => f.name);
   return {
     templateId: draft.templateId,
@@ -36,6 +42,10 @@ export function initialState(draft: Draft): WorkspaceState {
     error: null,
     problems: [],
     checked: "never",
+    tab: "problems",
+    paramsText,
+    prepared: null,
+    run: null,
   };
 }
 
@@ -64,11 +74,14 @@ export const failed = (problem: Problem, message: string) => (s: WorkspaceState)
     return;
   }
   s.error = message;
-  if (problem.problems?.length) s.problems = problem.problems;
+  if (problem.problems?.length) {
+    s.problems = problem.problems;
+    s.tab = "problems";
+  }
 };
 
 export const reloaded = (draft: Draft) => (s: WorkspaceState) => {
-  const next = initialState(draft);
+  const next = initialState(draft, s.paramsText);
   next.active = draft.files.some((f) => f.name === s.active) ? s.active : next.active;
-  return next;
+  return { ...next, tab: s.tab, run: s.run };
 };
