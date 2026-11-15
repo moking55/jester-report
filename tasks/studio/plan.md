@@ -1,6 +1,6 @@
 # Implementation Plan: `studio`
 
-สถานะ: **ร่าง รออนุมัติ** (15 พฤศจิกายน 2026)
+สถานะ: **เสร็จ — Checkpoint B ผ่าน ผู้ใช้ตรวจรับแล้ว** (15 พฤศจิกายน 2026)
 Spec: [SPEC-studio.md](../../SPEC-studio.md) · Map: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) · Task list: [todo.md](todo.md)
 
 ## Overview
@@ -49,7 +49,7 @@ T4, T5, T6 ขึ้นกับ T3 แต่แตะไฟล์คนละ�
 - [x] T7: E2E เต็มบน VM + ปรับหน้าตา catalog/workspace/history ให้ตรง mockup ใน theme classic
 
 ### Checkpoint B
-- [ ] Success criteria 1–5 ของ spec ผ่าน; ผู้ใช้ทบทวน
+- [x] Success criteria 1–5 ของ spec ผ่าน; ผู้ใช้ตรวจรับและอนุมัติปิดงาน 15 พฤศจิกายน 2026 ("ผ่านครับปิดงานได้")
 
 ## Risks and Mitigations
 

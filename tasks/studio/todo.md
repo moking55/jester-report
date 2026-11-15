@@ -1,5 +1,7 @@
 # Tasks: `studio`
 
+สถานะ: **เสร็จ — Checkpoint B ผ่าน ผู้ใช้ตรวจรับแล้ว** (15 พฤศจิกายน 2026)
+
 แผน: [plan.md](plan.md) · Spec: [SPEC-studio.md](../../SPEC-studio.md)
 backend: `cd apps/api && uv run ruff check . && uv run pytest tests -q` (+ `-m db` ผ่าน tunnel)
 studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm run build`
@@ -94,7 +96,7 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 - [x] ตัวอย่าง `curl` ใช้ placeholder `jrk_…` ไม่ใช่ secret จริง
 
 **Verification:**
-- [ ] Vitest + `npm run build`
+- [x] Vitest + `npm run build` (ยืนยันซ้ำก่อนปิดงาน 15 พ.ย. 2026: 47 tests ผ่าน และ build ผ่าน)
 
 **Dependencies:** T3
 **Files likely touched:** `components/{VersionsPanel,RenderDialog}.tsx`, `app/(app)/history/page.tsx`, `lib/actions/{versions,runs}.ts`
@@ -160,5 +162,9 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 ### Checkpoint B
 
-- [ ] Success criteria 1–5 ของ spec ผ่าน
-- [ ] ผู้ใช้ทบทวน
+- [x] Success criteria 1–5 ของ spec ผ่าน (หลักฐาน E2E บน VM ตาม T7 และผลตรวจในเครื่องด้านล่าง)
+- [x] ผู้ใช้ตรวจรับและอนุมัติปิดงาน 15 พฤศจิกายน 2026 ("ผ่านครับปิดงานได้")
+
+ผลตรวจในเครื่องก่อนปิดงาน: backend `pytest -q` ผ่าน 427 tests, ข้าม 97 tests ที่ต้องใช้บริการจริง; `ruff check .` ผ่าน; Studio `npm test` ผ่าน 47 tests, `npm run lint`, `npm run typecheck` และ `npm run build` ผ่านทั้งหมด
+
+ข้อจำกัดที่ยังคงอยู่: รอบปิดงานไม่ได้รัน E2E บน VM ซ้ำ; ปัญหา logout ที่เคยล้มหนึ่งรอบยังไม่ทราบสาเหตุ; ยังไม่ได้ยืนยัน load/concurrency และความพร้อม production
