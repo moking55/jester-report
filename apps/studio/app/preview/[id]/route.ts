@@ -4,19 +4,7 @@ import { apiRaw, ApiProblem } from "@/lib/api";
 import { problemMessage } from "@/lib/messages";
 import { parseParams } from "@/lib/params";
 import { isTemplateId, sameOrigin } from "@/lib/result";
-import type { ValidationProblem } from "@/lib/workspace";
-
-const escape = (text: string) =>
-  text.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-
-function page(status: number, message: string, problems: ValidationProblem[] = []): Response {
-  const items = problems
-    .map((p) => `<li><code>${escape(p.code)}</code> ${escape(p.message)} ${escape(p.pointer ?? p.file ?? "")}</li>`)
-    .join("");
-  const html = `<!doctype html><meta charset="utf-8"><body style="font:14px/1.5 system-ui,sans-serif;padding:16px;color:#333">
-<p style="color:#b42318;font-weight:600">${escape(message)}</p>${items ? `<ul>${items}</ul>` : ""}</body>`;
-  return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
-}
+import { errorPage as page } from "@/lib/error-page";
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useImmer } from "use-immer";
 
 import {
@@ -36,6 +36,7 @@ import { Editor, type EditorHandle } from "./Editor";
 import { FilePanel } from "./FilePanel";
 import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
+import { RenderDialog } from "./RenderDialog";
 import { RunDetails } from "./RunDetails";
 import { VersionsPanel } from "./VersionsPanel";
 import styles from "./Workspace.module.css";
@@ -55,6 +56,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   const previewForm = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const writing = useRef(false);
+  const [renderData, setRenderData] = useState<string | null>(null); // the dialog is open while set
 
   /**
    * One draft write at a time. Every write sends the revision this tab knows; two at once (Ctrl+S during a
@@ -232,6 +234,14 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   const unsaved = state.dirty.length > 0;
   return (
     <div className={styles.workspace}>
+      {renderData !== null && (
+        <RenderDialog
+          templateId={state.templateId}
+          params={state.paramsText}
+          data={renderData}
+          onClose={() => setRenderData(null)}
+        />
+      )}
       <div className={styles.toolbar}>
         <b>{name}</b>
         <code>{state.templateId}</code>
@@ -251,6 +261,9 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         </button>
         <button type="button" onClick={publish} disabled={state.saving || state.conflict}>
           Publish
+        </button>
+        <button type="button" onClick={() => setRenderData(editor.current?.content("sample.json") ?? "{}")}>
+          Render…
         </button>
       </div>
       {state.conflict && (

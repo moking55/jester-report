@@ -1,0 +1,103 @@
+.dialog {
+  width: min(760px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  border: 1px solid var(--color-border);
+  border-radius: calc(var(--radius) + 2px);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow);
+  padding: 0;
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.form {
+  display: grid;
+  gap: calc(var(--sp) * 1.5);
+  padding: calc(var(--sp) * 3);
+}
+
+.form h2,
+.form h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.form h3 {
+  font-size: 0.95em;
+  color: var(--color-textMuted);
+}
+
+.form label {
+  display: grid;
+  gap: 2px;
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.form select,
+.form input,
+.form textarea {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 4px 8px;
+}
+
+.form textarea,
+.curl {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+}
+
+.curl {
+  margin: 0;
+  padding: calc(var(--sp) * 1.5);
+  max-height: 180px;
+  overflow: auto;
+  background: var(--color-surfaceAlt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.hint,
+.warn {
+  margin: 0;
+  font-size: 0.85em;
+  color: var(--color-textMuted);
+}
+
+.warn {
+  color: var(--color-warning);
+}
+
+.buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: calc(var(--sp) * 1);
+}
+
+.buttons button {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 5px 14px;
+  cursor: pointer;
+}
+
+.buttons .primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  font-weight: 600;
+}
+
+.buttons button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -102,7 +102,7 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 **แตกย่อย:**
 - [x] T5a: ปุ่ม Publish (บันทึกก่อน; 422 → Problems) + แท็บ Versions (รายการ, ตั้ง published, reset draft จากเวอร์ชัน)
-- [ ] T5b: Render dialog (version/params/data/filename → PDF ในแท็บใหม่ผ่าน Route Handler) + ตัวอย่าง `curl` ที่ใช้ `jrk_…` และ `$JESTER_API`
+- [x] T5b: Render dialog (version/params/data/filename → PDF ในแท็บใหม่ผ่าน Route Handler) + ตัวอย่าง `curl` ที่ใช้ `jrk_…` และ `$JESTER_API`
 - [ ] T5c: หน้า history (ตัวกรอง template/status, หน้าถัดไปด้วย cursor, รายละเอียด provenance) + นโยบายเก็บ (ดูจำนวนที่จะลบก่อนยืนยัน)
 
 ### T6: settings + theme editor

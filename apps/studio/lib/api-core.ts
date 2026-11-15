@@ -24,6 +24,7 @@ export type ApiConfig = {
 export type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown; // sent as JSON
+  json?: string; // JSON text sent as is (render data: re-encoding would turn exact decimals into floats)
   text?: string; // sent as text/plain (draft files: JSON-encoding would save report.json as a string)
   form?: FormData; // sent as multipart/form-data (asset uploads); fetch writes the boundary
   ifMatch?: number; // draft revision
@@ -46,6 +47,9 @@ export async function apiResponse(config: ApiConfig, path: string, options: Requ
   let body: string | FormData | undefined;
   if (options.form !== undefined) {
     body = options.form;
+  } else if (options.json !== undefined) {
+    headers["Content-Type"] = "application/json";
+    body = options.json;
   } else if (options.text !== undefined) {
     headers["Content-Type"] = "text/plain; charset=utf-8";
     body = options.text;
