@@ -10,6 +10,7 @@ export type ValidationResult = components["schemas"]["ValidationResult"];
 export type PreparedData = components["schemas"]["PreparedData"];
 export type Run = components["schemas"]["Run"];
 export type Asset = components["schemas"]["Asset"];
+export type Version = components["schemas"]["Version"];
 
 export type Result<T> = { ok: true; data: T } | { ok: false; problem: Problem };
 
@@ -26,10 +27,11 @@ export type WorkspaceState = {
   error: string | null;
   problems: ValidationProblem[];
   checked: "never" | "valid" | "invalid"; // the last Validate, for the Problems tab
-  tab: "problems" | "prepared" | "provenance";
+  tab: "problems" | "prepared" | "provenance" | "versions";
   paramsText: string; // the params box shared by Preview and Prepared data
   prepared: PreparedData | null;
   run: Run | null;
+  lastPublished: number | null; // keys the Versions panel, so a publish reloads its list
 };
 
 export function initialState(draft: Draft, paramsText = "{}"): WorkspaceState {
@@ -51,6 +53,7 @@ export function initialState(draft: Draft, paramsText = "{}"): WorkspaceState {
     paramsText,
     prepared: null,
     run: null,
+    lastPublished: null,
   };
 }
 

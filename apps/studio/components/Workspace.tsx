@@ -13,6 +13,7 @@ import {
   saveFile,
   validateDraft,
 } from "@/lib/actions/draft";
+import { publishDraft, resetDraft } from "@/lib/actions/versions";
 import { problemMessage } from "@/lib/messages";
 import { defaultParams, parseParams } from "@/lib/params";
 import type { Problem } from "@/lib/api-core";
@@ -36,12 +37,14 @@ import { FilePanel } from "./FilePanel";
 import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
 import { RunDetails } from "./RunDetails";
+import { VersionsPanel } from "./VersionsPanel";
 import styles from "./Workspace.module.css";
 
 const TABS = [
   ["problems", "Problems"],
   ["prepared", "Prepared data"],
   ["provenance", "Provenance"],
+  ["versions", "Versions"],
 ] as const;
 
 export function Workspace({ draft, name, today }: { draft: Draft; name: string; today: string }) {
@@ -57,7 +60,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
    * One draft write at a time. Every write sends the revision this tab knows; two at once (Ctrl+S during a
    * slow upload) would make the second a 412 against this very tab. The ref guards clicks within one render.
    */
-  async function exclusive(write: () => Promise<boolean>): Promise<boolean> {
+  async function exclusive<T>(write: () => Promise<T | false>): Promise<T | false> {
     if (writing.current || state.conflict) return false;
     writing.current = true;
     update((s) => {
@@ -79,7 +82,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
     }
   }
 
-  /** Saves every dirty file in turn; false when one failed (412, 422, …). */
+  /** Saves every dirty file in turn: the revision after the last save, or false when one failed (412, 422, …). */
   const saveAll = () =>
     exclusive(async () => {
       let revision = state.revision;
@@ -95,7 +98,40 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         const stillDirty = editor.current?.markSaved(file, content) ?? false;
         update(saved(file, revision, stillDirty));
       }
-      return true;
+      return revision; // `state` in this closure is older than the saves above
+    });
+
+  async function publish() {
+    const note = prompt("โน้ตของเวอร์ชันนี้ (เว้นว่างได้)");
+    if (note === null) return;
+    const revision = await saveAll();
+    if (revision === false) return;
+    const result = await publishDraft(state.templateId, revision, note);
+    if (!result.ok && result.problem.code === "REVISION_CONFLICT") {
+      // the api answers 412 also when this exact draft is already the newest version: tell them apart
+      const draft = await loadDraft(state.templateId);
+      if (draft.ok && draft.data.revision === revision) {
+        update((s) => {
+          s.error = "draft นี้ตรงกับเวอร์ชันล่าสุดอยู่แล้ว ไม่มีอะไรใหม่ให้ publish";
+        });
+        return;
+      }
+    }
+    update((s) => {
+      if (result.ok) {
+        s.error = null;
+        s.tab = "versions";
+        s.lastPublished = result.data.version; // a new key remounts the panel, which loads the list again
+      } else failed(result.problem, problemMessage(result.problem))(s);
+    });
+  }
+
+  const reset = (version: number) =>
+    exclusive(async () => {
+      const result = await resetDraft(state.templateId, version, state.revision);
+      const draft = result.ok ? await loadDraft(state.templateId) : result;
+      update(draft.ok ? reloaded(draft.data) : failed(draft.problem, problemMessage(draft.problem)));
+      return draft.ok;
     });
 
   /** The api validates what is saved, so unsaved edits go first. */
@@ -213,6 +249,9 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         <button type="button" onClick={preview} disabled={state.saving || state.conflict}>
           Preview
         </button>
+        <button type="button" onClick={publish} disabled={state.saving || state.conflict}>
+          Publish
+        </button>
       </div>
       {state.conflict && (
         <div role="alert" className={styles.conflict}>
@@ -296,6 +335,11 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
                   <p className={styles.hint}>กด &quot;คำนวณใหม่&quot; เพื่อดูข้อมูลที่ template จะได้รับ (ใช้ sample data)</p>
                 ))}
               {state.tab === "provenance" && <RunDetails run={state.run} />}
+              {state.tab === "versions" && (
+                <VersionsPanel
+                  key={state.lastPublished ?? 0}
+                  templateId={state.templateId} busy={state.saving || state.conflict} onReset={reset} />
+              )}
             </div>
           </section>
         </div>

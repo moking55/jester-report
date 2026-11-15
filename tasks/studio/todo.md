@@ -100,6 +100,11 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Files likely touched:** `components/{VersionsPanel,RenderDialog}.tsx`, `app/(app)/history/page.tsx`, `lib/actions/{versions,runs}.ts`
 **Estimated scope:** M
 
+**แตกย่อย:**
+- [x] T5a: ปุ่ม Publish (บันทึกก่อน; 422 → Problems) + แท็บ Versions (รายการ, ตั้ง published, reset draft จากเวอร์ชัน)
+- [ ] T5b: Render dialog (version/params/data/filename → PDF ในแท็บใหม่ผ่าน Route Handler) + ตัวอย่าง `curl` ที่ใช้ `jrk_…` และ `$JESTER_API`
+- [ ] T5c: หน้า history (ตัวกรอง template/status, หน้าถัดไปด้วย cursor, รายละเอียด provenance) + นโยบายเก็บ (ดูจำนวนที่จะลบก่อนยืนยัน)
+
 ### T6: settings + theme editor
 
 **Description:** ผู้ใช้ (รายการ, เพิ่ม, ลบ; ลบคนสุดท้ายไม่ได้), API key (สร้าง → แสดง secret ครั้งเดียวพร้อมปุ่มคัดลอก, เพิกถอน), เปลี่ยนรหัสผ่าน, theme editor (เลือก theme ฐาน, ฟอร์ม token 16 ตัวพร้อมตัวอย่างสด, ทำสำเนา built-in, บันทึก/ลบ, import/export JSON, ตั้งค่าเริ่มต้นของระบบ)
