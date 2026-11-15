@@ -12,7 +12,7 @@ type ApiKey = components["schemas"]["ApiKey"];
 
 export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
   // the only copy of a new secret: gone when the box is closed or the page is left
-  const [created, setCreated] = useState<{ name: string; secret: string } | null>(null);
+  const [created, setCreated] = useState<{ id: string; name: string; secret: string } | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -22,7 +22,7 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
     startTransition(async () => {
       const result = await createApiKey(String(form.get("name") ?? ""));
       if (result.ok) {
-        setCreated({ name: result.name, secret: result.secret });
+        setCreated({ id: result.id, name: result.name, secret: result.secret });
         setCopied(false);
         setError(null);
       } else {
@@ -32,7 +32,7 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
 
   const revoke = (key: ApiKey) => {
     if (!window.confirm(`เพิกถอน key "${key.name}"? ระบบที่ใช้ key นี้จะเรียก render ไม่ได้ทันที`)) return;
-    setCreated(null);
+    if (key.id === created?.id) setCreated(null); // revoking another key keeps an uncopied secret
     startTransition(async () => setError(await revokeApiKey(key.id)));
   };
 

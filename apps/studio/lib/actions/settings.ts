@@ -37,16 +37,16 @@ export async function deleteUser(id: string): Promise<string | null> {
   return null;
 }
 
-export type NewKey = { ok: true; name: string; secret: string } | { ok: false; error: string };
+export type NewKey = { ok: true; id: string; name: string; secret: string } | { ok: false; error: string };
 
 /** The secret goes back to the one component that shows it; it is never stored, logged or put in a URL. */
 export async function createApiKey(name: string): Promise<NewKey> {
   const result = await attempt(() =>
-    api<{ name: string; secret: string }>("/v1/api-keys", { method: "POST", body: { name: name.trim() } }),
+    api<{ id: string; name: string; secret: string }>("/v1/api-keys", { method: "POST", body: { name: name.trim() } }),
   );
   if (!result.ok) return { ok: false, error: problemMessage(result.problem, KEY_NAME) };
   refresh();
-  return { ok: true, name: result.data.name, secret: result.data.secret };
+  return { ok: true, id: result.data.id, name: result.data.name, secret: result.data.secret };
 }
 
 export async function revokeApiKey(id: string): Promise<string | null> {
