@@ -4,6 +4,31 @@
   border-radius: 4px;
 }
 
+/* edge-to-edge panes: the handle shows as the 1px line between them */
+.resizer::before {
+  content: "";
+  position: absolute;
+  background: var(--color-border);
+}
+
+.vertical::before {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+}
+
+.horizontal::before {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+}
+
+:global(:root[data-look="aero"]) .resizer::before {
+  display: none; /* separate panes have their own edges */
+}
+
 .resizer::after {
   content: "";
   position: absolute;

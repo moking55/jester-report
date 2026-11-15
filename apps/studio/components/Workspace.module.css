@@ -76,20 +76,34 @@
 
 /* files | editor | preview, the tabs under editor and preview; every pane is bounded so CodeMirror
    and the iframe scroll inside it instead of growing the page */
+/* Panes sit edge to edge, split by the drag handles (components/Resizer.tsx); the classic theme's
+   glass look (data-look="aero") spaces them out as separate rounded panes like the mockup.
+   Sizes come from Workspace.tsx, which reads --ws-pad back for the drag maths. */
 .main {
+  --ws-pad: 0px;
+  --ws-track: 5px;
   flex: 1;
   display: grid;
-  /* the 8px tracks are the drag handles (components/Resizer.tsx); sizes come from Workspace.tsx */
-  grid-template-columns: var(--files-w, 210px) 8px minmax(0, 1fr) 8px var(--preview-w, 420px);
-  grid-template-rows: minmax(0, 1fr) 8px var(--bottom-h, 220px);
-  padding: 8px;
+  grid-template-columns: var(--files-w, 210px) var(--ws-track) minmax(0, 1fr) var(--ws-track) var(--preview-w, 420px);
+  grid-template-rows: minmax(0, 1fr) var(--ws-track) var(--bottom-h, 220px);
+  padding: var(--ws-pad);
   min-height: 0;
+  background: var(--color-surface);
 }
 
 .main > :not([role="separator"]) {
   min-width: 0;
   min-height: 0;
   background: var(--fill-pane);
+}
+
+:global(:root[data-look="aero"]) .main {
+  --ws-pad: 8px;
+  --ws-track: 8px;
+  background: none;
+}
+
+:global(:root[data-look="aero"]) .main > :not([role="separator"]) {
   backdrop-filter: var(--blur-pane);
   border: 1px solid var(--line-pane);
   border-radius: var(--radius-pane);

@@ -44,7 +44,6 @@ import { VersionsPanel } from "./VersionsPanel";
 import styles from "./Workspace.module.css";
 
 const SIZES_KEY = "jester.workspace.panes";
-const PAD = 8; // .main padding in Workspace.module.css
 
 const TABS = [
   ["problems", "Problems"],
@@ -76,11 +75,12 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
     }
   }, []);
 
-  function resize(change: (rect: DOMRect, current: PaneSizes) => Partial<PaneSizes>) {
+  function resize(change: (rect: DOMRect, current: PaneSizes, pad: number) => Partial<PaneSizes>) {
     const rect = main.current?.getBoundingClientRect();
     if (!rect) return;
+    const pad = parseFloat(getComputedStyle(main.current!).paddingLeft) || 0; // 0 edge to edge, 8 for classic
     setSizes((current) => {
-      const next = clampSizes({ ...current, ...change(rect, current) }, rect);
+      const next = clampSizes({ ...current, ...change(rect, current, pad) }, rect);
       try {
         localStorage.setItem(SIZES_KEY, JSON.stringify(next));
       } catch {
@@ -344,7 +344,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           orientation="vertical"
           label="ปรับความกว้างช่องไฟล์"
           className={styles.filesHandle}
-          onMove={(x) => resize((rect) => ({ files: x - rect.left - PAD }))}
+          onMove={(x) => resize((rect, _, pad) => ({ files: x - rect.left - pad }))}
           onStep={(d) => resize((_, s) => ({ files: s.files + d }))}
           onReset={() => resize(() => ({ files: DEFAULT_SIZES.files }))}
         />
@@ -369,7 +369,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           orientation="vertical"
           label="ปรับความกว้างช่อง preview"
           className={styles.previewHandle}
-          onMove={(x) => resize((rect) => ({ preview: rect.right - x - PAD }))}
+          onMove={(x) => resize((rect, _, pad) => ({ preview: rect.right - x - pad }))}
           onStep={(d) => resize((_, s) => ({ preview: s.preview - d }))}
           onReset={() => resize(() => ({ preview: DEFAULT_SIZES.preview }))}
         />
@@ -416,7 +416,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           orientation="horizontal"
           label="ปรับความสูงแท็บด้านล่าง"
           className={styles.bottomHandle}
-          onMove={(_, y) => resize((rect) => ({ bottom: rect.bottom - y - PAD }))}
+          onMove={(_, y) => resize((rect, _, pad) => ({ bottom: rect.bottom - y - pad }))}
           onStep={(d) => resize((_, s) => ({ bottom: s.bottom - d }))}
           onReset={() => resize(() => ({ bottom: DEFAULT_SIZES.bottom }))}
         />
