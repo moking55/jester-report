@@ -51,6 +51,8 @@
 
 ## D-3 — License โครงการ
 
+- **ตัดสินแล้ว (16 พฤศจิกายน 2026): MIT** — ผู้ใช้เลือก; ไฟล์ [LICENSE](../../../LICENSE) ที่ root
+
 - **ผู้ใช้ต้องเลือกก่อนลงทุนสูง: ใช่ แต่เฉพาะก่อนรับ contribution/เผยแพร่ (M4)** ไม่กั้น M0–M3
 - **Options ([05 §3](../findings/05-license-inventory.md)):** MIT · Apache-2.0 · AGPL-3.0 · อื่นที่ OSI รับรอง
 - **Rationale:** ต้องเลือกตามเป้าหมายการนำไปใช้และการมีส่วนร่วม ไม่เลือกจาก Engine license (Gotenberg MIT) เพียงตัวเดียว; MIT = permissive สั้น ไม่มี patent grant แบบ Apache; Apache-2.0 = patent grant/termination + notices; AGPL-3.0 = copyleft รวม section 13 สำหรับ network use ของ modified version (ไม่เหมารวมว่าข้อมูล PDF ต้องเปิด) — ทั้งหมด **ไม่ใช่คำแนะนำทางกฎหมาย**
