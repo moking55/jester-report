@@ -6,6 +6,7 @@ import type { components } from "./types.gen";
 export type Draft = components["schemas"]["Draft"];
 export type TextFile = components["schemas"]["TextFile"];
 export type ValidationProblem = components["schemas"]["ValidationProblem"];
+export type ValidationResult = components["schemas"]["ValidationResult"];
 
 export type Result<T> = { ok: true; data: T } | { ok: false; problem: Problem };
 
@@ -19,6 +20,7 @@ export type WorkspaceState = {
   conflict: boolean; // 412: someone else saved first; nothing is overwritten
   error: string | null;
   problems: ValidationProblem[];
+  checked: "never" | "valid" | "invalid"; // the last Validate, for the Problems tab
 };
 
 export function initialState(draft: Draft): WorkspaceState {
@@ -33,8 +35,15 @@ export function initialState(draft: Draft): WorkspaceState {
     conflict: false,
     error: null,
     problems: [],
+    checked: "never",
   };
 }
+
+export const validated = (result: ValidationResult) => (s: WorkspaceState) => {
+  s.problems = result.problems;
+  s.checked = result.valid ? "valid" : "invalid";
+  s.error = null;
+};
 
 export const setDirty = (name: string, dirty: boolean) => (s: WorkspaceState) => {
   s.dirty = s.dirty.filter((n) => n !== name);

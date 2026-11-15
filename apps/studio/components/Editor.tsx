@@ -3,10 +3,14 @@
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
-import { EditorState, type Extension } from "@codemirror/state";
+import { lintGutter, setDiagnostics } from "@codemirror/lint";
+import { EditorSelection, EditorState, type Extension } from "@codemirror/state";
 import { Decoration, EditorView, keymap, MatchDecorator, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import { basicSetup } from "codemirror";
 import { useEffect, useImperativeHandle, useRef, type Ref } from "react";
+
+import { diagnosticsFor, offsetOf } from "@/lib/diagnostics";
+import type { ValidationProblem } from "@/lib/workspace";
 
 import styles from "./Editor.module.css";
 
@@ -14,11 +18,14 @@ export type EditorHandle = {
   content: (name: string) => string | undefined;
   /** After a save: the file is clean again unless it was typed into meanwhile. */
   markSaved: (name: string, content: string) => boolean;
+  /** Shows a line of a file; the caller also sets `active` to that file. */
+  goto: (name: string, line: number, column?: number) => void;
 };
 
 type Props = {
   files: { name: string; content: string }[];
   active: string;
+  problems: ValidationProblem[];
   onDirty: (name: string, dirty: boolean) => void;
   onSave: () => void;
   ref?: Ref<EditorHandle>;
@@ -36,7 +43,7 @@ const jinjaHighlight = ViewPlugin.define((view) => ({ decorations: jinja.createD
 const language = (name: string): Extension =>
   name.endsWith(".json") ? json() : name.endsWith(".css") ? css() : [html(), jinjaHighlight];
 
-export function Editor({ files, active, onDirty, onSave, ref }: Props) {
+export function Editor({ files, active, problems, onDirty, onSave, ref }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const states = useRef(new Map<string, EditorState>()); // one per file, so switching keeps edits and undo
@@ -52,6 +59,7 @@ export function Editor({ files, active, onDirty, onSave, ref }: Props) {
       doc: content,
       extensions: [
         basicSetup,
+        lintGutter(),
         language(name),
         keymap.of([{ key: "Mod-s", preventDefault: true, run: () => (callbacks.current.onSave(), true) }]),
         EditorView.updateListener.of((u) => {
@@ -79,22 +87,42 @@ export function Editor({ files, active, onDirty, onSave, ref }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- created once; switching files swaps the state
   }, []);
 
+  function show(name: string) {
+    const v = view.current;
+    const next = states.current.get(name);
+    if (!v || !next || shown.current === name) return;
+    states.current.set(shown.current, v.state); // keep the edits of the file being left
+    v.setState(next);
+    shown.current = name;
+  }
+
+  useEffect(() => show(active), [active]);
+
+  // Problems follow the file on screen; switching files swaps the state, so set them again.
   useEffect(() => {
     const v = view.current;
-    if (!v || shown.current === active) return;
-    states.current.set(shown.current, v.state); // keep the edits of the file being left
-    const next = states.current.get(active);
-    if (next) v.setState(next);
-    shown.current = active;
-  }, [active]);
+    if (v) v.dispatch(setDiagnostics(v.state, diagnosticsFor(v.state.doc, shown.current, problems)));
+  }, [active, problems]);
+
+  // The file on screen lives in the view; the others in `states`.
+  const textOf = (name: string) =>
+    (name === shown.current ? view.current?.state : states.current.get(name))?.doc.toString();
 
   useImperativeHandle(ref, () => ({
-    content: (name) => (name === active ? view.current?.state : states.current.get(name))?.doc.toString(),
+    content: textOf,
     markSaved: (name, content) => {
-      const now = (name === active ? view.current?.state : states.current.get(name))?.doc.toString();
+      const now = textOf(name);
       const clean = now === content;
       if (clean) dirty.current.delete(name);
       return !clean;
+    },
+    goto: (name, line, column) => {
+      show(name);
+      const v = view.current;
+      if (!v || shown.current !== name) return;
+      const at = offsetOf(v.state.doc, line, column);
+      v.dispatch({ selection: EditorSelection.cursor(at), effects: EditorView.scrollIntoView(at, { y: "center" }) });
+      v.focus();
     },
   }));
 

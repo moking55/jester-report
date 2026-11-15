@@ -80,7 +80,7 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 **แตกย่อย (เรียงตามความเสี่ยง, commit ละชิ้น):**
 - [x] T4a: catalog (รายการ + สร้างจาก starter) + workspace: รายการไฟล์, CodeMirror, บันทึกด้วย `If-Match`, 412 → แถบเตือนพร้อมปุ่มโหลดใหม่
-- [ ] T4b: Validate → แท็บ Problems + `@codemirror/lint` (gutter + ขีดเส้นใต้), คลิก problem → กระโดดไปบรรทัด
+- [x] T4b: Validate → แท็บ Problems + `@codemirror/lint` (gutter + ขีดเส้นใต้), คลิก problem → กระโดดไปบรรทัด
 - [ ] T4c: Prepared data (ต้นไม้), Preview ใน iframe (form POST → `preview/[id]/route.ts`), Provenance จาก `/v1/runs?templateId=…&limit=1`
 - [ ] T4d: เพิ่ม/ลบไฟล์ข้อความ และ asset (upload ผ่าน Route Handler เพราะ Server Action จำกัด body ~1 MB)
 

@@ -1,7 +1,7 @@
 import { produce } from "immer";
 import { describe, expect, it } from "vitest";
 
-import { failed, initialState, reloaded, saved, setDirty, type Draft } from "@/lib/workspace";
+import { failed, initialState, reloaded, saved, setDirty, validated, type Draft } from "@/lib/workspace";
 
 const draft = (revision: number, names = ["report.json", "template.html", "sample.json"]): Draft => ({
   templateId: "quotation",
@@ -51,6 +51,14 @@ describe("workspace state", () => {
     expect(s.error).toBe("แก้ไม่ได้");
     expect(s.problems).toEqual([p]);
     expect(s.conflict).toBe(false);
+  });
+
+  it("validate replaces the problems and remembers the verdict", () => {
+    const p = { severity: "error" as const, code: "TEMPLATE_SYNTAX", message: "m", file: "template.html", line: 2 };
+    let s = produce(initialState(draft(3)), validated({ valid: false, revision: 3, problems: [p] }));
+    expect([s.checked, s.problems]).toEqual(["invalid", [p]]);
+    s = produce(s, validated({ valid: true, revision: 3, problems: [] }));
+    expect([s.checked, s.problems]).toEqual(["valid", []]);
   });
 
   it("reload takes the newest draft and keeps the open file if it still exists", () => {

@@ -3,19 +3,21 @@
 import { useRef } from "react";
 import { useImmer } from "use-immer";
 
-import { loadDraft, saveFile } from "@/lib/actions/draft";
+import { loadDraft, saveFile, validateDraft } from "@/lib/actions/draft";
 import { problemMessage } from "@/lib/messages";
-import { failed, initialState, reloaded, saved, setDirty, type Draft } from "@/lib/workspace";
+import { failed, initialState, reloaded, saved, setDirty, validated, type Draft } from "@/lib/workspace";
 
 import { Editor, type EditorHandle } from "./Editor";
+import { ProblemList } from "./ProblemList";
 import styles from "./Workspace.module.css";
 
 export function Workspace({ draft, name }: { draft: Draft; name: string }) {
   const [state, update] = useImmer(() => initialState(draft));
   const editor = useRef<EditorHandle>(null);
 
-  async function saveAll() {
-    if (state.saving || state.conflict) return;
+  /** Saves every dirty file in turn; false when one failed (412, 422, …). */
+  async function saveAll(): Promise<boolean> {
+    if (state.saving || state.conflict) return false;
     update((s) => {
       s.saving = true;
     });
@@ -26,7 +28,7 @@ export function Workspace({ draft, name }: { draft: Draft; name: string }) {
       const result = await saveFile(state.templateId, file, content, revision);
       if (!result.ok) {
         update(failed(result.problem, problemMessage(result.problem)));
-        return;
+        return false;
       }
       revision = result.data.revision;
       const stillDirty = editor.current?.markSaved(file, content) ?? false;
@@ -35,6 +37,21 @@ export function Workspace({ draft, name }: { draft: Draft; name: string }) {
     update((s) => {
       s.saving = false;
     });
+    return true;
+  }
+
+  /** The api validates what is saved, so unsaved edits go first. */
+  async function validate() {
+    if (!(await saveAll())) return;
+    const result = await validateDraft(state.templateId);
+    update(result.ok ? validated(result.data) : failed(result.problem, problemMessage(result.problem)));
+  }
+
+  function pick(file: string, line: number, column?: number) {
+    update((s) => {
+      s.active = file;
+    });
+    editor.current?.goto(file, line, column);
   }
 
   async function reload() {
@@ -56,6 +73,9 @@ export function Workspace({ draft, name }: { draft: Draft; name: string }) {
         </span>
         <button type="button" onClick={saveAll} disabled={!unsaved || state.saving || state.conflict}>
           บันทึก (Ctrl+S)
+        </button>
+        <button type="button" onClick={validate} disabled={state.saving || state.conflict}>
+          Validate
         </button>
       </div>
       {state.conflict && (
@@ -89,13 +109,25 @@ export function Workspace({ draft, name }: { draft: Draft; name: string }) {
             </button>
           ))}
         </nav>
-        <Editor
-          ref={editor}
-          files={state.files}
-          active={state.active}
-          onDirty={(file, dirty) => update(setDirty(file, dirty))}
-          onSave={saveAll}
-        />
+        <div className={styles.editorColumn}>
+          <Editor
+            ref={editor}
+            files={state.files}
+            active={state.active}
+            problems={state.problems}
+            onDirty={(file, dirty) => update(setDirty(file, dirty))}
+            onSave={saveAll}
+          />
+          <section className={styles.bottom} aria-label="Problems">
+            <h2>
+              Problems
+              {state.problems.length > 0 && <span className={styles.count}>{state.problems.length}</span>}
+            </h2>
+            <div className={styles.panel}>
+              <ProblemList problems={state.problems} checked={state.checked} onPick={pick} />
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );
