@@ -115,7 +115,7 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 - [x] ตั้ง theme ที่สร้างเองเป็นค่าเริ่มต้น → หน้า login ใช้ theme นั้น
 
 **Verification:**
-- [ ] Vitest (ThemeEditor, การสร้าง style) + `npm run build`
+- [x] Vitest (ThemeEditor, การสร้าง style) + `npm run build`
 
 **Dependencies:** T3
 **Files likely touched:** `app/(app)/settings/page.tsx`, `components/{UsersPanel,ApiKeysPanel,PasswordForm,ThemeEditor}.tsx`, `lib/actions/{users,keys,themes}.ts`
