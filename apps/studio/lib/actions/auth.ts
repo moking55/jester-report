@@ -12,7 +12,7 @@ import type { components } from "@/lib/types.gen";
 type Session = components["schemas"]["Session"];
 // `values` refills the non-secret fields: React resets a form after its action, and retyping the
 // username after a wrong password is annoying. Passwords are never sent back.
-export type FormState = { error: string | null; values?: Record<string, string> };
+export type FormState = { error: string | null; values?: Record<string, string>; notice?: string };
 
 const text = (form: FormData, name: string) => String(form.get(name) ?? "");
 

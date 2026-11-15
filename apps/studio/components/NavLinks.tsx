@@ -6,12 +6,13 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   ["/", "รายงาน"],
   ["/history", "ประวัติ Render"],
+  ["/settings", "ตั้งค่า"],
 ] as const;
 
 /** The caption bar's main links; the current section is marked for screen readers and styling. */
 export function NavLinks() {
   const path = usePathname();
-  const current = path.startsWith("/history") ? "/history" : "/";
+  const current = LINKS.find(([href]) => href !== "/" && path.startsWith(href))?.[0] ?? "/";
   return (
     <>
       {LINKS.map(([href, label]) => (
@@ -19,7 +20,6 @@ export function NavLinks() {
           {label}
         </Link>
       ))}
-      <span aria-disabled="true">ตั้งค่า</span>
     </>
   );
 }

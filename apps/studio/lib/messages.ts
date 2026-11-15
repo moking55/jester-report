@@ -15,15 +15,18 @@ const BY_CODE: Record<string, string> = {
 const FIELD: Record<string, string> = {
   username: "ชื่อผู้ใช้ต้องยาว 3–40 ตัว ใช้ได้เฉพาะ a–z, 0–9, . _ -",
   password: "รหัสผ่านต้องยาว 12–200 ตัวอักษร",
+  newPassword: "รหัสผ่านใหม่ต้องยาว 12–200 ตัวอักษร",
   setupToken: "setup token สั้นเกินไป",
   id: "id ต้องยาว 2–63 ตัว ใช้ได้เฉพาะ a–z, 0–9 และ - (ขึ้นต้นด้วยตัวอักษรหรือตัวเลข)",
   name: "ชื่อรายงานต้องยาว 1–120 ตัวอักษร",
 };
 
-export function problemMessage(problem: Problem): string {
+/** `fields` overrides a hint where the field means something else on that form (an API key's `name`). */
+export function problemMessage(problem: Problem, fields: Record<string, string> = {}): string {
   if (problem.code === "INPUT_INVALID") {
-    const field = problem.problems?.map((p) => p.pointer?.split("/")[1]).find((f) => f && FIELD[f]);
-    if (field) return FIELD[field];
+    const hints = { ...FIELD, ...fields };
+    const field = problem.problems?.map((p) => p.pointer?.split("/")[1]).find((f) => f && hints[f]);
+    if (field) return hints[field];
   }
   // one code for text files (1 MB), assets (5 MB) and the whole draft (20 MB): the api's detail has the number
   if (problem.code === "PAYLOAD_TOO_LARGE") return `ไฟล์ใหญ่เกินที่ระบบรับ (${problem.detail ?? "เกินขนาดที่กำหนด"})`;
