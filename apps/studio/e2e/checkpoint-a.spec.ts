@@ -2,18 +2,9 @@
 //   STUDIO_E2E_URL      Studio, e.g. http://10.0.1.29:3002
 //   STUDIO_E2E_API_URL  the api of the same stack; the browser must never call it
 //   STUDIO_E2E_SETUP_TOKEN  from `docker compose logs api`
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-const USER = "e2e-admin";
-const PASSWORD = "e2e correct horse battery";
-
-function watchRequests(page: Page): string[] {
-  const urls: string[] = [];
-  page.on("request", (request) => urls.push(request.url()));
-  return urls;
-}
-
-const themeCss = (page: Page) => page.locator("style#jester-theme").innerHTML();
+import { PASSWORD, themeCss, USER, watchRequests } from "./shared";
 
 test("setup, theme, logout, login; the browser only talks to Studio", async ({ page }) => {
   const token = process.env.STUDIO_E2E_SETUP_TOKEN;
