@@ -9,6 +9,7 @@ import styles from "./FilePanel.module.css";
 const REQUIRED = ["report.json", "template.html"]; // the api refuses to delete these
 const FILE_NAME = /^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$/;
 const ASSET = /\.(png|jpe?g|svg|ttf|otf)$/i;
+const IMAGE = /\.(png|jpe?g|svg)$/i;
 const NAME_RULE = "ชื่อไฟล์ใช้ได้เฉพาะ A–Z a–z 0–9 . _ - และลงท้าย .html .css .json";
 
 type Props = {
@@ -22,6 +23,8 @@ type Props = {
   onDelete: (name: string) => void;
   onUpload: (file: File) => void;
   onDeleteAsset: (name: string) => void;
+  previewing: string | null;
+  onPreview: (name: string) => void;
 };
 
 const size = (bytes: number) => (bytes < 1024 ? `${bytes} B` : `${Math.round(bytes / 1024)} KB`);
@@ -177,9 +180,21 @@ export function FilePanel(props: Props) {
       {assets.length === 0 && <p className={styles.hint}>รูปหรือฟอนต์ที่ template ใช้ นำเข้าผ่าน &quot;+ เพิ่มไฟล์&quot;</p>}
       {assets.map((a) => (
         <div key={a.name} className={styles.row}>
-          <span className={styles.asset} title={`${a.contentType} · ${size(a.size)}`}>
-            {a.name} <small>{size(a.size)}</small>
-          </span>
+          {IMAGE.test(a.name) ? (
+            <button
+              type="button"
+              className={`${styles.name} ${styles.asset}`}
+              title={`ดูรูป · ${a.contentType} · ${size(a.size)}`}
+              aria-current={a.name === props.previewing ? "true" : undefined}
+              onClick={() => props.onPreview(a.name)}
+            >
+              {a.name} <small>{size(a.size)}</small>
+            </button>
+          ) : (
+            <span className={styles.asset} title={`${a.contentType} · ${size(a.size)}`}>
+              {a.name} <small>{size(a.size)}</small>
+            </span>
+          )}
           <button
             type="button"
             className={styles.remove}

@@ -149,6 +149,12 @@
   grid-template-rows: auto minmax(0, 1fr);
 }
 
+/* fixed cells, so an image preview (components/AssetPreview) can cover both without moving the editor */
+.editorPane > :last-child {
+  grid-row: 2;
+  grid-column: 1;
+}
+
 .paneTitle {
   display: flex;
   align-items: center;
@@ -157,6 +163,10 @@
   background: var(--fill-bar);
   border-bottom: 1px solid var(--color-border);
   font-weight: 600;
+}
+
+.paneTitle[hidden] {
+  display: none;
 }
 
 .paneTitle .hint {

@@ -1,0 +1,74 @@
+/* fills the editor pane (grid row 1-2) and covers the editor, which stays mounted underneath */
+.preview {
+  grid-row: 1 / 3;
+  grid-column: 1;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  background: var(--color-surface); /* opaque: the editor underneath must not show through glass */
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 1);
+  padding: calc(var(--sp) * 0.6) calc(var(--sp) * 1.5);
+  background: var(--fill-bar);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+  font-weight: 400;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.title button {
+  border: 0;
+  background: none;
+  color: var(--color-textMuted);
+  font-size: 1.2em;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.title button:hover {
+  color: var(--color-danger);
+}
+
+/* a checkerboard shows transparent parts of the image */
+.stage {
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  padding: calc(var(--sp) * 2);
+  background-color: var(--color-surface);
+  background-image:
+    linear-gradient(45deg, var(--color-surfaceAlt) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-surfaceAlt) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-surfaceAlt) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-surfaceAlt) 75%);
+  background-size: 16px 16px;
+  background-position:
+    0 0,
+    0 8px,
+    8px -8px,
+    -8px 0;
+}
+
+.stage img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.error {
+  color: var(--color-danger);
+}

@@ -33,6 +33,7 @@ import {
   type Draft,
 } from "@/lib/workspace";
 
+import { AssetPreview } from "./AssetPreview";
 import { Editor, type EditorHandle } from "./Editor";
 import { FilePanel } from "./FilePanel";
 import { JsonTree } from "./JsonTree";
@@ -62,6 +63,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   const writing = useRef(false);
   const [renderData, setRenderData] = useState<string | null>(null); // the dialog is open while set
   const main = useRef<HTMLDivElement>(null);
+  const [assetPreview, setAssetPreview] = useState<string | null>(null); // an image asset shown in the editor pane
   const [sizes, setSizes] = useState<PaneSizes>(DEFAULT_SIZES);
 
   // pane sizes are a per-browser convenience; storage can be missing or blocked, then the defaults stay
@@ -330,15 +332,21 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           active={state.active}
           dirty={state.dirty}
           busy={state.saving || state.conflict}
-          onOpen={(file) =>
+          onOpen={(file) => {
+            setAssetPreview(null);
             update((s) => {
               s.active = file;
-            })
-          }
+            });
+          }}
+          previewing={assetPreview}
+          onPreview={setAssetPreview}
           onAdd={addFile}
           onDelete={removeFile}
           onUpload={upload}
-          onDeleteAsset={removeAsset}
+          onDeleteAsset={(asset) => {
+            if (asset === assetPreview) setAssetPreview(null);
+            removeAsset(asset);
+          }}
         />
         <Resizer
           orientation="vertical"
@@ -349,7 +357,16 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           onReset={() => resize(() => ({ files: DEFAULT_SIZES.files }))}
         />
         <section className={styles.editorPane} aria-label="Editor">
-          <div className={styles.paneTitle}>
+          {assetPreview && (
+            <AssetPreview
+              key={assetPreview}
+              templateId={state.templateId}
+              name={assetPreview}
+              asset={state.assets.find((a) => a.name === assetPreview)}
+              onClose={() => setAssetPreview(null)}
+            />
+          )}
+          <div className={styles.paneTitle} hidden={assetPreview !== null}>
             <code>{state.active}</code>
             {state.dirty.includes(state.active) && <span className={styles.hint}>● ยังไม่บันทึก</span>}
             <span className={styles.spacer} />
