@@ -67,12 +67,12 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Description:** catalog (รายการ + สร้างจาก starter); workspace: รายการไฟล์, CodeMirror 6 (HTML/CSS/JSON + เน้น Jinja), บันทึกด้วย `If-Match` และคำเตือน 412, เพิ่ม/ลบไฟล์และ asset, Validate → problems ในแท็บและ gutter, แท็บ Prepared data (ต้นไม้ของ view model), Provenance (ของ run ล่าสุด), Preview ใน iframe (form POST → Route Handler)
 
 **Acceptance criteria:**
-- [ ] บันทึกแล้ว revision เพิ่ม; สองแท็บบันทึกพร้อมกัน → แท็บหลังเห็นคำเตือนและไม่เขียนทับ
-- [ ] problem ที่มี `line` แสดงที่บรรทัดนั้นในไฟล์นั้น; คลิก problem แล้ว editor กระโดดไปบรรทัด
-- [ ] Prepared data แสดง `totals.grand`; Preview แสดง PDF ที่มี DRAFT
+- [x] บันทึกแล้ว revision เพิ่ม; สองแท็บบันทึกพร้อมกัน → แท็บหลังเห็นคำเตือนและไม่เขียนทับ
+- [x] problem ที่มี `line` แสดงที่บรรทัดนั้นในไฟล์นั้น; คลิก problem แล้ว editor กระโดดไปบรรทัด
+- [x] Prepared data แสดง `totals.grand`; Preview แสดง PDF ที่มี DRAFT
 
 **Verification:**
-- [ ] Vitest (state ของ workspace: บันทึก/412/422) + `npm run build`
+- [x] Vitest (state ของ workspace: บันทึก/412/422) + `npm run build`
 
 **Dependencies:** T3
 **Files likely touched:** `app/(app)/page.tsx`, `app/(app)/templates/[id]/page.tsx`, `app/preview/[id]/route.ts`, `components/{Workspace,Editor,BottomTabs,PdfPane}.tsx`, `lib/actions/draft.ts`
