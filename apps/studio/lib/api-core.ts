@@ -25,6 +25,7 @@ export type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown; // sent as JSON
   text?: string; // sent as text/plain (draft files: JSON-encoding would save report.json as a string)
+  form?: FormData; // sent as multipart/form-data (asset uploads); fetch writes the boundary
   ifMatch?: number; // draft revision
 };
 
@@ -42,8 +43,10 @@ export async function apiResponse(config: ApiConfig, path: string, options: Requ
   if (config.studioKey) headers["X-Jester-Studio-Key"] = config.studioKey;
   if (config.clientIp) headers["X-Jester-Client-IP"] = config.clientIp;
   if (options.ifMatch !== undefined) headers["If-Match"] = `"${options.ifMatch}"`;
-  let body: string | undefined;
-  if (options.text !== undefined) {
+  let body: string | FormData | undefined;
+  if (options.form !== undefined) {
+    body = options.form;
+  } else if (options.text !== undefined) {
     headers["Content-Type"] = "text/plain; charset=utf-8";
     body = options.text;
   } else if (options.body !== undefined) {

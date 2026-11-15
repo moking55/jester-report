@@ -3,7 +3,7 @@
 import { apiRaw, ApiProblem } from "@/lib/api";
 import { problemMessage } from "@/lib/messages";
 import { parseParams } from "@/lib/params";
-import { isTemplateId } from "@/lib/result";
+import { isTemplateId, sameOrigin } from "@/lib/result";
 import type { ValidationProblem } from "@/lib/workspace";
 
 const escape = (text: string) =>
@@ -16,18 +16,6 @@ function page(status: number, message: string, problems: ValidationProblem[] = [
   const html = `<!doctype html><meta charset="utf-8"><body style="font:14px/1.5 system-ui,sans-serif;padding:16px;color:#333">
 <p style="color:#b42318;font-weight:600">${escape(message)}</p>${items ? `<ul>${items}</ul>` : ""}</body>`;
   return new Response(html, { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
-}
-
-/** Same-origin check: a preview records a run, so another site must not be able to post this form. */
-function sameOrigin(request: Request): boolean {
-  const origin = request.headers.get("origin");
-  if (!origin) return true; // same-origin form posts without Origin are older browsers; SameSite=Lax still applies
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
 }
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {

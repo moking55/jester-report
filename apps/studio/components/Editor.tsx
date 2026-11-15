@@ -25,6 +25,7 @@ export type EditorHandle = {
 type Props = {
   files: { name: string; content: string }[];
   active: string;
+  generation: number; // a new value (reload) replaces every editor state
   problems: ValidationProblem[];
   onDirty: (name: string, dirty: boolean) => void;
   onSave: () => void;
@@ -43,7 +44,7 @@ const jinjaHighlight = ViewPlugin.define((view) => ({ decorations: jinja.createD
 const language = (name: string): Extension =>
   name.endsWith(".json") ? json() : name.endsWith(".css") ? css() : [html(), jinjaHighlight];
 
-export function Editor({ files, active, problems, onDirty, onSave, ref }: Props) {
+export function Editor({ files, active, generation, problems, onDirty, onSave, ref }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const states = useRef(new Map<string, EditorState>()); // one per file, so switching keeps edits and undo
@@ -71,13 +72,27 @@ export function Editor({ files, active, problems, onDirty, onSave, ref }: Props)
       ],
     });
 
-  // A new `files` list (first load, reload after a conflict) replaces every editor state.
+  // First load and reload after a conflict: every editor state starts again from `files`.
   useEffect(() => {
     states.current = new Map(files.map((f) => [f.name, stateFor(f.name, f.content)]));
     dirty.current.clear();
     view.current?.setState(states.current.get(active) ?? stateFor(active, ""));
     shown.current = active;
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a new file list resets the editors
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only a reload resets the editors
+  }, [generation]);
+
+  // A file added or deleted: only that state changes, edits in the other files stay.
+  useEffect(() => {
+    const names = new Set(files.map((f) => f.name));
+    for (const f of files) if (!states.current.has(f.name)) states.current.set(f.name, stateFor(f.name, f.content));
+    for (const name of [...states.current.keys()]) {
+      if (names.has(name)) continue;
+      states.current.delete(name);
+      dirty.current.delete(name);
+      if (shown.current === name) shown.current = ""; // let show() swap in the next file
+    }
+    show(active);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts to the file list only
   }, [files]);
 
   useEffect(() => {
@@ -91,7 +106,7 @@ export function Editor({ files, active, problems, onDirty, onSave, ref }: Props)
     const v = view.current;
     const next = states.current.get(name);
     if (!v || !next || shown.current === name) return;
-    states.current.set(shown.current, v.state); // keep the edits of the file being left
+    if (states.current.has(shown.current)) states.current.set(shown.current, v.state); // keep the edits being left
     v.setState(next);
     shown.current = name;
   }

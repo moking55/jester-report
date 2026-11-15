@@ -1,7 +1,19 @@
 import { produce } from "immer";
 import { describe, expect, it } from "vitest";
 
-import { failed, initialState, reloaded, saved, setDirty, validated, type Draft } from "@/lib/workspace";
+import {
+  assetAdded,
+  assetRemoved,
+  failed,
+  fileAdded,
+  fileRemoved,
+  initialState,
+  reloaded,
+  saved,
+  setDirty,
+  validated,
+  type Draft,
+} from "@/lib/workspace";
 
 const draft = (revision: number, names = ["report.json", "template.html", "sample.json"]): Draft => ({
   templateId: "quotation",
@@ -59,6 +71,28 @@ describe("workspace state", () => {
     expect([s.checked, s.problems]).toEqual(["invalid", [p]]);
     s = produce(s, validated({ valid: true, revision: 3, problems: [] }));
     expect([s.checked, s.problems]).toEqual(["valid", []]);
+  });
+
+  it("adding and deleting files keeps the other files and moves the revision on", () => {
+    let s = produce(initialState(draft(3)), setDirty("template.html", true));
+    s = produce(s, fileAdded("extra.css", 4));
+    expect([s.revision, s.active, s.files.map((f) => f.name)]).toEqual([
+      4,
+      "extra.css",
+      ["report.json", "template.html", "sample.json", "extra.css"],
+    ]);
+    s = produce(s, fileRemoved("extra.css", 5));
+    expect([s.revision, s.active, s.dirty]).toEqual([5, "template.html", ["template.html"]]);
+    expect(s.generation).toBe(0); // no reload: the editor keeps the unsaved template.html
+  });
+
+  it("assets replace one with the same name", () => {
+    const asset = (size: number) => ({ name: "logo.png", contentType: "image/png", size, sha256: "x" });
+    let s = produce(initialState(draft(3)), assetAdded(asset(10), 4));
+    s = produce(s, assetAdded(asset(20), 5));
+    expect(s.assets.map((a) => a.size)).toEqual([20]);
+    s = produce(s, assetRemoved("logo.png", 6));
+    expect([s.assets, s.revision]).toEqual([[], 6]);
   });
 
   it("reload takes the newest draft and keeps the open file if it still exists", () => {

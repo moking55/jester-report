@@ -9,13 +9,16 @@ export type ValidationProblem = components["schemas"]["ValidationProblem"];
 export type ValidationResult = components["schemas"]["ValidationResult"];
 export type PreparedData = components["schemas"]["PreparedData"];
 export type Run = components["schemas"]["Run"];
+export type Asset = components["schemas"]["Asset"];
 
 export type Result<T> = { ok: true; data: T } | { ok: false; problem: Problem };
 
 export type WorkspaceState = {
   templateId: string;
   revision: number;
-  files: TextFile[]; // as loaded; a new array (reload) resets the editor, so saves leave it alone
+  files: TextFile[]; // contents as loaded; the editor holds what is typed
+  assets: Asset[];
+  generation: number; // bumped by a reload: the editor drops every state and starts from `files`
   active: string;
   dirty: string[]; // files with edits the api has not seen
   saving: boolean;
@@ -35,6 +38,8 @@ export function initialState(draft: Draft, paramsText = "{}"): WorkspaceState {
     templateId: draft.templateId,
     revision: draft.revision,
     files: draft.files,
+    assets: draft.assets,
+    generation: 0,
     active: names.includes("template.html") ? "template.html" : (names[0] ?? ""),
     dirty: [],
     saving: false,
@@ -83,5 +88,32 @@ export const failed = (problem: Problem, message: string) => (s: WorkspaceState)
 export const reloaded = (draft: Draft) => (s: WorkspaceState) => {
   const next = initialState(draft, s.paramsText);
   next.active = draft.files.some((f) => f.name === s.active) ? s.active : next.active;
-  return { ...next, tab: s.tab, run: s.run };
+  return { ...next, tab: s.tab, run: s.run, generation: s.generation + 1 };
+};
+
+export const fileAdded = (name: string, revision: number) => (s: WorkspaceState) => {
+  s.revision = revision;
+  s.error = null;
+  if (!s.files.some((f) => f.name === name)) s.files.push({ name, content: "", sha256: "" });
+  s.active = name;
+};
+
+export const fileRemoved = (name: string, revision: number) => (s: WorkspaceState) => {
+  s.revision = revision;
+  s.error = null;
+  s.files = s.files.filter((f) => f.name !== name);
+  s.dirty = s.dirty.filter((n) => n !== name);
+  if (s.active === name) s.active = "template.html";
+};
+
+export const assetAdded = (asset: Asset, revision: number) => (s: WorkspaceState) => {
+  s.revision = revision;
+  s.error = null;
+  s.assets = [...s.assets.filter((a) => a.name !== asset.name), asset];
+};
+
+export const assetRemoved = (name: string, revision: number) => (s: WorkspaceState) => {
+  s.revision = revision;
+  s.error = null;
+  s.assets = s.assets.filter((a) => a.name !== name);
 };

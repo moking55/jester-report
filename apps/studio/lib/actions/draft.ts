@@ -26,6 +26,20 @@ export async function latestRun(templateId: string): Promise<Result<Run | null>>
   });
 }
 
+/** Deletes a text file (report.json and template.html cannot go: the api answers 409). */
+export async function deleteFile(templateId: string, name: string, revision: number): Promise<Result<{ revision: number }>> {
+  return attempt(() => api<{ revision: number }>(draftPath(templateId, name), { method: "DELETE", ifMatch: revision }));
+}
+
+const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|ttf|otf)$/;
+
+export async function deleteAsset(templateId: string, name: string, revision: number): Promise<Result<{ revision: number }>> {
+  if (!ASSET_NAME.test(name)) throw new Error("invalid asset name");
+  return attempt(() =>
+    api<{ revision: number }>(`${draftPath(templateId)}/assets/${name}`, { method: "DELETE", ifMatch: revision }),
+  );
+}
+
 /** Saves one file at the revision the tab last saw; a newer revision on the server answers 412. */
 export async function saveFile(
   templateId: string,

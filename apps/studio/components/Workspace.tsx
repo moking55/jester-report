@@ -1,14 +1,38 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useRef } from "react";
 import { useImmer } from "use-immer";
 
-import { latestRun, loadDraft, prepareDraft, saveFile, validateDraft } from "@/lib/actions/draft";
+import {
+  deleteAsset,
+  deleteFile,
+  latestRun,
+  loadDraft,
+  prepareDraft,
+  saveFile,
+  validateDraft,
+} from "@/lib/actions/draft";
 import { problemMessage } from "@/lib/messages";
 import { defaultParams, parseParams } from "@/lib/params";
-import { failed, initialState, reloaded, saved, setDirty, validated, type Draft } from "@/lib/workspace";
+import type { Problem } from "@/lib/api-core";
+import {
+  assetAdded,
+  assetRemoved,
+  failed,
+  fileAdded,
+  fileRemoved,
+  initialState,
+  reloaded,
+  saved,
+  setDirty,
+  validated,
+  type Asset,
+  type Draft,
+} from "@/lib/workspace";
 
 import { Editor, type EditorHandle } from "./Editor";
+import { FilePanel } from "./FilePanel";
 import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
 import { RunDetails } from "./RunDetails";
@@ -26,6 +50,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   );
   const editor = useRef<EditorHandle>(null);
   const previewForm = useRef<HTMLFormElement>(null);
+  const router = useRouter();
 
   /** Saves every dirty file in turn; false when one failed (412, 422, …). */
   async function saveAll(): Promise<boolean> {
@@ -104,6 +129,38 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
     editor.current?.goto(file, line, column);
   }
 
+  async function addFile(file: string) {
+    const result = await saveFile(state.templateId, file, "", state.revision);
+    update(result.ok ? fileAdded(file, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
+  }
+
+  async function removeFile(file: string) {
+    const result = await deleteFile(state.templateId, file, state.revision);
+    update(result.ok ? fileRemoved(file, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
+  }
+
+  async function upload(file: File) {
+    const form = new FormData();
+    form.set("file", file);
+    form.set("revision", String(state.revision));
+    try {
+      const response = await fetch(`/assets/${state.templateId}`, { method: "POST", body: form });
+      if (response.status === 401) return router.push("/login"); // the session ended
+      const body = await response.json();
+      if (response.ok) update(assetAdded((body as { asset: Asset }).asset, (body as { revision: number }).revision));
+      else update(failed(body as Problem, problemMessage(body as Problem)));
+    } catch {
+      update((s) => {
+        s.error = "อัปโหลดไม่สำเร็จ ติดต่อ Studio ไม่ได้";
+      });
+    }
+  }
+
+  async function removeAsset(asset: string) {
+    const result = await deleteAsset(state.templateId, asset, state.revision);
+    update(result.ok ? assetRemoved(asset, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
+  }
+
   async function reload() {
     const result = await loadDraft(state.templateId);
     if (result.ok) update(reloaded(result.data));
@@ -145,28 +202,28 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         </div>
       )}
       <div className={styles.main}>
-        <nav className={styles.files} aria-label="ไฟล์">
-          {state.files.map((f) => (
-            <button
-              key={f.name}
-              type="button"
-              aria-current={f.name === state.active ? "true" : undefined}
-              onClick={() =>
-                update((s) => {
-                  s.active = f.name;
-                })
-              }
-            >
-              {f.name}
-              {state.dirty.includes(f.name) && <span aria-label="ยังไม่บันทึก"> ●</span>}
-            </button>
-          ))}
-        </nav>
+        <FilePanel
+          files={state.files}
+          assets={state.assets}
+          active={state.active}
+          dirty={state.dirty}
+          busy={state.saving || state.conflict}
+          onOpen={(file) =>
+            update((s) => {
+              s.active = file;
+            })
+          }
+          onAdd={addFile}
+          onDelete={removeFile}
+          onUpload={upload}
+          onDeleteAsset={removeAsset}
+        />
         <div className={styles.editorColumn}>
           <Editor
             ref={editor}
             files={state.files}
             active={state.active}
+            generation={state.generation}
             problems={state.problems}
             onDirty={(file, dirty) => update(setDirty(file, dirty))}
             onSave={saveAll}
