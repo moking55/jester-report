@@ -23,6 +23,7 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
      - กดรูปใน Assets (PNG/JPEG/SVG) → **ดูรูปทับ editor** พร้อมชนิด ขนาดไฟล์ และขนาด pixel; editor ยังอยู่ข้างใต้ งานที่ยังไม่บันทึกไม่หาย
      - **ลากเส้นแบ่งเพื่อปรับขนาด** ช่องไฟล์, preview และแท็บล่าง (ลูกศรบนคีย์บอร์ดได้, ดับเบิลคลิกคืนค่าเดิม) จำไว้ใน `localStorage` ของ browser; editor เล็กสุด 280×140
      - pane ชิดกันมีเส้นแบ่ง 1px ทุก theme ยกเว้น `classic` ที่เป็นกล่องแยกมีช่องว่างตาม mockup
+     - ช่อง PDF preview ก่อนกด Preview ครั้งแรก: มาสคอต Jester สีจาง + "คลิก Preview เพื่อ render ตัวอย่าง PDF"
    - `api`: คู่มือสำหรับระบบอื่น — สร้าง API key, เรียก `POST /v1/render` (ตัวอย่าง `curl`), รูปแบบ error, รายงานที่ publish แล้ว และดาวน์โหลด contract (`/api/openapi.yaml` ผ่าน Studio)
    - `history`: ประวัติ render + นโยบายเก็บ (แสดงจำนวนที่จะลบก่อนยืนยัน)
    - `settings`: ผู้ใช้, API key (secret แสดงครั้งเดียว), เปลี่ยนรหัสผ่าน, **theme**
