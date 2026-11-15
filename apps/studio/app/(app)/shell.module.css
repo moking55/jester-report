@@ -11,9 +11,11 @@
   align-items: center;
   gap: calc(var(--sp) * 2);
   padding: calc(var(--sp) * 1.2) calc(var(--sp) * 3);
-  background: var(--color-surface);
+  background: var(--fill-caption);
+  backdrop-filter: var(--blur-pane);
   border-bottom: 1px solid var(--color-border);
   box-shadow: var(--shadow);
+  text-shadow: var(--text-shadow-caption);
   z-index: 1;
 }
 
@@ -21,7 +23,8 @@
   width: 22px;
   height: 22px;
   border-radius: calc(var(--radius) + 2px);
-  background: var(--color-primary);
+  background: var(--fill-orb);
+  box-shadow: var(--glow-primary);
 }
 
 .nav {
@@ -44,7 +47,7 @@
 }
 
 .nav a[aria-current="page"] {
-  background: var(--tint-primary);
+  background: var(--fill-selected);
   color: var(--color-primary);
   font-weight: 600;
 }
@@ -69,15 +72,15 @@
 }
 
 .logout {
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
+  border: 1px solid var(--line-button);
+  background: var(--fill-button);
   border-radius: var(--radius);
   padding: calc(var(--sp) * 0.7) calc(var(--sp) * 1.4);
   cursor: pointer;
 }
 
 .logout:hover {
-  background: var(--color-surfaceAlt);
+  background: var(--fill-button-hover);
 }
 
 .body {
@@ -89,7 +92,7 @@
   display: flex;
   gap: calc(var(--sp) * 3);
   padding: calc(var(--sp) * 0.6) calc(var(--sp) * 3);
-  background: var(--color-surfaceAlt);
+  background: var(--fill-bar);
   border-top: 1px solid var(--color-border);
   color: var(--color-textMuted);
   font-size: 0.85em;
@@ -97,10 +100,12 @@
 
 .up {
   color: var(--color-success);
+  text-shadow: var(--glow-dot);
 }
 
 .down {
   color: var(--color-danger);
+  text-shadow: var(--glow-dot);
 }
 
 @media (max-width: 900px) {

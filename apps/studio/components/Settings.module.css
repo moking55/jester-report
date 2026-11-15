@@ -11,6 +11,11 @@
   font-weight: 600;
 }
 
+.page h1 {
+  color: var(--heading);
+  font-weight: var(--heading-weight);
+}
+
 .panel h2 {
   flex-basis: 100%;
   font-size: 1.05em;
@@ -43,9 +48,14 @@
 
 .table {
   width: 100%;
-  border-collapse: collapse;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  border-collapse: separate; /* collapse ignores border-radius */
+  border-spacing: 0;
+  overflow: hidden;
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
 }
 
 .table th,
@@ -56,7 +66,7 @@
 }
 
 .table th {
-  background: var(--color-surfaceAlt);
+  background: var(--fill-bar);
   color: var(--color-textMuted);
   font-weight: 600;
 }
@@ -67,9 +77,11 @@
   align-items: end;
   gap: calc(var(--sp) * 2);
   padding: calc(var(--sp) * 2.5);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
 }
 
 .form label {
@@ -93,7 +105,14 @@
 
 .panel button,
 .form button {
+  border-color: var(--line-button);
+  background: var(--fill-button);
   cursor: pointer;
+}
+
+.panel button:hover:not(:disabled):not(.primary),
+.form button:hover:not(:disabled):not(.primary) {
+  background: var(--fill-button-hover);
 }
 
 .panel button:disabled,
@@ -104,8 +123,10 @@
 
 .panel .primary,
 .form .primary {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: var(--line-primary);
+  background: var(--fill-primary);
+  box-shadow: var(--glow-primary);
+  text-shadow: var(--text-shadow-primary);
   color: var(--color-onPrimary);
   font-weight: 600;
 }

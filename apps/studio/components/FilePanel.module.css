@@ -2,7 +2,8 @@
   display: flex;
   flex-direction: column;
   overflow: auto;
-  background: var(--color-surface);
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
   border-right: 1px solid var(--color-border);
   padding-bottom: calc(var(--sp) * 2);
 }
@@ -41,11 +42,11 @@
 }
 
 .name:hover {
-  background: var(--color-surfaceAlt);
+  background: var(--fill-button-hover);
 }
 
 .name[aria-current="true"] {
-  background: var(--tint-primary);
+  background: var(--fill-selected);
   color: var(--color-primary);
   font-weight: 600;
 }
@@ -90,9 +91,9 @@
 
 .add button,
 .upload {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--line-button);
   border-radius: var(--radius);
-  background: var(--color-surfaceAlt);
+  background: var(--fill-button);
   padding: 2px 8px;
   font-size: 0.85em;
   cursor: pointer;

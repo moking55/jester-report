@@ -9,15 +9,17 @@
   align-items: center;
   gap: calc(var(--sp) * 2);
   padding: calc(var(--sp) * 1) calc(var(--sp) * 3);
-  background: var(--color-surfaceAlt);
+  background: var(--fill-bar);
   border-bottom: 1px solid var(--color-border);
 }
 
 .toolbar button,
 .conflict button {
-  border: 0;
+  border: 1px solid var(--line-primary);
   border-radius: var(--radius);
-  background: var(--color-primary);
+  background: var(--fill-primary);
+  box-shadow: var(--glow-primary);
+  text-shadow: var(--text-shadow-primary);
   color: var(--color-onPrimary);
   padding: 4px 12px;
   font-weight: 600;
@@ -76,7 +78,8 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   border-top: 1px solid var(--color-border);
-  background: var(--color-surface);
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
   min-height: 0;
 }
 
@@ -85,7 +88,7 @@
   align-items: center;
   gap: 2px;
   padding: 0 calc(var(--sp) * 1);
-  background: var(--color-surfaceAlt);
+  background: var(--fill-bar);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -120,7 +123,8 @@
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   border-left: 1px solid var(--color-border);
-  background: var(--color-surfaceAlt);
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
 }
 
 .params {

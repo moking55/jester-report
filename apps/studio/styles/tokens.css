@@ -24,6 +24,59 @@
   --tint-danger: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
   --tint-warning: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
   --tint-success: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
+
+  /* fills by role: flat by default, the glass look below for classic only. Components use these,
+     never raw colours, for backgrounds of the app, bars, panes, buttons and selected items. */
+  --app-bg: var(--color-background);
+  --fill-caption: var(--color-surface);
+  --fill-bar: var(--color-surfaceAlt);
+  --fill-pane: var(--color-surface);
+  --fill-code: var(--color-surface);
+  --fill-button: var(--color-surface);
+  --fill-button-hover: var(--color-surfaceAlt);
+  --fill-primary: var(--color-primary);
+  --fill-selected: var(--tint-primary);
+  --line-button: var(--color-border);
+  --line-primary: var(--color-primary);
+  --glow-primary: none;
+  --glow-dot: none;
+  --text-shadow-caption: none;
+  --text-shadow-primary: none;
+  --blur-pane: none;
+  --line-pane: var(--color-border);
+  --shadow-pane: 0 0 transparent; /* a real shadow, so it can be listed with others */
+  --radius-pane: var(--radius);
+  --fill-orb: var(--color-primary);
+  --heading: var(--color-text);
+  --heading-weight: 600;
+}
+
+/* Frutiger Aero, from design/studio-mvp.html. Bound to the built-in classic theme (app/layout.tsx sets
+   data-look), so the values are the mockup's own; a copy of classic keeps the colours, not this. */
+:root[data-look="aero"] {
+  --app-bg: radial-gradient(circle at 18% 22%, rgba(255, 255, 255, 0.55), transparent 22%),
+    linear-gradient(180deg, #7cc8f2, #c8ecff 70%);
+  --fill-caption: linear-gradient(180deg, rgba(170, 215, 245, 0.75), rgba(110, 175, 225, 0.55));
+  --fill-bar: linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(220, 238, 252, 0.55));
+  --fill-pane: rgba(255, 255, 255, 0.78);
+  --fill-code: rgba(255, 255, 255, 0.82);
+  --fill-button: linear-gradient(180deg, #fbfdff, #e6f0f8 50%, #d3e3f0 51%, #eaf3fa);
+  --fill-button-hover: linear-gradient(180deg, #eef8ff, #c6e6fb 50%, #a6d6f6 51%, #d2ecfd);
+  --fill-primary: linear-gradient(180deg, #8ad4ff, #33a3e8 50%, #0d7cc8 51%, #3fb0f0);
+  --fill-selected: linear-gradient(180deg, #e8f6ff, #b6defa 50%, #8ccaf2 51%, #bfe6ff);
+  --line-button: #7aa6c6;
+  --line-primary: #1a6aa8;
+  --glow-primary: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 0 8px rgba(60, 170, 240, 0.45);
+  --glow-dot: 0 0 6px currentColor;
+  --text-shadow-caption: 0 0 8px rgba(255, 255, 255, 0.9);
+  --text-shadow-primary: 0 1px 1px rgba(0, 40, 80, 0.5);
+  --blur-pane: blur(18px) saturate(1.4);
+  --line-pane: rgba(255, 255, 255, 0.9);
+  --shadow-pane: 0 8px 32px rgba(10, 60, 110, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.95);
+  --radius-pane: 10px;
+  --fill-orb: radial-gradient(circle at 35% 30%, #fff 0 10%, #5bd0ff 30%, #1e90d6 70%, #0a5a8f);
+  --heading: #1e90d6;
+  --heading-weight: 400;
 }
 
 *,
@@ -39,7 +92,8 @@ body {
 }
 
 body {
-  background: var(--color-background);
+  background: var(--app-bg) fixed;
+  background-color: var(--color-background);
   color: var(--color-text);
   font: var(--font-size) / 1.55 var(--font-family), "Noto Sans Thai", system-ui, sans-serif;
 }

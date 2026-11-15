@@ -1,9 +1,10 @@
 .dialog {
   width: min(760px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
-  border: 1px solid var(--color-border);
-  border-radius: calc(var(--radius) + 2px);
-  background: var(--color-surface);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
   color: var(--color-text);
   box-shadow: var(--shadow);
   padding: 0;
@@ -83,16 +84,18 @@
 }
 
 .buttons button {
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--line-button);
   border-radius: var(--radius);
-  background: var(--color-surface);
+  background: var(--fill-button);
   padding: 5px 14px;
   cursor: pointer;
 }
 
 .buttons .primary {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: var(--line-primary);
+  background: var(--fill-primary);
+  box-shadow: var(--glow-primary);
+  text-shadow: var(--text-shadow-primary);
   color: var(--color-onPrimary);
   font-weight: 600;
 }

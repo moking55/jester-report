@@ -151,6 +151,11 @@ export function ThemeEditor({ themes, defaultId }: { themes: Theme[]; defaultId:
         {draft.builtIn && (
           <p className={styles.note}>theme ในตัวแก้ไม่ได้ กด &quot;ทำสำเนา&quot; เพื่อสร้าง theme ของคุณจากแบบนี้</p>
         )}
+        {draft.id === "classic" && (
+          <p className={styles.note}>
+            ลุค Aero (กระจก สีไล่ ปุ่มเงา) มีเฉพาะ classic สำเนาจะได้แค่ชุดสี และตัวอย่างด้านขวาก็แสดงเฉพาะสี
+          </p>
+        )}
         <fieldset disabled={draft.builtIn || pending}>
           <label className={styles.wide}>
             ชื่อ theme

@@ -11,6 +11,11 @@
   font-weight: 600;
 }
 
+.page h1 {
+  color: var(--heading);
+  font-weight: var(--heading-weight);
+}
+
 .page h2 {
   font-size: 1.1em;
 }
@@ -40,12 +45,22 @@
 }
 
 .page button {
+  border-color: var(--line-button);
+  background: var(--fill-button);
   cursor: pointer;
 }
 
+.page button:hover:not(.danger) {
+  background: var(--fill-button-hover);
+}
+
 .runs {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  overflow: hidden;
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
 }
 
 .head,
@@ -58,7 +73,7 @@
 }
 
 .head {
-  background: var(--color-surfaceAlt);
+  background: var(--fill-bar);
   color: var(--color-textMuted);
   font-weight: 600;
 }
@@ -75,7 +90,7 @@
 .run[open] > :not(summary) {
   padding: calc(var(--sp) * 1) calc(var(--sp) * 3);
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-surfaceAlt);
+  background: var(--fill-code);
 }
 
 .ok {
@@ -103,9 +118,11 @@
   display: grid;
   gap: calc(var(--sp) * 1.5);
   padding: calc(var(--sp) * 2.5);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
 }
 
 .retention p {
