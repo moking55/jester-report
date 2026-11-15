@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { useImmer } from "use-immer";
 
 import {
@@ -15,6 +15,7 @@ import {
 } from "@/lib/actions/draft";
 import { publishDraft, resetDraft } from "@/lib/actions/versions";
 import { problemMessage } from "@/lib/messages";
+import { clampSizes, DEFAULT_SIZES, type PaneSizes, readSizes } from "@/lib/panes";
 import { defaultParams, parseParams } from "@/lib/params";
 import type { Problem } from "@/lib/api-core";
 import {
@@ -36,10 +37,14 @@ import { Editor, type EditorHandle } from "./Editor";
 import { FilePanel } from "./FilePanel";
 import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
+import { Resizer } from "./Resizer";
 import { RenderDialog } from "./RenderDialog";
 import { RunDetails } from "./RunDetails";
 import { VersionsPanel } from "./VersionsPanel";
 import styles from "./Workspace.module.css";
+
+const SIZES_KEY = "jester.workspace.panes";
+const PAD = 8; // .main padding in Workspace.module.css
 
 const TABS = [
   ["problems", "Problems"],
@@ -57,6 +62,33 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   const router = useRouter();
   const writing = useRef(false);
   const [renderData, setRenderData] = useState<string | null>(null); // the dialog is open while set
+  const main = useRef<HTMLDivElement>(null);
+  const [sizes, setSizes] = useState<PaneSizes>(DEFAULT_SIZES);
+
+  // pane sizes are a per-browser convenience; storage can be missing or blocked, then the defaults stay
+  useEffect(() => {
+    try {
+      const saved = readSizes(localStorage.getItem(SIZES_KEY));
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- storage exists only after hydration
+      setSizes(saved);
+    } catch {
+      // keep the defaults
+    }
+  }, []);
+
+  function resize(change: (rect: DOMRect, current: PaneSizes) => Partial<PaneSizes>) {
+    const rect = main.current?.getBoundingClientRect();
+    if (!rect) return;
+    setSizes((current) => {
+      const next = clampSizes({ ...current, ...change(rect, current) }, rect);
+      try {
+        localStorage.setItem(SIZES_KEY, JSON.stringify(next));
+      } catch {
+        // not saved; it still applies until the page is left
+      }
+      return next;
+    });
+  }
 
   /**
    * One draft write at a time. Every write sends the revision this tab knows; two at once (Ctrl+S during a
@@ -281,7 +313,17 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           {state.error}
         </div>
       )}
-      <div className={styles.main}>
+      <div
+        ref={main}
+        className={styles.main}
+        style={
+          {
+            "--files-w": `${sizes.files}px`,
+            "--preview-w": `${sizes.preview}px`,
+            "--bottom-h": `${sizes.bottom}px`,
+          } as CSSProperties
+        }
+      >
         <FilePanel
           files={state.files}
           assets={state.assets}
@@ -297,6 +339,14 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           onDelete={removeFile}
           onUpload={upload}
           onDeleteAsset={removeAsset}
+        />
+        <Resizer
+          orientation="vertical"
+          label="ปรับความกว้างช่องไฟล์"
+          className={styles.filesHandle}
+          onMove={(x) => resize((rect) => ({ files: x - rect.left - PAD }))}
+          onStep={(d) => resize((_, s) => ({ files: s.files + d }))}
+          onReset={() => resize(() => ({ files: DEFAULT_SIZES.files }))}
         />
         <section className={styles.editorPane} aria-label="Editor">
           <div className={styles.paneTitle}>
@@ -315,6 +365,14 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
             onSave={saveAll}
           />
         </section>
+        <Resizer
+          orientation="vertical"
+          label="ปรับความกว้างช่อง preview"
+          className={styles.previewHandle}
+          onMove={(x) => resize((rect) => ({ preview: rect.right - x - PAD }))}
+          onStep={(d) => resize((_, s) => ({ preview: s.preview - d }))}
+          onReset={() => resize(() => ({ preview: DEFAULT_SIZES.preview }))}
+        />
         <section className={styles.preview} aria-label="Preview">
           <div className={styles.paneTitle}>PDF Preview</div>
           <form
@@ -354,6 +412,14 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
             }}
           />
         </section>
+        <Resizer
+          orientation="horizontal"
+          label="ปรับความสูงแท็บด้านล่าง"
+          className={styles.bottomHandle}
+          onMove={(_, y) => resize((rect) => ({ bottom: rect.bottom - y - PAD }))}
+          onStep={(d) => resize((_, s) => ({ bottom: s.bottom - d }))}
+          onReset={() => resize(() => ({ bottom: DEFAULT_SIZES.bottom }))}
+        />
         <section className={styles.bottom}>
           <div role="tablist" className={styles.tabs}>
             {TABS.map(([id, label]) => (

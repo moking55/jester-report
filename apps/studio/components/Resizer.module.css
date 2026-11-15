@@ -1,0 +1,50 @@
+.resizer {
+  position: relative;
+  touch-action: none;
+  border-radius: 4px;
+}
+
+.resizer::after {
+  content: "";
+  position: absolute;
+  border-radius: 2px;
+  background: var(--color-border);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.vertical {
+  cursor: col-resize;
+}
+
+.vertical::after {
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 36px;
+  transform: translate(-50%, -50%);
+}
+
+.horizontal {
+  cursor: row-resize;
+}
+
+.horizontal::after {
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 3px;
+  transform: translate(-50%, -50%);
+}
+
+.resizer:hover::after,
+.resizer:focus-visible::after,
+.resizer:active::after {
+  opacity: 1;
+  background: var(--color-primary);
+}
+
+.resizer:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: -1px;
+}
