@@ -11,7 +11,9 @@ export default async function LoginPage() {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
-        <h1 className={styles.brand}>Jester Studio</h1>
+        {/* eslint-disable-next-line @next/next/no-img-element -- see app/(app)/layout.tsx */}
+        <img src="/jester-logo.webp" alt="Jester Reports" className={styles.logo} width={240} height={73} />
+        <h1 className={styles.brand}>Studio</h1>
         <p className={styles.lead}>เข้าสู่ระบบเพื่อจัดการรายงาน</p>
         <AuthForm
           action={login}

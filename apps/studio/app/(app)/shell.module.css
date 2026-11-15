@@ -19,12 +19,17 @@
   z-index: 1;
 }
 
-.appIcon {
-  width: 22px;
-  height: 22px;
-  border-radius: calc(var(--radius) + 2px);
-  background: var(--fill-orb);
-  box-shadow: var(--glow-primary);
+.logo {
+  height: 34px;
+  width: auto;
+  display: block;
+}
+
+.product {
+  padding-left: calc(var(--sp) * 1.5);
+  border-left: 1px solid var(--color-border);
+  color: var(--color-textMuted);
+  font-weight: 600;
 }
 
 .nav {

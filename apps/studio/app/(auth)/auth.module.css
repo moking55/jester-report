@@ -15,6 +15,13 @@
   padding: calc(var(--sp) * 4);
 }
 
+.logo {
+  display: block;
+  width: min(240px, 100%);
+  height: auto;
+  margin: 0 auto calc(var(--sp) * 2);
+}
+
 .brand {
   font-weight: 700;
   font-size: 1.3em;

@@ -26,8 +26,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className={styles.window}>
       <header className={styles.caption}>
-        <span className={styles.appIcon} aria-hidden="true" />
-        <b>Jester Report Studio</b>
+        {/* eslint-disable-next-line @next/next/no-img-element -- a fixed 20 KB file; next/image adds nothing here */}
+        <img src="/jester-logo.webp" alt="Jester Reports" className={styles.logo} width={112} height={34} />
+        <b className={styles.product}>Studio</b>
         <nav className={styles.nav} aria-label="หลัก">
           <NavLinks />
         </nav>

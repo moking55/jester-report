@@ -11,6 +11,8 @@ export default async function SetupPage() {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- see app/(app)/layout.tsx */}
+        <img src="/jester-logo.webp" alt="Jester Reports" className={styles.logo} width={240} height={73} />
         <h1 className={styles.brand}>ตั้งค่า Jester ครั้งแรก</h1>
         <p className={styles.lead}>
           ใส่ setup token จาก log ของ api (<code>docker compose logs api</code>) แล้วสร้างบัญชีแรก
