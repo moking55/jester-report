@@ -2,9 +2,6 @@
   display: flex;
   flex-direction: column;
   overflow: auto;
-  background: var(--fill-pane);
-  backdrop-filter: var(--blur-pane);
-  border-right: 1px solid var(--color-border);
   padding-bottom: calc(var(--sp) * 2);
 }
 

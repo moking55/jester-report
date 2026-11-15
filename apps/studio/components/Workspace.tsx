@@ -252,13 +252,13 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         <span role="status" className={styles.saveState}>
           {state.saving ? "กำลังบันทึก…" : unsaved ? `ยังไม่บันทึก ${state.dirty.length} ไฟล์` : "บันทึกแล้ว"}
         </span>
-        <button type="button" onClick={saveAll} disabled={!unsaved || state.saving || state.conflict}>
+        <button type="button" className={styles.secondary} onClick={saveAll} disabled={!unsaved || state.saving || state.conflict}>
           บันทึก (Ctrl+S)
         </button>
-        <button type="button" onClick={validate} disabled={state.saving || state.conflict}>
+        <button type="button" className={styles.secondary} onClick={validate} disabled={state.saving || state.conflict}>
           Validate
         </button>
-        <button type="button" onClick={preview} disabled={state.saving || state.conflict}>
+        <button type="button" className={styles.secondary} onClick={preview} disabled={state.saving || state.conflict}>
           Preview
         </button>
         <button type="button" onClick={publish} disabled={state.saving || state.conflict}>
@@ -298,7 +298,13 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           onUpload={upload}
           onDeleteAsset={removeAsset}
         />
-        <div className={styles.editorColumn}>
+        <section className={styles.editorPane} aria-label="Editor">
+          <div className={styles.paneTitle}>
+            <code>{state.active}</code>
+            {state.dirty.includes(state.active) && <span className={styles.hint}>● ยังไม่บันทึก</span>}
+            <span className={styles.spacer} />
+            <span className={styles.hint}>Ctrl+S บันทึก</span>
+          </div>
           <Editor
             ref={editor}
             files={state.files}
@@ -308,57 +314,9 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
             onDirty={(file, dirty) => update(setDirty(file, dirty))}
             onSave={saveAll}
           />
-          <section className={styles.bottom}>
-            <div role="tablist" className={styles.tabs}>
-              {TABS.map(([id, label]) => (
-                <button
-                  key={id}
-                  type="button"
-                  role="tab"
-                  aria-selected={state.tab === id}
-                  onClick={() => {
-                    update((s) => {
-                      s.tab = id;
-                    });
-                    if (id === "provenance") refreshRun();
-                  }}
-                >
-                  {label}
-                  {id === "problems" && state.problems.length > 0 && (
-                    <span className={styles.count}>{state.problems.length}</span>
-                  )}
-                </button>
-              ))}
-              <span className={styles.spacer} />
-              {state.tab === "prepared" && (
-                <button type="button" onClick={prepare} disabled={state.saving || state.conflict}>
-                  คำนวณใหม่
-                </button>
-              )}
-            </div>
-            <div role="tabpanel" className={styles.panel}>
-              {state.tab === "problems" && <ProblemList problems={state.problems} checked={state.checked} onPick={pick} />}
-              {state.tab === "prepared" &&
-                (state.prepared ? (
-                  <>
-                    <JsonTree name="totals" value={state.prepared.totals} />
-                    <JsonTree name="params" value={state.prepared.params} />
-                    <JsonTree name="lists" value={state.prepared.lists} depth={1} />
-                    <JsonTree name="data" value={state.prepared.data} depth={1} />
-                  </>
-                ) : (
-                  <p className={styles.hint}>กด &quot;คำนวณใหม่&quot; เพื่อดูข้อมูลที่ template จะได้รับ (ใช้ sample data)</p>
-                ))}
-              {state.tab === "provenance" && <RunDetails run={state.run} />}
-              {state.tab === "versions" && (
-                <VersionsPanel
-                  key={state.lastPublished ?? 0}
-                  templateId={state.templateId} busy={state.saving || state.conflict} onReset={reset} />
-              )}
-            </div>
-          </section>
-        </div>
+        </section>
         <section className={styles.preview} aria-label="Preview">
+          <div className={styles.paneTitle}>PDF Preview</div>
           <form
             ref={previewForm}
             method="post"
@@ -395,6 +353,55 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
               if (href !== "about:blank") refreshRun();
             }}
           />
+        </section>
+        <section className={styles.bottom}>
+          <div role="tablist" className={styles.tabs}>
+            {TABS.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={state.tab === id}
+                onClick={() => {
+                  update((s) => {
+                    s.tab = id;
+                  });
+                  if (id === "provenance") refreshRun();
+                }}
+              >
+                {label}
+                {id === "problems" && state.problems.length > 0 && (
+                  <span className={styles.count}>{state.problems.length}</span>
+                )}
+              </button>
+            ))}
+            <span className={styles.spacer} />
+            {state.tab === "prepared" && (
+              <button type="button" onClick={prepare} disabled={state.saving || state.conflict}>
+                คำนวณใหม่
+              </button>
+            )}
+          </div>
+          <div role="tabpanel" className={styles.panel}>
+            {state.tab === "problems" && <ProblemList problems={state.problems} checked={state.checked} onPick={pick} />}
+            {state.tab === "prepared" &&
+              (state.prepared ? (
+                <>
+                  <JsonTree name="totals" value={state.prepared.totals} />
+                  <JsonTree name="params" value={state.prepared.params} />
+                  <JsonTree name="lists" value={state.prepared.lists} depth={1} />
+                  <JsonTree name="data" value={state.prepared.data} depth={1} />
+                </>
+              ) : (
+                <p className={styles.hint}>กด &quot;คำนวณใหม่&quot; เพื่อดูข้อมูลที่ template จะได้รับ (ใช้ sample data)</p>
+              ))}
+            {state.tab === "provenance" && <RunDetails run={state.run} />}
+            {state.tab === "versions" && (
+              <VersionsPanel
+                key={state.lastPublished ?? 0}
+                templateId={state.templateId} busy={state.saving || state.conflict} onReset={reset} />
+            )}
+          </div>
         </section>
       </div>
     </div>

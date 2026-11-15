@@ -26,6 +26,19 @@
   cursor: pointer;
 }
 
+.toolbar .secondary {
+  border-color: var(--line-button);
+  background: var(--fill-button);
+  box-shadow: none;
+  color: var(--color-text);
+  text-shadow: none;
+  font-weight: 500;
+}
+
+.toolbar .secondary:hover:not(:disabled) {
+  background: var(--fill-button-hover);
+}
+
 .toolbar button:disabled {
   opacity: 0.5;
   cursor: default;
@@ -61,26 +74,61 @@
   color: var(--color-danger);
 }
 
+/* files | editor | preview, the tabs under editor and preview; every pane is bounded so CodeMirror
+   and the iframe scroll inside it instead of growing the page */
 .main {
   flex: 1;
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) minmax(320px, 40%);
+  grid-template-columns: 210px minmax(0, 1fr) minmax(320px, 40%);
+  grid-template-rows: minmax(0, 1fr) 220px;
+  gap: calc(var(--sp) * 1);
+  padding: calc(var(--sp) * 1);
   min-height: 0;
 }
 
-.editorColumn {
-  display: grid;
-  grid-template-rows: minmax(0, 1fr) 200px;
+.main > * {
+  min-width: 0;
   min-height: 0;
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
+}
+
+.main > :first-child {
+  grid-row: 1 / 3;
+}
+
+.main > :not(:first-child) {
+  overflow: hidden; /* the title bars follow the rounded corner; the file list scrolls itself */
+}
+
+.editorPane {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.paneTitle {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 1);
+  padding: calc(var(--sp) * 0.6) calc(var(--sp) * 1.5);
+  background: var(--fill-bar);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.paneTitle .hint {
+  padding: 0;
+  font-weight: 400;
+  font-size: 0.85em;
 }
 
 .bottom {
+  grid-column: 2 / 4;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
-  border-top: 1px solid var(--color-border);
-  background: var(--fill-pane);
-  backdrop-filter: var(--blur-pane);
-  min-height: 0;
 }
 
 .tabs {
@@ -120,11 +168,7 @@
 
 .preview {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  min-height: 0;
-  border-left: 1px solid var(--color-border);
-  background: var(--fill-pane);
-  backdrop-filter: var(--blur-pane);
+  grid-template-rows: auto auto minmax(0, 1fr);
 }
 
 .params {
