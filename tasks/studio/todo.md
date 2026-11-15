@@ -110,9 +110,9 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Description:** ผู้ใช้ (รายการ, เพิ่ม, ลบ; ลบคนสุดท้ายไม่ได้), API key (สร้าง → แสดง secret ครั้งเดียวพร้อมปุ่มคัดลอก, เพิกถอน), เปลี่ยนรหัสผ่าน, theme editor (เลือก theme ฐาน, ฟอร์ม token 16 ตัวพร้อมตัวอย่างสด, ทำสำเนา built-in, บันทึก/ลบ, import/export JSON, ตั้งค่าเริ่มต้นของระบบ)
 
 **Acceptance criteria:**
-- [ ] secret ของ API key แสดงครั้งเดียว ปิดแล้วไม่มีทางดูอีก
-- [ ] แก้สีในฟอร์ม → ตัวอย่างเปลี่ยนทันทีโดยยังไม่บันทึก; import JSON ที่มีค่าผิด → แสดง error ตาม pointer จาก server
-- [ ] ตั้ง theme ที่สร้างเองเป็นค่าเริ่มต้น → หน้า login ใช้ theme นั้น
+- [x] secret ของ API key แสดงครั้งเดียว ปิดแล้วไม่มีทางดูอีก
+- [x] แก้สีในฟอร์ม → ตัวอย่างเปลี่ยนทันทีโดยยังไม่บันทึก; import JSON ที่มีค่าผิด → แสดง error ตาม pointer จาก server
+- [x] ตั้ง theme ที่สร้างเองเป็นค่าเริ่มต้น → หน้า login ใช้ theme นั้น
 
 **Verification:**
 - [ ] Vitest (ThemeEditor, การสร้าง style) + `npm run build`
@@ -120,6 +120,10 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Dependencies:** T3
 **Files likely touched:** `app/(app)/settings/page.tsx`, `components/{UsersPanel,ApiKeysPanel,PasswordForm,ThemeEditor}.tsx`, `lib/actions/{users,keys,themes}.ts`
 **Estimated scope:** M
+
+**แตกย่อย:**
+- [x] T6a: หน้า settings แท็บผู้ใช้ (ลบตัวเองไม่ได้), API key (secret อยู่ใน state ของ panel เท่านั้น, ปุ่มคัดลอกมีทางสำรองบน http), เปลี่ยนรหัสผ่าน (401 แยกรหัสผิดกับ session หมดด้วย `/v1/auth/me`)
+- [x] T6b: theme editor (ฟอร์ม 16 token + ตัวอย่างสดจาก `themeStyle`, ทำสำเนา built-in, บันทึก/ลบ, ตั้งค่าเริ่มต้น, export `{name, tokens}`, import → problems ตาม pointer)
 
 ### T7: E2E เต็ม + ให้ตรง mockup
 

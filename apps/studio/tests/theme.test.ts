@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { themeCss, themeDeclarations } from "@/lib/theme";
+import { readThemeFile, themeCss, themeDeclarations, themeFile, themeStyle, type ThemeTokens } from "@/lib/theme";
 
 const SURIYAN = {
   "color.background": "#f5f6f8",
@@ -47,5 +47,30 @@ describe("themeCss", () => {
     expect(css.match(/[{}]/g)).toEqual(["{", "}"]);
     expect(themeDeclarations({})).toEqual([]);
     expect(themeCss(null)).toBe(":root{}");
+  });
+});
+
+describe("themeStyle", () => {
+  it("gives the editor preview only checked values", () => {
+    const style = themeStyle({ ...SURIYAN, "color.primary": "red;}*{x:y" });
+    expect(style["--color-surface"]).toBe("#ffffff");
+    expect(style).not.toHaveProperty("--color-primary");
+  });
+});
+
+describe("theme files", () => {
+  it("round-trips an export and keeps only name and tokens on import", () => {
+    const text = themeFile("Mine", SURIYAN as ThemeTokens);
+    expect(readThemeFile(text)).toEqual({ name: "Mine", tokens: SURIYAN });
+    expect(readThemeFile(JSON.stringify({ id: "x", builtIn: true, name: "A", tokens: {} }))).toEqual({
+      name: "A",
+      tokens: {},
+    });
+  });
+
+  it("explains files that are not a theme object", () => {
+    expect(readThemeFile("{oops")).toEqual({ error: "ไฟล์นี้ไม่ใช่ JSON" });
+    expect(readThemeFile("[1]")).toHaveProperty("error");
+    expect(readThemeFile("null")).toHaveProperty("error");
   });
 });

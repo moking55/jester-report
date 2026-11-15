@@ -1,0 +1,274 @@
+.editor {
+  display: grid;
+  grid-template-columns: minmax(10em, 14em) minmax(18em, 1fr) minmax(18em, 1.1fr);
+  gap: calc(var(--sp) * 2.5);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .editor {
+    grid-template-columns: minmax(10em, 14em) 1fr;
+  }
+  .preview {
+    grid-column: 1 / -1;
+  }
+}
+
+.list {
+  display: grid;
+  gap: calc(var(--sp) * 0.5);
+}
+
+.list button {
+  display: grid;
+  text-align: left;
+  padding: calc(var(--sp) * 0.8) calc(var(--sp) * 1.5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.list button[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--tint-primary);
+}
+
+.list small {
+  color: var(--color-textMuted);
+}
+
+.import {
+  margin-top: calc(var(--sp) * 1.5);
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.import input {
+  display: block;
+  max-width: 100%;
+  font-size: 0.85em;
+}
+
+.form {
+  display: grid;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 2.5);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.form fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12em, 1fr));
+  gap: calc(var(--sp) * 1.5);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.form label {
+  display: grid;
+  gap: 2px;
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.form .wide {
+  grid-column: 1 / -1;
+}
+
+.form .color {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: calc(var(--sp) * 1);
+}
+
+.color span {
+  display: grid;
+}
+
+.color input {
+  width: 2.4em;
+  height: 2em;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+}
+
+.form input:not([type="color"]):not([type="range"]),
+.form select,
+.form button {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 4px 10px;
+}
+
+.form button {
+  cursor: pointer;
+}
+
+.form button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.form .primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  font-weight: 600;
+}
+
+.form .danger {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--sp) * 1);
+}
+
+.note {
+  margin: 0;
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 1.5);
+  background: var(--tint-primary);
+  border-radius: var(--radius);
+}
+
+.error {
+  color: var(--color-danger);
+}
+
+.error ul {
+  margin: calc(var(--sp) * 0.5) 0 0;
+  padding-left: 1.2em;
+}
+
+/* The preview sets the theme's custom properties on itself; values derived from them at :root
+   (tokens.css) were computed with the page's theme, so they are declared again here. */
+.preview {
+  --sp: calc(8px * var(--density));
+  --tint-primary: color-mix(in srgb, var(--color-primary) 12%, var(--color-surface));
+  --tint-danger: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  --tint-warning: color-mix(in srgb, var(--color-warning) 14%, var(--color-surface));
+  --tint-success: color-mix(in srgb, var(--color-success) 12%, var(--color-surface));
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-background);
+  color: var(--color-text);
+  font: var(--font-size) / 1.55 var(--font-family), "Noto Sans Thai", system-ui, sans-serif;
+  box-shadow: var(--shadow);
+}
+
+.pvCaption {
+  display: flex;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 2);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.pvCaption span {
+  color: var(--color-textMuted);
+}
+
+.pvBody {
+  display: grid;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 2.5);
+}
+
+.pvCard {
+  display: grid;
+  gap: calc(var(--sp) * 1.5);
+  padding: calc(var(--sp) * 2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.pvCard table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.pvCard th,
+.pvCard td {
+  padding: calc(var(--sp) * 0.6) calc(var(--sp) * 1.5);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.pvCard th {
+  background: var(--color-surfaceAlt);
+  color: var(--color-textMuted);
+}
+
+.pvCard tbody tr {
+  background: var(--tint-primary);
+}
+
+.pvMuted {
+  color: var(--color-textMuted);
+}
+
+.pvRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--sp) * 1.5);
+  align-items: center;
+}
+
+.pvPrimary,
+.pvButton,
+.pvInput {
+  padding: 4px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.pvPrimary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  font-weight: 600;
+}
+
+.pvInput {
+  flex: 1;
+  color: var(--color-textMuted);
+}
+
+.pvSuccess,
+.pvWarning,
+.pvDanger {
+  padding: 2px 10px;
+  border-radius: var(--radius);
+}
+
+.pvSuccess {
+  color: var(--color-success);
+  background: var(--tint-success);
+}
+
+.pvWarning {
+  color: var(--color-warning);
+  background: var(--tint-warning);
+}
+
+.pvDanger {
+  color: var(--color-danger);
+  background: var(--tint-danger);
+}

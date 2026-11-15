@@ -2,10 +2,12 @@ import Link from "next/link";
 
 import { ApiKeysPanel } from "@/components/ApiKeysPanel";
 import { PasswordForm } from "@/components/PasswordForm";
+import { ThemeEditor } from "@/components/ThemeEditor";
 import { UsersPanel } from "@/components/UsersPanel";
 import styles from "@/components/Settings.module.css";
 import { api } from "@/lib/api";
 import { requireUser } from "@/lib/current";
+import type { Theme } from "@/lib/theme";
 import type { components } from "@/lib/types.gen";
 
 type User = components["schemas"]["User"];
@@ -15,6 +17,7 @@ const TABS = [
   ["users", "ผู้ใช้"],
   ["keys", "API key"],
   ["password", "รหัสผ่าน"],
+  ["themes", "Theme"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -35,6 +38,12 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
       {tab === "users" && <UsersPanel users={await api<User[]>("/v1/users")} me={me.id} />}
       {tab === "keys" && <ApiKeysPanel keys={await api<ApiKey[]>("/v1/api-keys")} />}
       {tab === "password" && <PasswordForm />}
+      {tab === "themes" && <Themes />}
     </section>
   );
+}
+
+async function Themes() {
+  const [themes, fallback] = await Promise.all([api<Theme[]>("/v1/themes"), api<Theme>("/v1/themes/default")]);
+  return <ThemeEditor themes={themes} defaultId={fallback.id} />;
 }
