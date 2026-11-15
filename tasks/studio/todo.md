@@ -142,11 +142,21 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Estimated scope:** M
 
 **แตกย่อย:**
-- [x] T7a: catalog เป็นการ์ด (ข้อมูลจากรายการ template อย่างเดียว ไม่เรียก api ต่อการ์ด) + การ์ด "+" เปิดฟอร์มสร้าง
-- [x] T7b: workspace เป็น pane แยกมีช่องว่าง (ไฟล์สูงสองแถว, แท็บล่างกว้างใต้ editor+preview, title bar), ปุ่มรองเป็นสีเทา
+- [x] T7a: catalog มีมุมมองการ์ด (ข้อมูลจากรายการ template อย่างเดียว ไม่เรียก api ต่อการ์ด) + การ์ด "+" เปิดฟอร์มสร้าง; ภายหลังผู้ใช้ขอให้ตารางเป็นค่าเริ่มต้น สลับด้วยไอคอน (cookie `jester_catalog_view`)
+- [x] T7b: workspace มี title bar ต่อ pane (ไฟล์สูงสองแถว, แท็บล่างกว้างใต้ editor+preview), ปุ่มรองเป็นสีเทา; pane แยกมีช่องว่างเฉพาะ classic ส่วน theme อื่นชิดกันมีเส้น 1px
 - [x] T7c: history/settings กว้างสูงสุดและหัวเรื่องแบบเดียวกับ catalog
 - [x] T7d: `e2e/full-flow.spec.ts` ต่อจาก checkpoint-a
 - ผล 15 พ.ย. 2026: ทั้ง 2 spec ผ่านบน stack แยก `-p jester-e2e` (พอร์ต 3002/8002, volume ใหม่) ที่ VM ใน 43 วินาที แล้ว `down -v`; ไม่ได้ทำตาม mockup: dark mode, avatar, Engine log, autosave, ตัวเลือกชุดข้อมูลใน preview
+
+### หลัง T7: ตามคำขอของผู้ใช้ (15 พ.ย. 2026)
+
+- [x] ลากเส้นแบ่งปรับขนาด pane (ไฟล์, preview, แท็บล่าง) จำใน `localStorage`; `lib/panes.ts` + test
+- [x] ปุ่ม "+ เพิ่มไฟล์" เป็นเมนู: สร้างไฟล์ใหม่ หรือ import (ข้อความ → ไฟล์, รูป/ฟอนต์ → asset)
+- [x] กดรูปใน Assets แล้วดูรูปทับ editor; api เพิ่ม `GET /v1/templates/{id}/draft/assets/{name}` (nosniff + CSP sandbox) + test
+- [x] ตรวจ draft อัตโนมัติ (ตอนเปิดและทุก revision ใหม่) แทนปุ่ม Validate
+- [x] เมนู "API" ใน navbar: หน้า `/api` คู่มือเรียก render + ดาวน์โหลด contract
+- [x] Render dialog มีปุ่ม × ; Publish สีเขียว ต่างจาก Render
+- ผล: test 47 ตัว, lint, typecheck, build ผ่าน; E2E 2 spec ผ่านบน stack ใหม่ที่ VM (มีรอบหนึ่ง checkpoint-a ตกตรง logout แล้วเปิด `/` ยังไม่ไป login รันใหม่ผ่าน — ยังไม่ได้หาสาเหตุ)
 
 ### Checkpoint B
 

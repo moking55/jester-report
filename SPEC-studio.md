@@ -15,8 +15,15 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
 3. **Type จาก contract:** สร้าง TypeScript types จาก `public-api.yaml` ด้วย `openapi-typescript` แล้วเขียน client บาง ๆ บน `fetch`; contract เปลี่ยนแล้ว type ไม่ตรง → build ล้ม
 4. **หน้าจอ:**
    - `setup` (setup token + บัญชีแรก), `login`
-   - `catalog` (รายการรายงาน + สร้างจาก starter)
-   - `workspace`: ไฟล์ / editor / PDF preview / แท็บล่าง **Problems, Prepared data, Provenance** (ไม่มี Engine log — Gotenberg ไม่คืน log ต่อ request และ trace/options อยู่ใน Provenance แล้ว); ปุ่ม Validate, Preview, Publish; Render dialog พร้อมตัวอย่าง `curl`; versions + rollback + reset
+   - `catalog` (รายการรายงาน + สร้างจาก starter): มุมมอง **ตาราง** (ค่าเริ่มต้น) หรือ **การ์ด** สลับด้วยไอคอนข้างหัวเรื่อง จำไว้ใน cookie `jester_catalog_view`
+   - `workspace`: ไฟล์ / editor / PDF preview / แท็บล่าง **Problems, Prepared data, Provenance, Versions** (ไม่มี Engine log — Gotenberg ไม่คืน log ต่อ request และ trace/options อยู่ใน Provenance แล้ว)
+     - **ตรวจ draft อัตโนมัติ** ตอนเปิดและทุกครั้งที่ revision เปลี่ยน (บันทึก, เพิ่ม/ลบไฟล์หรือ asset, reset) — ไม่มีปุ่ม Validate; ตรวจเฉพาะสิ่งที่บันทึกแล้ว เพราะ api ตรวจจาก draft
+     - ปุ่ม Preview, **Publish (สีเขียว)**, **Render… (สีหลัก)**; Render dialog พร้อมตัวอย่าง `curl` ปิดได้ด้วย × หรือปุ่มปิด; versions + rollback + reset
+     - ปุ่ม **"+ เพิ่มไฟล์"** เปิดเมนู: สร้างไฟล์ใหม่ (.html .css .json ว่าง) หรือ import ไฟล์ (ข้อความ → ไฟล์ draft, รูป/ฟอนต์ → asset)
+     - กดรูปใน Assets (PNG/JPEG/SVG) → **ดูรูปทับ editor** พร้อมชนิด ขนาดไฟล์ และขนาด pixel; editor ยังอยู่ข้างใต้ งานที่ยังไม่บันทึกไม่หาย
+     - **ลากเส้นแบ่งเพื่อปรับขนาด** ช่องไฟล์, preview และแท็บล่าง (ลูกศรบนคีย์บอร์ดได้, ดับเบิลคลิกคืนค่าเดิม) จำไว้ใน `localStorage` ของ browser; editor เล็กสุด 280×140
+     - pane ชิดกันมีเส้นแบ่ง 1px ทุก theme ยกเว้น `classic` ที่เป็นกล่องแยกมีช่องว่างตาม mockup
+   - `api`: คู่มือสำหรับระบบอื่น — สร้าง API key, เรียก `POST /v1/render` (ตัวอย่าง `curl`), รูปแบบ error, รายงานที่ publish แล้ว และดาวน์โหลด contract (`/api/openapi.yaml` ผ่าน Studio)
    - `history`: ประวัติ render + นโยบายเก็บ (แสดงจำนวนที่จะลบก่อนยืนยัน)
    - `settings`: ผู้ใช้, API key (secret แสดงครั้งเดียว), เปลี่ยนรหัสผ่าน, **theme**
 5. **Editor: CodeMirror 6 (ผู้ใช้ยืนยัน)** — HTML/CSS/JSON + เน้น `{{ }}`/`{% %}` ของ Jinja; problem จาก `ValidationProblem.line` แสดงเป็น gutter marker และขีดเส้นใต้บรรทัด
@@ -39,7 +46,7 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
 
 1. **Prepared data:** `POST /v1/templates/{templateId}/draft/prepared` body `{ params?, data?, sampleFile? }` (ไม่มี data → sample) คืน view model ของ `data-prep` (`params`, `data`, `lists` พร้อม `rows`/`groups`, `totals`) โดยตัวเลข `Decimal` เป็น string ทศนิยม; error เหมือน preview (422 พร้อม problems); รันใน worker เดียวกับ render (template ไม่เกี่ยว แต่ data-prep ใช้ CPU)
 2. **Theme:** ตาราง `themes` (`0004_themes.sql`) + store เล็ก ๆ ใน `jester_api/themes/`:
-   - `GET /v1/themes` (session) → theme ทั้งหมด รวม built-in 2 แบบ
+   - `GET /v1/themes` (session) → theme ทั้งหมด รวม built-in 3 แบบ
    - `POST /v1/themes`, `PUT /v1/themes/{themeId}`, `DELETE /v1/themes/{themeId}` (session; built-in → 409; ลบ theme ที่เป็นค่าเริ่มต้น → ค่าเริ่มต้นกลับเป็น `mahasamut`)
    - `GET /v1/themes/default` (**ไม่ต้อง login** — หน้า login ต้องใช้; คืนแค่ token ไม่มีข้อมูลลับ) และ `PUT /v1/themes/default` (session)
    - token ที่รับ (ชุดเดียวกับ CSS ของ Studio):
@@ -54,6 +61,7 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
      | `density` | `compact`, `comfortable` |
 
    - ชื่อ theme 1–40 ตัวอักษร, ไม่เกิน 50 theme; JSON ที่ import มี token เกินหรือค่าผิด → 422 พร้อม pointer
+3. **อ่าน asset ของ draft:** `GET /v1/templates/{templateId}/draft/assets/{assetName}` (session) คืน bytes ด้วยชนิดที่ตรวจจากเนื้อไฟล์ตอน upload พร้อม `X-Content-Type-Options: nosniff`, CSP แบบ `sandbox` และ `Cache-Control: private, no-store` — SVG ที่ถูกเปิดตรง ๆ รัน script ไม่ได้; Studio ดึงผ่าน `GET /assets/[id]?name=`
 
 ## Objective
 
@@ -62,7 +70,7 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
 ### User stories
 
 - ในฐานะคนติดตั้ง ฉันเปิด Studio ครั้งแรก ใส่ setup token จาก log แล้วได้บัญชีแรกและเข้า catalog ทันที
-- ในฐานะนักพัฒนา ฉันสร้างรายงานจาก starter ใบเสนอราคา แก้ `template.html` กด Validate แล้วเห็น problem ที่บรรทัด เปิดแท็บ Prepared data แล้วเห็น `totals.grand = "3210.00"` กด Preview แล้วเห็น PDF จริงพร้อมลายน้ำ DRAFT
+- ในฐานะนักพัฒนา ฉันสร้างรายงานจาก starter ใบเสนอราคา แก้ `template.html` บันทึกแล้วเห็น problem ที่บรรทัดทันที (ตรวจอัตโนมัติ) เปิดแท็บ Prepared data แล้วเห็น `totals.grand = "3210.00"` กด Preview แล้วเห็น PDF จริงพร้อมลายน้ำ DRAFT
 - ในฐานะนักพัฒนา ฉัน publish แล้วสร้าง API key ให้ระบบ ERP ได้ secret ครั้งเดียว พร้อมตัวอย่าง `curl` สำหรับ `/v1/render`
 - ในฐานะผู้ดูแล ฉันดูประวัติ render และตั้งนโยบายเก็บโดยเห็นก่อนว่าจะลบกี่รายการ
 - ในฐานะผู้ดูแล ฉันทำสำเนา `suriyan` แก้สีหลักเป็นสีขององค์กร ตั้งเป็นค่าเริ่มต้น แล้ว export เป็น JSON ไปใช้กับอีก server
@@ -116,10 +124,12 @@ apps/studio/
     (app)/templates/[id]/page.tsx → workspace
     (app)/history/page.tsx
     (app)/settings/page.tsx       → ผู้ใช้, API key, รหัสผ่าน, theme
+    (app)/api/page.tsx            → คู่มือ API สำหรับระบบอื่น; (app)/api/openapi.yaml/route.ts → ดาวน์โหลด contract
     preview/[id]/route.ts         → ส่ง PDF ให้ iframe
+    assets/[id]/route.ts          → upload asset (POST) และอ่านรูปสำหรับ preview (GET)
   components/                     → Client Components (Editor, PdfPane, BottomTabs, RenderDialog, ThemeEditor, …)
   lib/api.ts, lib/session.ts, lib/theme.ts, lib/types.gen.ts, lib/actions/*.ts
-  styles/tokens.css (classic + suriyan), styles/*.module.css
+  styles/tokens.css (ค่า fallback = mahasamut + ตัวแปรบทบาท; ลุค Aero ใต้ `:root[data-look="aero"]` ที่ layout ใส่ให้เฉพาะ theme `classic`), styles/*.module.css
   tests/ (Vitest), e2e/ (Playwright)
   Dockerfile, next.config.ts
 infra/compose.yaml                → + service studio (พอร์ต 3000)
@@ -143,9 +153,9 @@ export function Workspace({ draft }: { draft: Draft }) {
 
 ## Testing Strategy
 
-- **Backend (pytest):** prepared data ได้ยอดของ quotation (`totals.grand == "3210.00"`) และ error เหมือน preview; theme: built-in แก้/ลบไม่ได้, token เกิน/ค่าผิด/สีที่มี CSS แฝง (`red;}body{display:none`) → 422, ลบค่าเริ่มต้นแล้วกลับเป็น classic, `GET /v1/themes/default` ไม่ต้อง login; test contract ครอบ endpoint ใหม่
+- **Backend (pytest):** prepared data ได้ยอดของ quotation (`totals.grand == "3210.00"`) และ error เหมือน preview; theme: built-in แก้/ลบไม่ได้, token เกิน/ค่าผิด/สีที่มี CSS แฝง (`red;}body{display:none`) → 422, ลบค่าเริ่มต้นแล้วกลับเป็น mahasamut, อ่าน asset ได้ bytes/404/401 พร้อม header กัน script, `GET /v1/themes/default` ไม่ต้อง login; test contract ครอบ endpoint ใหม่
 - **Unit/component (Vitest):** client ของ API (header ครบ, problem+json → `ApiProblem`, 401 → logout), update ของ workspace (บันทึก, 412, 422 → problem ที่บรรทัด), ฟอร์ม setup/login, ThemeEditor (แก้ token → ตัวอย่างเปลี่ยน, import JSON ที่ผิด → error), การสร้าง `<style>` จาก token (ไม่มีค่าที่หลุดออกนอก declaration)
-- **E2E (Playwright, compose บน VM ตอนจบ phase):** setup → สร้างจาก starter → แก้ไฟล์ → validate เห็น problem → Prepared data เห็นยอด → preview เห็น PDF → publish → สร้าง API key → `curl` render ได้ PDF → history เห็น run; สองแท็บแก้พร้อมกันได้คำเตือน; สลับ classic/suriyan และ theme ที่สร้างเองแล้วหน้าจอเปลี่ยน
+- **E2E (Playwright, compose บน VM ตอนจบ phase):** setup → สร้างจาก starter → แก้ไฟล์ → บันทึกแล้วการตรวจอัตโนมัติเห็น problem → Prepared data เห็นยอด → preview เห็น PDF → publish → สร้าง API key → `curl` render ได้ PDF → history เห็น run; สองแท็บแก้พร้อมกันได้คำเตือน; สลับ classic/suriyan และ theme ที่สร้างเองแล้วหน้าจอเปลี่ยน
 - **กติกา:** ESLint ห้าม import state library อื่นนอกจาก `use-immer`/`immer` และห้ามเรียก FastAPI จาก Client Component (`lib/api.ts` เป็น `server-only`); Playwright ตรวจว่าไม่มี request จาก browser ไปที่ api ตรง
 - `npm run build` ผ่านโดย type ตรง contract
 
@@ -160,7 +170,7 @@ export function Workspace({ draft }: { draft: Draft }) {
 1. Flow ใน E2E ผ่านทั้งหมดบน compose stack จริง (setup → render ด้วย API key → history) รวมการสลับและสร้าง theme
 2. ไม่มีการเรียก FastAPI จาก browser และไม่มี state library อื่น (Playwright + ESLint)
 3. problem จาก validate แสดงที่บรรทัด; 412 ได้คำเตือนไม่เขียนทับ; Prepared data แสดงยอดที่คำนวณแล้ว
-4. theme ที่มีค่าผิดหรือมี CSS แฝงถูกปฏิเสธที่ server; classic และ suriyan แก้ไม่ได้
+4. theme ที่มีค่าผิดหรือมี CSS แฝงถูกปฏิเสธที่ server; mahasamut, classic และ suriyan แก้ไม่ได้
 5. `npm run build` / lint / typecheck / test ผ่าน; test ของ backend ที่เพิ่มผ่าน; `docker compose up` ได้ studio ที่ login แล้วใช้งานได้; หน้าจอหลักตรงกับ mockup ใน theme classic
 
 ## Open Questions

@@ -2,7 +2,7 @@
 
 สถานะ: **อนุมัติแล้ว 14 พ.ย. 2026** (ปรับตาม interview)
 Module id: `public-api` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้นกับ: `render-service`, `template-store`, `auth` · ถูกใช้โดย: `studio` (Next.js server) และระบบภายนอก
-อ้างอิง: [public-api.yaml](apps/api/openapi/public-api.yaml) (contract 34 operation + `GET /v1/openapi.yaml`), [SPEC-auth.md](SPEC-auth.md) (`X-Jester-Client-IP`), [SPEC-render-service.md](SPEC-render-service.md) (ลำดับ route ของ `/v1/runs/retention`), [intent](docs/intent/report-server-v1.md)
+อ้างอิง: [public-api.yaml](apps/api/openapi/public-api.yaml) (contract 42 operation + `GET /v1/openapi.yaml`; ที่เพิ่มหลัง spec นี้ — prepared data, theme, อ่าน asset ของ draft — อยู่ใน [SPEC-studio.md](SPEC-studio.md)), [SPEC-auth.md](SPEC-auth.md) (`X-Jester-Client-IP`), [SPEC-render-service.md](SPEC-render-service.md) (ลำดับ route ของ `/v1/runs/retention`), [intent](docs/intent/report-server-v1.md)
 
 ## สมมติฐาน (ผู้ใช้ยืนยันใน interview)
 1. **การติดตั้ง (ผู้ใช้ยืนยัน):** ระบบภายนอกเรียก api ผ่าน reverse proxy ของทีม (TLS อยู่ที่ proxy); Studio คุยกับ api ผ่าน network ภายในของ compose; พอร์ตที่เปิดออกนอก compose มีแค่ของ api (postgres, rustfs, gotenberg ไม่เปิด); IP ที่ api เห็นจาก connection จึงเป็นของ proxy — v1 ไม่เชื่อ `X-Forwarded-For` (rate limit ของ login ใช้ `X-Jester-Client-IP` จาก Studio อยู่แล้ว)
