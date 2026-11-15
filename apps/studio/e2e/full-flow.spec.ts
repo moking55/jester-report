@@ -86,7 +86,8 @@ test("report from starter to API render, history, two tabs and themes", async ({
   const dialog = page.getByRole("dialog", { name: "Render" });
   const params = await dialog.locator('textarea[name="params"]').inputValue();
   const data = await dialog.locator('textarea[name="data"]').inputValue();
-  await dialog.getByRole("button", { name: "ปิด" }).click();
+  await dialog.getByLabel("ปิด").click(); // the × in the header
+  await expect(dialog).toHaveCount(0);
 
   // 6. an API key: the secret is shown once
   await page.goto("/settings?tab=keys");
