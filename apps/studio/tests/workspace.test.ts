@@ -84,6 +84,8 @@ describe("workspace state", () => {
     s = produce(s, fileRemoved("extra.css", 5));
     expect([s.revision, s.active, s.dirty]).toEqual([5, "template.html", ["template.html"]]);
     expect(s.generation).toBe(0); // no reload: the editor keeps the unsaved template.html
+    s = produce(s, fileAdded("imported.css", 6, "h1 { color: red }"));
+    expect(s.files.at(-1)).toMatchObject({ name: "imported.css", content: "h1 { color: red }" });
   });
 
   it("assets replace one with the same name", () => {

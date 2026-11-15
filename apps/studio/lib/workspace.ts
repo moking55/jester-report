@@ -94,10 +94,10 @@ export const reloaded = (draft: Draft) => (s: WorkspaceState) => {
   return { ...next, tab: s.tab, run: s.run, generation: s.generation + 1 };
 };
 
-export const fileAdded = (name: string, revision: number) => (s: WorkspaceState) => {
+export const fileAdded = (name: string, revision: number, content = "") => (s: WorkspaceState) => {
   s.revision = revision;
   s.error = null;
-  if (!s.files.some((f) => f.name === name)) s.files.push({ name, content: "", sha256: "" });
+  if (!s.files.some((f) => f.name === name)) s.files.push({ name, content, sha256: "" });
   s.active = name;
 };
 

@@ -188,10 +188,12 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
     editor.current?.goto(file, line, column);
   }
 
-  const addFile = (file: string) =>
+  const addFile = (file: string, content = "") =>
     exclusive(async () => {
-      const result = await saveFile(state.templateId, file, "", state.revision);
-      update(result.ok ? fileAdded(file, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
+      const result = await saveFile(state.templateId, file, content, state.revision);
+      update(
+        result.ok ? fileAdded(file, result.data.revision, content) : failed(result.problem, problemMessage(result.problem)),
+      );
       return result.ok;
     });
 

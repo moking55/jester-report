@@ -89,8 +89,7 @@
   font-size: 0.85em;
 }
 
-.add button,
-.upload {
+.add button {
   border: 1px solid var(--line-button);
   border-radius: var(--radius);
   background: var(--fill-button);
@@ -104,20 +103,80 @@
   cursor: default;
 }
 
-.upload {
-  margin: calc(var(--sp) * 0.8) calc(var(--sp) * 1.5);
-  align-self: flex-start;
+.addMenu {
+  position: relative;
+  margin: calc(var(--sp) * 1) calc(var(--sp) * 1.5) 0;
 }
 
-.upload input {
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--sp) * 0.8);
+  width: 100%;
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  padding: calc(var(--sp) * 0.6) calc(var(--sp) * 1.5);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.addButton span {
+  font-size: 1.2em;
+  line-height: 1;
+  color: var(--color-primary);
+}
+
+.addButton:hover:not(:disabled),
+.addButton[aria-expanded="true"] {
+  background: var(--fill-button-hover);
+}
+
+.addButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.menu {
   position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 5;
+  display: grid;
+  padding: 4px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
-.upload:focus-within {
-  outline: 2px solid var(--color-primary);
+.menu button {
+  display: grid;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  padding: calc(var(--sp) * 0.8) calc(var(--sp) * 1.2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu button:hover,
+.menu button:focus-visible {
+  background: var(--fill-selected);
+  outline: none;
+}
+
+.menu small {
+  color: var(--color-textMuted);
+  font-size: 0.8em;
+}
+
+.error {
+  margin: calc(var(--sp) * 0.5) calc(var(--sp) * 1.5) 0;
+  color: var(--color-danger);
+  font-size: 0.85em;
 }
 
 .hint {
