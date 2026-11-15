@@ -60,6 +60,14 @@ async def test_assets(api, admin):
         url, headers={**admin, "If-Match": "2"}, files={"file": ("logo.png", PNG, "image/png")}
     )
     assert dup.status_code == 409
+
+    got = await api.get(f"{url}/logo.png", headers=admin)
+    assert got.status_code == 200 and got.content == PNG
+    assert got.headers["content-type"] == "image/png" and got.headers["x-content-type-options"] == "nosniff"
+    assert "sandbox" in got.headers["content-security-policy"]
+    assert (await api.get(f"{url}/nope.png", headers=admin)).status_code == 404
+    assert (await api.get(f"{url}/logo.png")).status_code == 401
+
     gone = await api.delete(f"{url}/logo.png", headers={**admin, "If-Match": "2"})
     assert gone.json() == {"revision": 3}
 

@@ -544,6 +544,24 @@ paths:
     parameters:
       - $ref: '#/components/parameters/TemplateId'
       - { name: assetName, in: path, required: true, schema: { $ref: '#/components/schemas/AssetName' } }
+    get:
+      tags: [draft]
+      operationId: getDraftAsset
+      summary: The asset's bytes, for Studio's preview of an image or font
+      description: |
+        Sent with the type detected at upload, `X-Content-Type-Options: nosniff` and a sandboxing
+        Content-Security-Policy, so an SVG opened directly cannot run script.
+      responses:
+        '200':
+          description: The bytes
+          content:
+            image/png: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/svg+xml: { schema: { type: string, format: binary } }
+            font/ttf: { schema: { type: string, format: binary } }
+            font/otf: { schema: { type: string, format: binary } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [draft]
       operationId: deleteDraftAsset

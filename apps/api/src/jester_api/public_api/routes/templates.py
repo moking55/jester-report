@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Literal
 
 from fastapi import APIRouter, Request, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from ...render_service import RenderError
 from .. import views
@@ -115,6 +115,29 @@ async def upload_asset(
         templateId, file.filename or "", data, revision, caller.name
     )
     return JSONResponse({"asset": views.asset(asset), "revision": new}, status_code=201)
+
+
+@router.get("/v1/templates/{templateId}/draft/assets/{assetName}")
+async def get_asset(
+    request: Request,
+    caller: SessionCaller,
+    templateId: str,  # noqa: N803
+    assetName: str,  # noqa: N803
+) -> Response:
+    store = services(request).store
+    draft = await store.get_draft(templateId)
+    asset = next((a for a in draft.assets if a.name == assetName), None)
+    if asset is None:
+        raise ApiError("NOT_FOUND", "the draft has no asset with that name")
+    return Response(
+        await store.asset_bytes(asset.sha256),
+        media_type=asset.content_type,  # detected from the bytes at upload, never the client's word
+        headers={
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+            "Cache-Control": "private, no-store",
+        },
+    )
 
 
 @router.delete("/v1/templates/{templateId}/draft/assets/{assetName}")
