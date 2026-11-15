@@ -6,22 +6,25 @@ import { login, themeCss, watchRequests } from "./shared";
 
 const ID = "e2e-quote";
 
-/** CodeMirror's view, to put a file back exactly; typing is done with the keyboard like a person would. */
+/** CodeMirror's view, to read and put back a file exactly (it draws only the lines on screen, so the
+ *  page text is not the file); typing is done with the keyboard like a person would. */
+type View = { state: { doc: { length: number; toString(): string } }; dispatch: (tr: object) => void };
 const setEditorText = (page: Page, text: string) =>
   page.evaluate((value) => {
-    const content = document.querySelector(".cm-content") as unknown as {
-      cmTile: { view: { state: { doc: { length: number } }; dispatch: (tr: object) => void } };
-    };
-    const view = content.cmTile.view;
+    const view = (document.querySelector(".cm-content") as unknown as { cmTile: { view: View } }).cmTile.view;
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
   }, text);
-const editorText = (page: Page) => page.locator(".cm-content").innerText();
+const editorText = (page: Page) =>
+  page.evaluate(() =>
+    (document.querySelector(".cm-content") as unknown as { cmTile: { view: View } }).cmTile.view.state.doc.toString(),
+  );
 
 async function openFile(page: Page, name: string) {
   await page.getByRole("navigation", { name: "ไฟล์" }).getByRole("button", { name, exact: true }).click();
 }
 
 async function save(page: Page) {
+  await expect(page.getByRole("button", { name: "บันทึก (Ctrl+S)" })).toBeEnabled();
   await page.getByRole("button", { name: "บันทึก (Ctrl+S)" }).click();
   await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible();
 }
@@ -40,7 +43,7 @@ test("report from starter to API render, history, two tabs and themes", async ({
   await page.getByLabel("ชื่อรายงาน").fill("ใบเสนอราคา E2E");
   await page.getByLabel("เริ่มจาก").selectOption({ label: "ใบเสนอราคา" });
   await page.getByRole("button", { name: "สร้างรายงาน" }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`));
+  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 }); // a cold stack is slow here
   await expect(page.locator(".cm-content")).toBeVisible();
 
   // 2. edit a file with the keyboard, save, validate: the problem shows with its line
@@ -57,6 +60,7 @@ test("report from starter to API render, history, two tabs and themes", async ({
 
   // put the file back, save, validate clean
   await setEditorText(page, original);
+  await expect(page.getByRole("status").filter({ hasText: /ยังไม่บันทึก/ })).toBeVisible();
   await save(page);
   await page.getByRole("button", { name: "Validate" }).click();
   await expect(problems.getByText("ไม่พบปัญหา")).toBeVisible();
