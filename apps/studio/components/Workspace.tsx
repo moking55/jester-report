@@ -59,22 +59,31 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
       s.saving = true;
     });
     let revision = state.revision;
-    for (const file of state.dirty) {
-      const content = editor.current?.content(file);
-      if (content === undefined) continue;
-      const result = await saveFile(state.templateId, file, content, revision);
-      if (!result.ok) {
-        update(failed(result.problem, problemMessage(result.problem)));
-        return false;
+    try {
+      for (const file of state.dirty) {
+        const content = editor.current?.content(file);
+        if (content === undefined) continue;
+        const result = await saveFile(state.templateId, file, content, revision);
+        if (!result.ok) {
+          update(failed(result.problem, problemMessage(result.problem)));
+          return false;
+        }
+        revision = result.data.revision;
+        const stillDirty = editor.current?.markSaved(file, content) ?? false;
+        update(saved(file, revision, stillDirty));
       }
-      revision = result.data.revision;
-      const stillDirty = editor.current?.markSaved(file, content) ?? false;
-      update(saved(file, revision, stillDirty));
+      return true;
+    } catch {
+      // the action itself failed (Studio unreachable, body too big): say so instead of staying "saving"
+      update((s) => {
+        s.error = "บันทึกไม่สำเร็จ ติดต่อ Studio ไม่ได้ หรือไฟล์ใหญ่เกินไป";
+      });
+      return false;
+    } finally {
+      update((s) => {
+        s.saving = false;
+      });
     }
-    update((s) => {
-      s.saving = false;
-    });
-    return true;
   }
 
   /** The api validates what is saved, so unsaved edits go first. */
