@@ -67,9 +67,10 @@ def _check_html(name: str, text: str, known: set[str]) -> list[Problem]:
     problems: list[Problem] = []
     try:
         ast = _ENV.parse(text)
+        undeclared = meta.find_undeclared_variables(ast)  # compiles: unknown filters/tests raise here
     except TemplateSyntaxError as exc:
         return [error("TEMPLATE_SYNTAX", exc.message or "template syntax error", file=name, line=exc.lineno)]
-    for var in sorted(meta.find_undeclared_variables(ast) - _ALLOWED_VARS):
+    for var in sorted(undeclared - _ALLOWED_VARS):
         idx = re.search(rf"\b{re.escape(var)}\b", text)
         problems.append(
             error(

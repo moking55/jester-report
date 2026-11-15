@@ -46,6 +46,12 @@ def test_jinja_syntax_error_has_line():
     )  # Jinja points at the unclosed block
 
 
+def test_unknown_filter_is_a_problem_not_a_crash():
+    # Jinja reports unknown filters/tests while compiling, inside find_undeclared_variables
+    problems = lint({"template.html": "<p>\n{{ params.quoteId | nosuchfilter }}</p>"})
+    assert found(problems) == {("TEMPLATE_SYNTAX", "template.html", 2)}
+
+
 def test_unknown_top_level_variable():
     problems = lint({"template.html": "<p>\n{{ customer.name }}</p>"})
     assert ("TEMPLATE_UNKNOWN_VAR", "template.html", 2) in found(problems)
