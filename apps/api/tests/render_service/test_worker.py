@@ -6,7 +6,12 @@ import pytest
 
 from jester_api.binder import bind
 from jester_api.data_prep import prepare
-from jester_api.render_service.worker import WorkerTimeout, run_in_worker
+from jester_api.render_service.worker import (
+    PrepareOnly,
+    WorkerTimeout,
+    prepare_in_worker,
+    run_in_worker,
+)
 
 from ..data_prep.conftest import fixture_files, load_fixture, sample
 
@@ -37,6 +42,13 @@ async def test_input_problems_come_back_without_a_document():
     definition, files = load_fixture("quotation"), fixture_files("quotation")
     result = await run_in_worker(definition, files, {}, {}, sample("quotation"), {}, timeout_s=30)
     assert result.bound is None and {p.code for p in result.problems} == {"PARAM_REQUIRED"}
+
+
+async def test_prepare_crash_comes_back_as_render_failed():
+    # None is no definition: data-prep raises in the child, which answers with a WorkerResult
+    result = await prepare_in_worker(None, {}, {}, {}, timeout_s=30)  # type: ignore[arg-type]
+    assert isinstance(result, PrepareOnly) and result.view is None
+    assert [p.code for p in result.problems] == ["RENDER_FAILED"]
 
 
 async def test_endless_template_is_killed_and_the_loop_keeps_running():

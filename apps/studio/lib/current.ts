@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { api, ApiProblem, publicApi } from "./api";
@@ -32,8 +33,9 @@ export async function requireUser(): Promise<User> {
   redirect((await setupRequired()) ? "/setup" : "/login");
 }
 
-/** The theme the user picked (needs a session to look it up), else the system default. */
-export async function activeTheme(): Promise<{ theme: Theme | null; themes: Theme[] }> {
+/** The theme the user picked (needs a session to look it up), else the system default.
+ *  cache(): both the root and the (app) layout ask for it; one api round per request. */
+export const activeTheme = cache(async (): Promise<{ theme: Theme | null; themes: Theme[] }> => {
   const chosen = (await cookies()).get(THEME_COOKIE)?.value;
   let themes: Theme[] = [];
   if (await sessionToken()) {
@@ -50,4 +52,4 @@ export async function activeTheme(): Promise<{ theme: Theme | null; themes: Them
   } catch {
     return { theme: null, themes }; // styles/tokens.css fallback
   }
-}
+});

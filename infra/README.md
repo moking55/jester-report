@@ -18,7 +18,12 @@ curl http://localhost:8000/v1/health
 Only Studio (`JESTER_STUDIO_PORT`, default 3000) and the api (`JESTER_API_PORT`, default 8000) are published;
 PostgreSQL, RustFS and Gotenberg stay on the compose network. Put your reverse proxy (TLS) in front of both.
 Studio's session cookie is `Secure`, so open Studio over HTTPS (or set `JESTER_COOKIE_SECURE=false` to try it
-over plain http). `infra/.env` holds real secrets and is
+over plain http).
+
+Behind that proxy, set `JESTER_TRUST_PROXY=1` (the proxy must append the browser IP to `X-Forwarded-For`).
+Without it every Studio login reaches the api from Studio's own address, so failed logins count for the whole
+team: anyone can lock a username out for 15 minutes from any machine. Leave it `0` when Studio is reachable
+without the proxy, or anyone could fake the header. `infra/.env` holds real secrets and is
 git-ignored. The contract is served at `/v1/openapi.yaml`.
 
 ## Dev stack
