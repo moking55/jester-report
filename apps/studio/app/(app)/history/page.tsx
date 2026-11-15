@@ -43,6 +43,7 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
   return (
     <section className={styles.page}>
       <h1>ประวัติ Render</h1>
+      <p className={styles.sub}>ทุก render และ preview พร้อม provenance สำหรับ reproduce และ debug</p>
 
       <form className={styles.filters} method="get">
         <label>
