@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "jester_session";
 export const THEME_COOKIE = "jester_theme";
+export const VIEW_COOKIE = "jester_catalog_view"; // "table" (default) or "cards"
 const WEEK = 7 * 24 * 60 * 60; // the api's absolute session cap; the api decides when it really ends
 
 // Secure by default (SPEC-studio.md). JESTER_COOKIE_SECURE=false only for plain-http test setups.

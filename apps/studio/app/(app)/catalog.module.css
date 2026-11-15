@@ -182,3 +182,85 @@
   cursor: pointer;
   text-decoration: underline;
 }
+
+.heading {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 2);
+}
+
+.toggle {
+  display: flex;
+  margin-left: auto;
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.toggle button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 28px;
+  border: 0;
+  background: var(--fill-button);
+  color: var(--color-textMuted);
+  cursor: pointer;
+}
+
+.toggle button + button {
+  border-left: 1px solid var(--line-button);
+}
+
+.toggle button[aria-pressed="true"] {
+  background: var(--fill-selected);
+  color: var(--color-primary);
+}
+
+.toggle svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.table {
+  width: 100%;
+  border-collapse: separate; /* collapse ignores border-radius */
+  border-spacing: 0;
+  overflow: hidden;
+  background: var(--fill-pane);
+  backdrop-filter: var(--blur-pane);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
+}
+
+.table th,
+.table td {
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 2);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table th {
+  background: var(--fill-bar);
+  color: var(--color-textMuted);
+  font-weight: 600;
+}
+
+.table a {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.changed {
+  color: var(--color-warning);
+  font-size: 0.85em;
+}
