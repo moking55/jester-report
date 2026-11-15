@@ -130,16 +130,23 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Description:** Playwright บน compose ที่ VM ครอบ flow ใน spec (setup → render ด้วย API key → history, สองแท็บ, theme ที่สร้างเอง); ตรวจ network ว่าไม่มี request ไป api จาก browser; ปรับ catalog/workspace/history ใน theme classic ให้ตรง mockup (เต็มจอ, ไม่มีกรอบ card ครอบหน้า)
 
 **Acceptance criteria:**
-- [ ] Playwright ผ่านทั้งหมดบน VM
-- [ ] ภาพหน้าจอ catalog/workspace/history ใน classic เทียบ mockup แล้วจัดวางตรงกัน
-- [ ] `docker compose up` (5 services) แล้ว login ใช้งานได้
+- [x] Playwright ผ่านทั้งหมดบน VM
+- [x] ภาพหน้าจอ catalog/workspace/history ใน classic เทียบ mockup แล้วจัดวางตรงกัน
+- [x] `docker compose up` (5 services) แล้ว login ใช้งานได้
 
 **Verification:**
-- [ ] `STUDIO_E2E_URL=… npx playwright test`
+- [x] `STUDIO_E2E_URL=… npx playwright test`
 
 **Dependencies:** T4, T5, T6; VM `10.0.1.29`
 **Files likely touched:** `e2e/*.spec.ts`, CSS modules, `infra/compose.yaml`
 **Estimated scope:** M
+
+**แตกย่อย:**
+- [x] T7a: catalog เป็นการ์ด (ข้อมูลจากรายการ template อย่างเดียว ไม่เรียก api ต่อการ์ด) + การ์ด "+" เปิดฟอร์มสร้าง
+- [x] T7b: workspace เป็น pane แยกมีช่องว่าง (ไฟล์สูงสองแถว, แท็บล่างกว้างใต้ editor+preview, title bar), ปุ่มรองเป็นสีเทา
+- [x] T7c: history/settings กว้างสูงสุดและหัวเรื่องแบบเดียวกับ catalog
+- [x] T7d: `e2e/full-flow.spec.ts` ต่อจาก checkpoint-a
+- ผล 15 พ.ย. 2026: ทั้ง 2 spec ผ่านบน stack แยก `-p jester-e2e` (พอร์ต 3002/8002, volume ใหม่) ที่ VM ใน 43 วินาที แล้ว `down -v`; ไม่ได้ทำตาม mockup: dark mode, avatar, Engine log, autosave, ตัวเลือกชุดข้อมูลใน preview
 
 ### Checkpoint B
 

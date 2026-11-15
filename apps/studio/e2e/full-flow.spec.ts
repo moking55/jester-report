@@ -133,7 +133,7 @@ test("report from starter to API render, history, two tabs and themes", async ({
   const look = () => page.evaluate(() => document.documentElement.dataset.look ?? null);
   await page.goto("/");
   expect(await themeCss(page)).toContain("--color-primary:#155fa8");
-  const picker = page.getByLabel("Theme");
+  const picker = page.getByLabel("Theme", { exact: true });
   await picker.selectOption({ label: "Classic" });
   await expect.poll(() => themeCss(page)).toContain("--color-primary:#1e90d6");
   expect(await look()).toBe("aero");
@@ -148,7 +148,7 @@ test("report from starter to API render, history, two tabs and themes", async ({
   await page.getByLabel(/^สีหลัก/).fill("#2457c5");
   await page.getByRole("button", { name: "สร้าง theme" }).click();
   await expect(page.getByRole("status")).toHaveText("บันทึกแล้ว");
-  await page.getByLabel("Theme").selectOption({ label: "E2E แบรนด์" });
+  await page.getByLabel("Theme", { exact: true }).selectOption({ label: "E2E แบรนด์" });
   await expect.poll(() => themeCss(page)).toContain("--color-primary:#2457c5");
 
   // the browser only ever talked to Studio
