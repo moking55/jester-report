@@ -1,0 +1,96 @@
+.workspace {
+  height: 100%;
+  display: flex;
+  flex-direction: column; /* the banners come and go; the editor takes the rest */
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 3);
+  background: var(--color-surfaceAlt);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbar button,
+.conflict button {
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  padding: 4px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toolbar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.revision,
+.saveState {
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.conflict,
+.error {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.conflict {
+  background: var(--tint-warning);
+  color: var(--color-warning);
+  font-weight: 600;
+}
+
+.error {
+  background: var(--tint-danger);
+  color: var(--color-danger);
+}
+
+.main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.files {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border);
+  padding: calc(var(--sp) * 1) 0;
+}
+
+.files button {
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: calc(var(--sp) * 0.6) calc(var(--sp) * 2);
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+
+.files button:hover {
+  background: var(--color-surfaceAlt);
+}
+
+.files button[aria-current="true"] {
+  background: var(--tint-primary);
+  color: var(--color-primary);
+  font-weight: 600;
+}

@@ -1,0 +1,46 @@
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 2);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.form label {
+  display: grid;
+  gap: 2px;
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.form input,
+.form select {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  padding: 4px 8px;
+  color: var(--color-text);
+}
+
+.form button {
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--color-primary);
+  color: var(--color-onPrimary);
+  padding: 5px 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.form button:disabled {
+  opacity: 0.6;
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-danger);
+}

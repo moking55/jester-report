@@ -27,6 +27,14 @@ describe("api client", () => {
     expect(init.body).toBe('{"a":1}');
   });
 
+  it("sends draft files as text/plain, not as a JSON string", async () => {
+    const fetch = vi.fn(async () => Response.json({ revision: 4 }));
+    await apiJson(config(fetch), "/v1/templates/q/draft/files/report.json", { method: "PUT", text: '{"a":1}' });
+    const [, init] = fetch.mock.calls[0] as unknown as [URL, RequestInit];
+    expect(init.headers).toMatchObject({ "Content-Type": "text/plain; charset=utf-8" });
+    expect(init.body).toBe('{"a":1}');
+  });
+
   it("sends no Authorization without a session", async () => {
     const fetch = vi.fn(async () => Response.json({}));
     await apiJson(config(fetch, null), "/v1/themes/default");

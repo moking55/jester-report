@@ -24,6 +24,7 @@ export type ApiConfig = {
 export type RequestOptions = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown; // sent as JSON
+  text?: string; // sent as text/plain (draft files: JSON-encoding would save report.json as a string)
   ifMatch?: number; // draft revision
 };
 
@@ -41,13 +42,20 @@ export async function apiResponse(config: ApiConfig, path: string, options: Requ
   if (config.studioKey) headers["X-Jester-Studio-Key"] = config.studioKey;
   if (config.clientIp) headers["X-Jester-Client-IP"] = config.clientIp;
   if (options.ifMatch !== undefined) headers["If-Match"] = `"${options.ifMatch}"`;
-  if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  let body: string | undefined;
+  if (options.text !== undefined) {
+    headers["Content-Type"] = "text/plain; charset=utf-8";
+    body = options.text;
+  } else if (options.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+    body = JSON.stringify(options.body);
+  }
   let response: Response;
   try {
     response = await (config.fetch ?? fetch)(new URL(path, config.baseUrl), {
       method: options.method ?? "GET",
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body,
       cache: "no-store",
     });
   } catch {

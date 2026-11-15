@@ -1,0 +1,27 @@
+.editor {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.editor :global(.cm-editor) {
+  height: 100%;
+  font-size: 13px;
+}
+
+.editor :global(.cm-editor.cm-focused) {
+  outline: none;
+}
+
+.editor :global(.cm-gutters) {
+  background: var(--color-surfaceAlt);
+  border-right: 1px solid var(--color-border);
+  color: var(--color-textMuted);
+}
+
+.editor :global(.cm-jinja) {
+  color: var(--color-primary);
+  background: var(--tint-primary);
+  border-radius: 2px;
+}
