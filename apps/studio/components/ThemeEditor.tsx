@@ -69,12 +69,12 @@ export function ThemeEditor({ themes, defaultId }: { themes: Theme[]; defaultId:
     startTransition(async () => settle(await saveTheme(draft.id, draft.name, draft.tokens), "บันทึกแล้ว"));
 
   const remove = () => {
-    if (!draft.id || !window.confirm(`ลบ theme "${draft.name}"? ถ้าเป็นค่าเริ่มต้นอยู่ ระบบจะกลับไปใช้ classic`)) return;
+    if (!draft.id || !window.confirm(`ลบ theme "${draft.name}"? ถ้าเป็นค่าเริ่มต้นอยู่ ระบบจะกลับไปใช้ Mahasamut`)) return;
     const id = draft.id;
     startTransition(async () => {
       const error = await deleteTheme(id);
       if (error) return setMessage({ error });
-      update(() => fromTheme(themes.find((t) => t.id === "classic") ?? themes[0]));
+      update(() => fromTheme(themes.find((t) => t.id === "mahasamut") ?? themes[0]));
       setMessage({ notice: "ลบแล้ว" });
     });
   };

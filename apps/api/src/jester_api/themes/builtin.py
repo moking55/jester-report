@@ -57,8 +57,30 @@ def check_tokens(tokens: Any) -> list[Problem]:
     return problems
 
 
-# classic: the Aero look of design/studio-mvp.html; suriyan: design/studio-suriyan.html
+# mahasamut: the default, modern business in indigo blue; classic: the Aero look of design/studio-mvp.html;
+# suriyan: design/studio-suriyan.html. Listed in this order.
 BUILTIN: dict[str, dict[str, Any]] = {
+    "mahasamut": {
+        "name": "Mahasamut",
+        "tokens": {
+            "color.background": "#f2f6fa",
+            "color.surface": "#ffffff",
+            "color.surfaceAlt": "#edf3f9",
+            "color.border": "#d6e1ec",
+            "color.text": "#0d1b33",
+            "color.textMuted": "#566a84",
+            "color.primary": "#155fa8",
+            "color.onPrimary": "#ffffff",
+            "color.danger": "#c8372d",
+            "color.warning": "#b26b00",
+            "color.success": "#1d8656",
+            "font.family": "Noto Sans Thai",
+            "font.size": 14,
+            "radius": 8,
+            "shadow": "soft",
+            "density": "comfortable",
+        },
+    },
     "classic": {
         "name": "Classic",
         "tokens": {

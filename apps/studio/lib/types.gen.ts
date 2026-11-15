@@ -570,7 +570,7 @@ export interface paths {
         /** Replace a theme's name and tokens (built-in themes are 409) */
         put: operations["updateTheme"];
         post?: never;
-        /** Delete a theme; if it was the default, the default goes back to `classic` */
+        /** Delete a theme; if it was the default, the default goes back to `mahasamut` */
         delete: operations["deleteTheme"];
         options?: never;
         head?: never;
@@ -847,7 +847,7 @@ export interface components {
             /** @description Warnings only (errors are a 422) */
             problems: components["schemas"]["ValidationProblem"][];
         };
-        /** @description `classic` and `suriyan` are built in; themes made in Studio get a UUID */
+        /** @description `mahasamut` (the default), `classic` and `suriyan` are built in; themes made in Studio get a UUID */
         ThemeId: string;
         /**
          * @description The only things a theme can set. The server checks every value against these rules, and Studio

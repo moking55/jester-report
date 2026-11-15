@@ -32,8 +32,8 @@ test("setup, theme, logout, login; the browser only talks to Studio", async ({ p
   await expect(page.getByRole("heading", { name: "รายงาน" })).toBeVisible();
   await expect(page.getByText(USER, { exact: true })).toBeVisible();
 
-  // the system default is classic; switching to suriyan changes the tokens and survives a reload
-  expect(await themeCss(page)).toContain("--color-primary:#1e90d6");
+  // the system default is mahasamut; switching to suriyan changes the tokens and survives a reload
+  expect(await themeCss(page)).toContain("--color-primary:#155fa8");
   await page.getByLabel("Theme").selectOption({ label: "Suriyan" });
   await expect.poll(() => themeCss(page)).toContain("--color-primary:#d9730d");
   await page.reload();

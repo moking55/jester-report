@@ -9,15 +9,15 @@ pytestmark = pytest.mark.db
 SURIYAN = BUILTIN["suriyan"]["tokens"]
 
 
-async def test_default_theme_is_public_and_starts_as_classic(api):
+async def test_default_theme_is_public_and_starts_as_mahasamut(api):
     response = await api.get("/v1/themes/default")
     assert response.status_code == 200
-    assert response.json()["id"] == "classic" and response.json()["builtIn"] is True
+    assert response.json()["id"] == "mahasamut" and response.json()["builtIn"] is True
 
 
 async def test_theme_lifecycle(api, admin):
     listed = await api.get("/v1/themes", headers=admin)
-    assert [t["id"] for t in listed.json()] == ["classic", "suriyan"]
+    assert [t["id"] for t in listed.json()] == ["mahasamut", "classic", "suriyan"]
     for t in listed.json():
         assert_fits("Theme", t)
 
@@ -42,7 +42,7 @@ async def test_theme_lifecycle(api, admin):
     assert (await api.get("/v1/themes/default")).json()["id"] == theme["id"]
 
     assert (await api.delete(f"/v1/themes/{theme['id']}", headers=admin)).status_code == 204
-    assert (await api.get("/v1/themes/default")).json()["id"] == "classic"  # fell back
+    assert (await api.get("/v1/themes/default")).json()["id"] == "mahasamut"  # fell back
     assert (await api.delete(f"/v1/themes/{theme['id']}", headers=admin)).status_code == 404
 
 

@@ -16,7 +16,7 @@ from ..report_definition.problems import Problem
 from .builtin import BUILTIN, check_tokens
 
 MAX_THEMES = 50
-FALLBACK = "classic"
+FALLBACK = "mahasamut"
 _LOCK_ID = 0x4A54_484D  # "JTHM": serialises creates so the 50-theme limit holds across processes
 
 ThemeErrorCode = Literal["INPUT_INVALID", "NOT_FOUND", "CONFLICT"]

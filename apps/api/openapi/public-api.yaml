@@ -957,7 +957,7 @@ paths:
     delete:
       tags: [themes]
       operationId: deleteTheme
-      summary: Delete a theme; if it was the default, the default goes back to `classic`
+      summary: Delete a theme; if it was the default, the default goes back to `mahasamut`
       responses:
         '204': { description: Deleted }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -1380,7 +1380,7 @@ components:
 
     ThemeId:
       type: string
-      description: '`classic` and `suriyan` are built in; themes made in Studio get a UUID'
+      description: '`mahasamut` (the default), `classic` and `suriyan` are built in; themes made in Studio get a UUID'
       pattern: '^[a-z0-9-]{1,64}$'
     ThemeTokens:
       type: object

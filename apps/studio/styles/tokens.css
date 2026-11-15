@@ -1,22 +1,22 @@
 /* Design tokens (SPEC-studio.md). The root layout overrides these with the active theme's checked tokens;
-   these values (theme "classic") apply only when the api cannot be reached. Components read tokens only. */
+   these values (theme "mahasamut", the default) apply only when the api cannot be reached. Components read tokens only. */
 :root {
-  --color-background: #c8ecff;
-  --color-surface: #f4fbff;
-  --color-surfaceAlt: #e2f2fc;
-  --color-border: #9cc6e2;
-  --color-text: #12324a;
-  --color-textMuted: #4a6a80;
-  --color-primary: #1e90d6;
+  --color-background: #f2f6fa;
+  --color-surface: #ffffff;
+  --color-surfaceAlt: #edf3f9;
+  --color-border: #d6e1ec;
+  --color-text: #0d1b33;
+  --color-textMuted: #566a84;
+  --color-primary: #155fa8;
   --color-onPrimary: #ffffff;
-  --color-danger: #c0281c;
-  --color-warning: #a26a00;
-  --color-success: #2e8b23;
-  --font-family: "Sarabun";
+  --color-danger: #c8372d;
+  --color-warning: #b26b00;
+  --color-success: #1d8656;
+  --font-family: "Noto Sans Thai";
   --font-size: 14px;
-  --radius: 4px;
-  --shadow: 0 4px 14px rgba(16, 24, 40, 0.18);
-  --density: 0.75;
+  --radius: 8px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
+  --density: 1;
 
   /* derived from tokens, never set by a theme */
   --sp: calc(8px * var(--density));
@@ -46,7 +46,6 @@
   --line-pane: var(--color-border);
   --shadow-pane: 0 0 transparent; /* a real shadow, so it can be listed with others */
   --radius-pane: var(--radius);
-  --fill-orb: var(--color-primary);
   --heading: var(--color-text);
   --heading-weight: 600;
 }
@@ -74,7 +73,6 @@
   --line-pane: rgba(255, 255, 255, 0.9);
   --shadow-pane: 0 8px 32px rgba(10, 60, 110, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.95);
   --radius-pane: 10px;
-  --fill-orb: radial-gradient(circle at 35% 30%, #fff 0 10%, #5bd0ff 30%, #1e90d6 70%, #0a5a8f);
   --heading: #1e90d6;
   --heading-weight: 400;
 }

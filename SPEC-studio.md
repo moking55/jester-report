@@ -24,7 +24,7 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
 7. **แก้ draft พร้อมกัน:** เก็บ revision ล่าสุดใน state; บันทึกส่ง `If-Match`; ได้ 412 → แจ้ง "มีคนแก้ draft นี้แล้ว" พร้อมปุ่มโหลดใหม่ (ไม่เขียนทับ)
 8. **Theme (ผู้ใช้ยืนยัน):**
    - ทุก component อ่านค่าจาก **ตัวแปร CSS (design tokens)** เท่านั้น — สลับ theme โดยไม่แก้ component
-   - **มีในตัว 2 แบบ:** `classic` (สไตล์ Aero/enterprise ตาม mockup) และ `suriyan` (modern business: เรียบ แบน ช่องไฟกว้าง) — แก้ไม่ได้ แต่ทำสำเนาได้
+   - **มีในตัว 3 แบบ:** `mahasamut` (ค่าเริ่มต้น, modern business สีฟ้าคราม), `classic` (สไตล์ Aero/enterprise ตาม mockup; ลุคกระจกผูกกับ id นี้ สำเนาได้แค่สี) และ `suriyan` (modern business: เรียบ แบน ช่องไฟกว้าง) — แก้ไม่ได้ แต่ทำสำเนาได้
    - **คนในทีมสร้าง/แก้/ลบ theme ได้ในหน้า settings** ด้วยฟอร์มแก้ token (เลือกสี, เลือกฟอนต์จากรายการ, ความโค้ง ฯลฯ) ที่ดูตัวอย่างหน้าจอทันที และ **import/export เป็น JSON**
    - theme ใช้ร่วมกันทั้งทีม ทุกคนแก้ได้ (สิทธิ์เท่ากัน)
    - **ปลอดภัย:** server รับเฉพาะ token ในรายการและรูปแบบค่าที่กำหนด (สี `#RRGGBB`, ขนาดเป็นตัวเลขในช่วง, ค่าจากรายการ) **ไม่รับ CSS ดิบ** จึงใส่ CSS ที่ซ่อนปุ่มหรือปลอมหน้าจอไม่ได้
@@ -40,7 +40,7 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
 1. **Prepared data:** `POST /v1/templates/{templateId}/draft/prepared` body `{ params?, data?, sampleFile? }` (ไม่มี data → sample) คืน view model ของ `data-prep` (`params`, `data`, `lists` พร้อม `rows`/`groups`, `totals`) โดยตัวเลข `Decimal` เป็น string ทศนิยม; error เหมือน preview (422 พร้อม problems); รันใน worker เดียวกับ render (template ไม่เกี่ยว แต่ data-prep ใช้ CPU)
 2. **Theme:** ตาราง `themes` (`0004_themes.sql`) + store เล็ก ๆ ใน `jester_api/themes/`:
    - `GET /v1/themes` (session) → theme ทั้งหมด รวม built-in 2 แบบ
-   - `POST /v1/themes`, `PUT /v1/themes/{themeId}`, `DELETE /v1/themes/{themeId}` (session; built-in → 409; ลบ theme ที่เป็นค่าเริ่มต้น → ค่าเริ่มต้นกลับเป็น `classic`)
+   - `POST /v1/themes`, `PUT /v1/themes/{themeId}`, `DELETE /v1/themes/{themeId}` (session; built-in → 409; ลบ theme ที่เป็นค่าเริ่มต้น → ค่าเริ่มต้นกลับเป็น `mahasamut`)
    - `GET /v1/themes/default` (**ไม่ต้อง login** — หน้า login ต้องใช้; คืนแค่ token ไม่มีข้อมูลลับ) และ `PUT /v1/themes/default` (session)
    - token ที่รับ (ชุดเดียวกับ CSS ของ Studio):
 

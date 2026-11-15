@@ -10,8 +10,8 @@ export const metadata: Metadata = { title: "Jester Studio" };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const { theme } = await activeTheme();
-  // the glass look belongs to the built-in classic only (also the fallback when the api is down)
-  const look = !theme || theme.id === "classic" ? "aero" : undefined;
+  // the glass look belongs to the built-in classic only
+  const look = theme?.id === "classic" ? "aero" : undefined;
   return (
     <html lang="th" data-look={look}>
       <head>
