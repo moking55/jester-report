@@ -64,6 +64,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   const [renderData, setRenderData] = useState<string | null>(null); // the dialog is open while set
   const main = useRef<HTMLDivElement>(null);
   const [assetPreview, setAssetPreview] = useState<string | null>(null); // an image asset shown in the editor pane
+  const [previewed, setPreviewed] = useState(false); // the empty preview pane shows a hint until the first Preview
   const [sizes, setSizes] = useState<PaneSizes>(DEFAULT_SIZES);
 
   // pane sizes are a per-browser convenience; storage can be missing or blocked, then the defaults stay
@@ -210,6 +211,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   /** The form posts into the iframe; the Route Handler answers with the PDF (or a Thai error page). */
   async function preview() {
     if (!params() || !(await saveAll())) return;
+    setPreviewed(true);
     previewForm.current?.requestSubmit();
   }
 
@@ -416,6 +418,13 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
               }}
             />
           </form>
+          {!previewed && (
+            <div className={styles.previewEmpty}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- a static decoration from public/ */}
+              <img src="/jester-mascot.webp" alt="" width={86} height={160} />
+              <p>คลิก Preview เพื่อ render ตัวอย่าง PDF</p>
+            </div>
+          )}
           <iframe
             name="pdf-preview"
             title="PDF preview"
