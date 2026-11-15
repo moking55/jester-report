@@ -170,12 +170,18 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
       return draft.ok;
     });
 
-  /** The api validates what is saved, so unsaved edits go first. */
-  async function validate() {
-    if (!(await saveAll())) return;
-    const result = await validateDraft(state.templateId);
-    update(result.ok ? validated(result.data) : failed(result.problem, problemMessage(result.problem)));
-  }
+  // the Problems tab follows the saved draft: opening it and every new revision (save, add, delete, reset)
+  // check again; an answer for a revision already replaced is dropped
+  useEffect(() => {
+    if (state.conflict) return;
+    let current = true;
+    validateDraft(state.templateId).then((result) => {
+      if (current) update(result.ok ? validated(result.data) : failed(result.problem, problemMessage(result.problem)));
+    });
+    return () => {
+      current = false;
+    };
+  }, [state.templateId, state.revision, state.conflict, update]);
 
   /** Params from the box, or the box's error shown in the bar. */
   function params(): Record<string, unknown> | null {
@@ -289,13 +295,10 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         <button type="button" className={styles.secondary} onClick={saveAll} disabled={!unsaved || state.saving || state.conflict}>
           บันทึก (Ctrl+S)
         </button>
-        <button type="button" className={styles.secondary} onClick={validate} disabled={state.saving || state.conflict}>
-          Validate
-        </button>
         <button type="button" className={styles.secondary} onClick={preview} disabled={state.saving || state.conflict}>
           Preview
         </button>
-        <button type="button" onClick={publish} disabled={state.saving || state.conflict}>
+        <button type="button" className={styles.publish} onClick={publish} disabled={state.saving || state.conflict}>
           Publish
         </button>
         <button type="button" onClick={() => setRenderData(editor.current?.content("sample.json") ?? "{}")}>

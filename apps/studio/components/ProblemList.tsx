@@ -12,7 +12,7 @@ type Props = {
 
 export function ProblemList({ problems, checked, onPick }: Props) {
   if (problems.length === 0)
-    return <p className={styles.empty}>{checked === "valid" ? "ไม่พบปัญหา" : "กด Validate เพื่อตรวจ draft"}</p>;
+    return <p className={styles.empty}>{checked === "valid" ? "ไม่พบปัญหา" : "กำลังตรวจ draft…"}</p>;
   return (
     <ul className={styles.list}>
       {problems.map((p, i) => {

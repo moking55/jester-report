@@ -40,7 +40,12 @@ export function RenderDialog({ templateId, params, data, onClose }: Props) {
   return (
     <dialog ref={dialog} className={styles.dialog} onClose={onClose} aria-label="Render">
       <form method="post" action={`/render/${templateId}`} target="_blank" className={styles.form}>
-        <h2>Render {templateId}</h2>
+        <div className={styles.head}>
+          <h2>Render {templateId}</h2>
+          <button type="button" className={styles.close} onClick={() => dialog.current?.close()} aria-label="ปิด">
+            ×
+          </button>
+        </div>
         {state.versions.length === 0 && (
           <p className={styles.warn}>ยังไม่มีเวอร์ชันที่ publish — render ใช้ได้เฉพาะเวอร์ชันที่ publish แล้ว</p>
         )}

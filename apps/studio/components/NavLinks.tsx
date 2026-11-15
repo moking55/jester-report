@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const LINKS = [
   ["/", "รายงาน"],
   ["/history", "ประวัติ Render"],
+  ["/api", "API"],
   ["/settings", "ตั้งค่า"],
 ] as const;
 

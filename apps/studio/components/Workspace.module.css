@@ -39,6 +39,22 @@
   background: var(--fill-button-hover);
 }
 
+/* Publish makes a version live: green, so it is never mistaken for Render (blue) */
+.toolbar .publish {
+  border-color: color-mix(in srgb, var(--color-success) 80%, black);
+  background: var(--color-success);
+  box-shadow: none;
+  color: #fff;
+}
+
+:global(:root[data-look="aero"]) .toolbar .publish {
+  background: linear-gradient(rgba(255, 255, 255, 0.35), rgba(255, 255, 255, 0) 50%), var(--color-success);
+}
+
+.toolbar .publish:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
 .toolbar button:disabled {
   opacity: 0.5;
   cursor: default;

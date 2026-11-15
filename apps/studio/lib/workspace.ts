@@ -26,7 +26,7 @@ export type WorkspaceState = {
   conflict: boolean; // 412: someone else saved first; nothing is overwritten
   error: string | null;
   problems: ValidationProblem[];
-  checked: "never" | "valid" | "invalid"; // the last Validate, for the Problems tab
+  checked: "never" | "valid" | "invalid"; // the last automatic check of the saved draft, for the Problems tab
   tab: "problems" | "prepared" | "provenance" | "versions";
   paramsText: string; // the params box shared by Preview and Prepared data
   prepared: PreparedData | null;
@@ -59,8 +59,7 @@ export function initialState(draft: Draft, paramsText = "{}"): WorkspaceState {
 
 export const validated = (result: ValidationResult) => (s: WorkspaceState) => {
   s.problems = result.problems;
-  s.checked = result.valid ? "valid" : "invalid";
-  s.error = null;
+  s.checked = result.valid ? "valid" : "invalid"; // the bar's error is left alone: it belongs to another action
 };
 
 export const setDirty = (name: string, dirty: boolean) => (s: WorkspaceState) => {

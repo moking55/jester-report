@@ -46,23 +46,21 @@ test("report from starter to API render, history, two tabs and themes", async ({
   await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 }); // a cold stack is slow here
   await expect(page.locator(".cm-content")).toBeVisible();
 
-  // 2. edit a file with the keyboard, save, validate: the problem shows with its line
+  // 2. edit a file with the keyboard and save: the automatic check shows the problem with its line
   await openFile(page, "template.html");
   const original = await editorText(page);
   await page.locator(".cm-content").click();
   await page.keyboard.press("Control+End");
   await page.keyboard.type("\n<p>{{ params.quoteId | nosuchfilter }}</p>");
   await save(page);
-  await page.getByRole("button", { name: "Validate" }).click();
   const problems = page.getByRole("tabpanel");
   await expect(problems.getByText(/nosuchfilter/)).toBeVisible();
   await expect(problems.getByText(/template\.html:\d+/)).toBeVisible();
 
-  // put the file back, save, validate clean
+  // put the file back and save: checked clean
   await setEditorText(page, original);
   await expect(page.getByRole("status").filter({ hasText: /ยังไม่บันทึก/ })).toBeVisible();
   await save(page);
-  await page.getByRole("button", { name: "Validate" }).click();
   await expect(problems.getByText("ไม่พบปัญหา")).toBeVisible();
 
   // 3. prepared data has the computed total
