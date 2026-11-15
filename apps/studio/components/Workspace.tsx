@@ -51,15 +51,38 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   const editor = useRef<EditorHandle>(null);
   const previewForm = useRef<HTMLFormElement>(null);
   const router = useRouter();
+  const writing = useRef(false);
 
-  /** Saves every dirty file in turn; false when one failed (412, 422, …). */
-  async function saveAll(): Promise<boolean> {
-    if (state.saving || state.conflict) return false;
+  /**
+   * One draft write at a time. Every write sends the revision this tab knows; two at once (Ctrl+S during a
+   * slow upload) would make the second a 412 against this very tab. The ref guards clicks within one render.
+   */
+  async function exclusive(write: () => Promise<boolean>): Promise<boolean> {
+    if (writing.current || state.conflict) return false;
+    writing.current = true;
     update((s) => {
       s.saving = true;
     });
-    let revision = state.revision;
     try {
+      return await write();
+    } catch {
+      // the call itself failed (Studio unreachable, body too big): say so instead of staying "saving"
+      update((s) => {
+        s.error = "บันทึกไม่สำเร็จ ติดต่อ Studio ไม่ได้ หรือไฟล์ใหญ่เกินไป";
+      });
+      return false;
+    } finally {
+      writing.current = false;
+      update((s) => {
+        s.saving = false;
+      });
+    }
+  }
+
+  /** Saves every dirty file in turn; false when one failed (412, 422, …). */
+  const saveAll = () =>
+    exclusive(async () => {
+      let revision = state.revision;
       for (const file of state.dirty) {
         const content = editor.current?.content(file);
         if (content === undefined) continue;
@@ -73,18 +96,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         update(saved(file, revision, stillDirty));
       }
       return true;
-    } catch {
-      // the action itself failed (Studio unreachable, body too big): say so instead of staying "saving"
-      update((s) => {
-        s.error = "บันทึกไม่สำเร็จ ติดต่อ Studio ไม่ได้ หรือไฟล์ใหญ่เกินไป";
-      });
-      return false;
-    } finally {
-      update((s) => {
-        s.saving = false;
-      });
-    }
-  }
+    });
 
   /** The api validates what is saved, so unsaved edits go first. */
   async function validate() {
@@ -138,37 +150,42 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
     editor.current?.goto(file, line, column);
   }
 
-  async function addFile(file: string) {
-    const result = await saveFile(state.templateId, file, "", state.revision);
-    update(result.ok ? fileAdded(file, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
-  }
+  const addFile = (file: string) =>
+    exclusive(async () => {
+      const result = await saveFile(state.templateId, file, "", state.revision);
+      update(result.ok ? fileAdded(file, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
+      return result.ok;
+    });
 
-  async function removeFile(file: string) {
-    const result = await deleteFile(state.templateId, file, state.revision);
-    update(result.ok ? fileRemoved(file, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
-  }
+  const removeFile = (file: string) =>
+    exclusive(async () => {
+      const result = await deleteFile(state.templateId, file, state.revision);
+      update(result.ok ? fileRemoved(file, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
+      return result.ok;
+    });
 
-  async function upload(file: File) {
-    const form = new FormData();
-    form.set("file", file);
-    form.set("revision", String(state.revision));
-    try {
+  const upload = (file: File) =>
+    exclusive(async () => {
+      const form = new FormData();
+      form.set("file", file);
+      form.set("revision", String(state.revision));
       const response = await fetch(`/assets/${state.templateId}`, { method: "POST", body: form });
-      if (response.status === 401) return router.push("/login"); // the session ended
+      if (response.status === 401) {
+        router.push("/login"); // the session ended
+        return false;
+      }
       const body = await response.json();
       if (response.ok) update(assetAdded((body as { asset: Asset }).asset, (body as { revision: number }).revision));
       else update(failed(body as Problem, problemMessage(body as Problem)));
-    } catch {
-      update((s) => {
-        s.error = "อัปโหลดไม่สำเร็จ ติดต่อ Studio ไม่ได้";
-      });
-    }
-  }
+      return response.ok;
+    });
 
-  async function removeAsset(asset: string) {
-    const result = await deleteAsset(state.templateId, asset, state.revision);
-    update(result.ok ? assetRemoved(asset, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
-  }
+  const removeAsset = (asset: string) =>
+    exclusive(async () => {
+      const result = await deleteAsset(state.templateId, asset, state.revision);
+      update(result.ok ? assetRemoved(asset, result.data.revision) : failed(result.problem, problemMessage(result.problem)));
+      return result.ok;
+    });
 
   async function reload() {
     const result = await loadDraft(state.templateId);

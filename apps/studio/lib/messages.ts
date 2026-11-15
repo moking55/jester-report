@@ -7,10 +7,9 @@ const BY_CODE: Record<string, string> = {
   SETUP_TOKEN_INVALID: "setup token ไม่ถูกต้องหรือถูกใช้ไปแล้ว ดูค่าใหม่ใน log ของ api",
   SETUP_COMPLETED: "ระบบตั้งค่าเสร็จแล้ว กรุณาเข้าสู่ระบบ",
   SERVICE_UNAVAILABLE: "ติดต่อ Jester API ไม่ได้ กรุณาลองใหม่อีกครั้ง",
-  PAYLOAD_TOO_LARGE: "ไฟล์ใหญ่เกิน 1 MB",
   DRAFT_INVALID: "draft ยังมีปัญหา แก้ตามรายการแล้วลองใหม่",
   RENDER_TIMEOUT: "สร้าง PDF นานเกินกำหนด",
-  INTERNAL_ERROR:"เกิดข้อผิดพลาดที่ server ดูรายละเอียดใน log ของ api",
+  INTERNAL_ERROR: "เกิดข้อผิดพลาดที่ server ดูรายละเอียดใน log ของ api",
 };
 
 const FIELD: Record<string, string> = {
@@ -26,5 +25,7 @@ export function problemMessage(problem: Problem): string {
     const field = problem.problems?.map((p) => p.pointer?.split("/")[1]).find((f) => f && FIELD[f]);
     if (field) return FIELD[field];
   }
+  // one code for text files (1 MB), assets (5 MB) and the whole draft (20 MB): the api's detail has the number
+  if (problem.code === "PAYLOAD_TOO_LARGE") return `ไฟล์ใหญ่เกินที่ระบบรับ (${problem.detail ?? "เกินขนาดที่กำหนด"})`;
   return BY_CODE[problem.code] ?? problem.detail ?? "เกิดข้อผิดพลาด กรุณาลองใหม่";
 }
