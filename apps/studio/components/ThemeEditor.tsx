@@ -89,12 +89,11 @@ export function ThemeEditor({ themes, defaultId }: { themes: Theme[]; defaultId:
   };
 
   const download = () => {
-    const url = URL.createObjectURL(new Blob([themeFile(draft.name, draft.tokens)], { type: "application/json" }));
+    // a data: URL needs no object URL to revoke, so no race with the browser starting the download
     const link = document.createElement("a");
-    link.href = url;
+    link.href = `data:application/json;charset=utf-8,${encodeURIComponent(themeFile(draft.name, draft.tokens))}`;
     link.download = `theme-${draft.name}.json`;
     link.click();
-    URL.revokeObjectURL(url);
   };
 
   const upload = (file: File | undefined) => {
