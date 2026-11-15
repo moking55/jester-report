@@ -44,7 +44,7 @@ T4, T5, T6 ขึ้นกับ T3 แต่แตะไฟล์คนละ�
 
 ### Phase 2: หน้าจอหลัก
 - [x] T4: catalog (สร้างจาก starter) + workspace (ไฟล์, CodeMirror, บันทึก + 412, validate + gutter, แท็บ Problems/Prepared data/Provenance, preview ใน iframe)
-- [ ] T5: publish (422 → problems), versions + rollback + reset, Render dialog + ตัวอย่าง curl, history + cursor + นโยบายเก็บพร้อมตัวเลขที่จะลบ
+- [x] T5: publish (422 → problems), versions + rollback + reset, Render dialog + ตัวอย่าง curl, history + cursor + นโยบายเก็บพร้อมตัวเลขที่จะลบ
 - [ ] T6: settings — ผู้ใช้, API key (secret ครั้งเดียว), เปลี่ยนรหัส, theme editor (ฟอร์ม token + ตัวอย่างสด, ทำสำเนา, import/export JSON, ตั้งค่าเริ่มต้น)
 - [ ] T7: E2E เต็มบน VM + ปรับหน้าตา catalog/workspace/history ให้ตรง mockup ใน theme classic
 

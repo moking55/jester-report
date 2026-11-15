@@ -1,6 +1,6 @@
-import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { NavLinks } from "@/components/NavLinks";
 import { ThemePicker } from "@/components/ThemePicker";
 import { publicApi } from "@/lib/api";
 import { logout } from "@/lib/actions/auth";
@@ -29,11 +29,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <span className={styles.appIcon} aria-hidden="true" />
         <b>Jester Report Studio</b>
         <nav className={styles.nav} aria-label="หลัก">
-          <Link href="/" aria-current="page">
-            รายงาน
-          </Link>
-          <span aria-disabled="true">ประวัติ Render</span>
-          <span aria-disabled="true">ตั้งค่า</span>
+          <NavLinks />
         </nav>
         <span className={styles.spacer} />
         <ThemePicker themes={themes.map((t) => ({ id: t.id, name: t.name }))} current={theme?.id} />

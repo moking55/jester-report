@@ -89,9 +89,9 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **Description:** Publish (ส่ง revision ปัจจุบัน; 422 → problems), รายการ versions + ตั้ง published + reset draft, Render dialog (เลือก version/params/data, แสดงตัวอย่าง `curl` ที่ไม่มี secret จริง), history (ตาราง run, ตัวกรอง, ไล่หน้า, รายละเอียด provenance), นโยบายเก็บ (ดูจำนวนที่จะลบก่อนยืนยัน)
 
 **Acceptance criteria:**
-- [ ] publish draft ที่ผิด → เห็น problems ไม่ publish; ถูก → version ใหม่ขึ้นในรายการ
-- [ ] ตั้งนโยบาย N วันต้องผ่านหน้ายืนยันที่แสดงจำนวนจริง; ค่าเริ่มต้นแสดง "เก็บตลอด"
-- [ ] ตัวอย่าง `curl` ใช้ placeholder `jrk_…` ไม่ใช่ secret จริง
+- [x] publish draft ที่ผิด → เห็น problems ไม่ publish; ถูก → version ใหม่ขึ้นในรายการ
+- [x] ตั้งนโยบาย N วันต้องผ่านหน้ายืนยันที่แสดงจำนวนจริง; ค่าเริ่มต้นแสดง "เก็บตลอด"
+- [x] ตัวอย่าง `curl` ใช้ placeholder `jrk_…` ไม่ใช่ secret จริง
 
 **Verification:**
 - [ ] Vitest + `npm run build`
@@ -103,7 +103,7 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 **แตกย่อย:**
 - [x] T5a: ปุ่ม Publish (บันทึกก่อน; 422 → Problems) + แท็บ Versions (รายการ, ตั้ง published, reset draft จากเวอร์ชัน)
 - [x] T5b: Render dialog (version/params/data/filename → PDF ในแท็บใหม่ผ่าน Route Handler) + ตัวอย่าง `curl` ที่ใช้ `jrk_…` และ `$JESTER_API`
-- [ ] T5c: หน้า history (ตัวกรอง template/status, หน้าถัดไปด้วย cursor, รายละเอียด provenance) + นโยบายเก็บ (ดูจำนวนที่จะลบก่อนยืนยัน)
+- [x] T5c: หน้า history (ตัวกรอง template/status, หน้าถัดไปด้วย cursor, รายละเอียด provenance) + นโยบายเก็บ (ดูจำนวนที่จะลบก่อนยืนยัน)
 
 ### T6: settings + theme editor
 
