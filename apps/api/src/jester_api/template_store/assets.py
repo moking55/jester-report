@@ -17,6 +17,9 @@ CONTENT_TYPES = {
     "jpg": "image/jpeg",
     "jpeg": "image/jpeg",
     "svg": "image/svg+xml",
+    "webp": "image/webp",
+    "avif": "image/avif",
+    "bmp": "image/bmp",
     "ttf": "font/ttf",
     "otf": "font/otf",
 }
@@ -24,6 +27,7 @@ _MAGIC = {
     "png": (b"\x89PNG\r\n\x1a\n",),
     "jpg": (b"\xff\xd8\xff",),
     "jpeg": (b"\xff\xd8\xff",),
+    "bmp": (b"BM",),
     "ttf": (b"\x00\x01\x00\x00", b"true"),
     "otf": (b"OTTO",),
 }
@@ -50,6 +54,19 @@ def font_family(data: bytes) -> str | None:
     return None
 
 
+def _is_webp(data: bytes) -> bool:
+    return data[:4] == b"RIFF" and data[8:12] == b"WEBP"
+
+
+def _is_avif(data: bytes) -> bool:
+    """ISO-BMFF `ftyp` box whose major or compatible brands name AVIF (encoders often lead with `mif1`)."""
+    if data[4:8] != b"ftyp":
+        return False
+    end = min(int.from_bytes(data[:4], "big"), len(data), 256)
+    brands = [data[8:12]] + [data[i : i + 4] for i in range(16, end - 3, 4)]
+    return b"avif" in brands or b"avis" in brands
+
+
 def detect(name: str, data: bytes) -> AssetInfo:
     """AssetInfo for an upload, or UNSUPPORTED_MEDIA_TYPE when the bytes do not match the extension."""
     ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
@@ -57,6 +74,10 @@ def detect(name: str, data: bytes) -> AssetInfo:
         raise _unsupported(name)
     if ext == "svg":
         ok = bool(_SVG_START.match(data.removeprefix(b"\xef\xbb\xbf")[:4096]))
+    elif ext == "webp":
+        ok = _is_webp(data)
+    elif ext == "avif":
+        ok = _is_avif(data)
     else:
         ok = data.startswith(_MAGIC[ext])
     family = font_family(data) if ok and ext in ("ttf", "otf") else None

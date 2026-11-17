@@ -17,6 +17,21 @@ PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 )
 
+# 1x1 images written by sharp (libwebp, libheif); AVIF_MIF1 is the same file led by the `mif1` brand
+WEBP = base64.b64decode(
+    "UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoBAAEAAUAmJaACdLoB+AADsAD+8ut//NgVzXPv9//S4P0uD9Lg/9KQAAA="
+)
+AVIF = base64.b64decode(
+    "AAAAHGZ0eXBhdmlmAAAAAG1pZjFhdmlmbWlhZgAAANZtZXRhAAAAAAAAACFoZGxyAAAAAAAAAABwaWN0AAAAAAAAAAAAAAAAAAAAACJpbG9j"
+    "AAAAAERAAAEAAQAAAAAA+gABAAAAAAAAACQAAAAjaWluZgAAAAAAAQAAABVpbmZlAgAAAAABAABhdjAxAAAAAA5waXRtAAAAAAABAAAAVmlw"
+    "cnAAAAA4aXBjbwAAAAxhdjFDgSACAAAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAABZpcG1hAAAAAAAAAAEAAQOBAgMA"
+    "AAAsbWRhdBIACgc4AAaQENBpMhcZQmMEwAA0AACQQMkcYUuNGtYQVLH7IA=="
+)
+AVIF_MIF1 = AVIF[:8] + b"mif1" + AVIF[12:]
+GIF = base64.b64decode("R0lGODlhAQABAIAAAExpcf8AACH5BAUAAAAALAAAAAABAAEAAAICTAEAOw==")
+# 1x1 24-bit BMP: file header, BITMAPINFOHEADER, one pixel padded to 4 bytes
+BMP = bytes.fromhex("424d3a000000000000003600000028000000010000000100000001001800" + "00" * 24 + "0000ff00")
+
 
 def _otf(family: str) -> bytes:
     fb = FontBuilder(1000, isTTF=False)
@@ -60,6 +75,10 @@ def test_noto_and_otf():
             b'\xef\xbb\xbf<?xml version="1.0"?>\n<!-- logo -->\n<svg viewBox="0 0 1 1"></svg>',
             "image/svg+xml",
         ),
+        ("photo.webp", WEBP, "image/webp"),
+        ("photo.avif", AVIF, "image/avif"),
+        ("photo.avif", AVIF_MIF1, "image/avif"),
+        ("scan.BMP", BMP, "image/bmp"),
     ],
 )
 def test_images(name, data, content_type):
@@ -78,6 +97,11 @@ def test_images(name, data, content_type):
         ("doc.svg", b"text before <svg></svg>"),
         ("noext", PNG),
         ("script.js", b"alert(1)"),
+        ("anim.gif", GIF),  # gif is not accepted
+        ("logo.webp", PNG),
+        ("logo.webp", b"RIFF\0\0\0\0WAVEfmt "),  # RIFF, but audio
+        ("logo.avif", b"\0\0\0\x18ftypheic\0\0\0\0mif1heic"),  # HEIC, not AVIF
+        ("logo.bmp", PNG),
     ],
 )
 def test_rejected(name, data):

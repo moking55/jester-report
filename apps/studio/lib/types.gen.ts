@@ -1722,6 +1722,9 @@ export interface operations {
                     "image/png": string;
                     "image/jpeg": string;
                     "image/svg+xml": string;
+                    "image/webp": string;
+                    "image/avif": string;
+                    "image/bmp": string;
                     "font/ttf": string;
                     "font/otf": string;
                 };

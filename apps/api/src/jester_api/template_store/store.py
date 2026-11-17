@@ -28,7 +28,7 @@ REQUIRED_FILES = ("report.json", "template.html")
 # patterns from public-api.yaml (TemplateId, TextFileName, AssetName)
 TEMPLATE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 TEXT_FILE = re.compile(r"^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$")
-ASSET_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|ttf|otf)$")
+ASSET_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$")
 
 
 @dataclass(frozen=True)

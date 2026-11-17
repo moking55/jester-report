@@ -8,8 +8,8 @@ import styles from "./FilePanel.module.css";
 
 const REQUIRED = ["report.json", "template.html"]; // the api refuses to delete these
 const FILE_NAME = /^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$/;
-const ASSET = /\.(png|jpe?g|svg|ttf|otf)$/i;
-const IMAGE = /\.(png|jpe?g|svg)$/i;
+const ASSET = /\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$/i;
+const IMAGE = /\.(png|jpe?g|svg|webp|avif|bmp)$/i;
 const NAME_RULE = "ชื่อไฟล์ใช้ได้เฉพาะ A–Z a–z 0–9 . _ - และลงท้าย .html .css .json";
 
 type Props = {
@@ -141,7 +141,7 @@ export function FilePanel(props: Props) {
           ref={picker}
           type="file"
           hidden
-          accept=".html,.css,.json,.png,.jpg,.jpeg,.svg,.ttf,.otf"
+          accept=".html,.css,.json,.png,.jpg,.jpeg,.svg,.webp,.avif,.bmp,.ttf,.otf"
           onChange={(e) => {
             const file = e.target.files?.[0];
             e.target.value = "";

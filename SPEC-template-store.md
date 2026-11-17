@@ -98,7 +98,7 @@ blobs          (sha256 text PK, content_type text, size int, font_family text NU
 | ลบ `report.json` หรือ `template.html` | `CONFLICT` |
 | template id ซ้ำ | `CONFLICT` |
 | asset ชื่อซ้ำใน draft | `CONFLICT` (ลบก่อนแล้วอัปโหลดใหม่) |
-| ชนิด asset (ตรวจจาก bytes ไม่เชื่อ `Content-Type`) ไม่ใช่ png/jpeg/svg/ttf/otf หรือไม่ตรงนามสกุล | `UNSUPPORTED_MEDIA_TYPE` |
+| ชนิด asset (ตรวจจาก bytes ไม่เชื่อ `Content-Type`) ไม่ใช่ png/jpeg/svg/webp/avif/bmp/ttf/otf (gif ไม่รับ) หรือไม่ตรงนามสกุล | `UNSUPPORTED_MEDIA_TYPE` |
 | เกินขีดจำกัดในสมมติฐานข้อ 7 | `PAYLOAD_TOO_LARGE` |
 | revision ไม่ตรง | `REVISION_CONFLICT` |
 | ไม่มี template/version | `NOT_FOUND` |
