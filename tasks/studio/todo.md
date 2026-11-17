@@ -171,7 +171,7 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 ## รอบ 2: ปรับปรุงหลังปิดงาน
 
-แผน: [plan.md](plan.md#รอบ-2-ปรับปรุงหลังปิดงาน-16-พฤศจิกายน-2026) · สถานะ: ผู้ใช้อนุมัติแผน 17 พ.ย. 2026
+แผน: [plan.md](plan.md#รอบ-2-ปรับปรุงหลังปิดงาน-16-พฤศจิกายน-2026) · สถานะ: เสร็จ — Checkpoint C ผ่าน ผู้ใช้ตรวจรับ 17 พ.ย. 2026
 
 ### U1: ปุ่มเพิ่มผู้ใช้
 
@@ -223,6 +223,6 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 - [x] deploy Studio + api บน VM แล้วลองครบ 4 ข้อในเบราว์เซอร์
 - [x] E2E 2 spec ผ่านบน stack ใหม่ (`-p jester-e2e`) แล้ว `down -v`
 - [x] `SPEC-studio.md` อัปเดต (screens: settings แท็บใหม่, history, versions/publish diff)
-- [ ] ผู้ใช้ตรวจรับ
+- [x] ผู้ใช้ตรวจรับและอนุมัติปิดงาน 17 พฤศจิกายน 2026 ("ผ่าน ปิดงาน")
 
 ผลตรวจ 17 พ.ย. 2026: api `ruff check .` ผ่าน, `pytest -q` 436 ผ่าน 97 ข้าม; Studio test 50 ผ่าน, lint, typecheck, build ผ่าน; deploy api + studio ที่ stack หลักบน VM แล้วลองในเบราว์เซอร์ครบ 4 ข้อ (เพิ่ม/ลบผู้ใช้ทดสอบ, ดูจำนวนที่จะลบแล้วยกเลิก, upload webp แล้ว PDF มีรูป, diff ทั้ง 3 จุด รวมตั้ง v1 เป็น published แล้วคืนเป็น v2 ใน `t4-check`); E2E 2 spec ผ่านบน stack ใหม่ใน 46.5 วินาทีแล้ว `down -v` (รอบแรกล้มตอน setup เพราะ VM load สูงหลัง build image รอบสองผ่าน)
