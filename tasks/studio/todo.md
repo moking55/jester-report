@@ -212,15 +212,17 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 - [x] กด Publish เปิด dialog: draft (รวมที่ยังไม่บันทึก) เทียบ published + ช่องโน้ต แทน `prompt()`; ยังไม่เคย publish แสดงว่าเป็น v1
 - [x] ไม่มีอะไรต่างจาก published แสดงว่า "ไม่มีอะไรเปลี่ยน" และปิดปุ่มยืนยัน
-- [ ] E2E `full-flow.spec.ts` ผ่านกับ flow publish ใหม่
+- [x] E2E `full-flow.spec.ts` ผ่านกับ flow publish ใหม่
 
 **Verification:** lint/typecheck/test/build; ในเบราว์เซอร์แก้ไฟล์แล้ว Publish เห็น diff; E2E บน stack แยกที่ VM
 **Files:** `components/Workspace.tsx`, `components/DiffDialog.tsx`, `e2e/full-flow.spec.ts` · **Scope:** S
 
 ### Checkpoint C
 
-- [ ] backend: ruff + pytest; Studio: lint, typecheck, test, build
-- [ ] deploy Studio + api บน VM แล้วลองครบ 4 ข้อในเบราว์เซอร์
-- [ ] E2E 2 spec ผ่านบน stack ใหม่ (`-p jester-e2e`) แล้ว `down -v`
-- [ ] `SPEC-studio.md` อัปเดต (screens: settings แท็บใหม่, history, versions/publish diff)
+- [x] backend: ruff + pytest; Studio: lint, typecheck, test, build
+- [x] deploy Studio + api บน VM แล้วลองครบ 4 ข้อในเบราว์เซอร์
+- [x] E2E 2 spec ผ่านบน stack ใหม่ (`-p jester-e2e`) แล้ว `down -v`
+- [x] `SPEC-studio.md` อัปเดต (screens: settings แท็บใหม่, history, versions/publish diff)
 - [ ] ผู้ใช้ตรวจรับ
+
+ผลตรวจ 17 พ.ย. 2026: api `ruff check .` ผ่าน, `pytest -q` 436 ผ่าน 97 ข้าม; Studio test 50 ผ่าน, lint, typecheck, build ผ่าน; deploy api + studio ที่ stack หลักบน VM แล้วลองในเบราว์เซอร์ครบ 4 ข้อ (เพิ่ม/ลบผู้ใช้ทดสอบ, ดูจำนวนที่จะลบแล้วยกเลิก, upload webp แล้ว PDF มีรูป, diff ทั้ง 3 จุด รวมตั้ง v1 เป็น published แล้วคืนเป็น v2 ใน `t4-check`); E2E 2 spec ผ่านบน stack ใหม่ใน 46.5 วินาทีแล้ว `down -v` (รอบแรกล้มตอน setup เพราะ VM load สูงหลัง build image รอบสองผ่าน)
