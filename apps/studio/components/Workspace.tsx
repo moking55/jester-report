@@ -13,8 +13,8 @@ import {
   saveFile,
   validateDraft,
 } from "@/lib/actions/draft";
-import { publishDraft, resetDraft } from "@/lib/actions/versions";
-import type { Snapshot } from "@/lib/diff";
+import { getVersion, listVersions, publishDraft, resetDraft } from "@/lib/actions/versions";
+import { EMPTY, type Snapshot } from "@/lib/diff";
 import { problemMessage } from "@/lib/messages";
 import { clampSizes, DEFAULT_SIZES, type PaneSizes, readSizes } from "@/lib/panes";
 import { defaultParams, parseParams } from "@/lib/params";
@@ -32,9 +32,11 @@ import {
   validated,
   type Asset,
   type Draft,
+  type Result,
 } from "@/lib/workspace";
 
 import { AssetPreview } from "./AssetPreview";
+import { DiffDialog } from "./DiffDialog";
 import { Editor, type EditorHandle } from "./Editor";
 import { FilePanel } from "./FilePanel";
 import { JsonTree } from "./JsonTree";
@@ -65,6 +67,8 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   const [renderData, setRenderData] = useState<string | null>(null); // the dialog is open while set
   const main = useRef<HTMLDivElement>(null);
   const [assetPreview, setAssetPreview] = useState<string | null>(null); // an image asset shown in the editor pane
+  const [publishing, setPublishing] = useState(false); // the publish dialog is open
+  const [publishedVersion, setPublishedVersion] = useState<number | null>(null); // for the dialog's label
   const [previewed, setPreviewed] = useState(false); // the empty preview pane shows a hint until the first Preview
   const [sizes, setSizes] = useState<PaneSizes>(DEFAULT_SIZES);
 
@@ -139,9 +143,17 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
       return revision; // `state` in this closure is older than the saves above
     });
 
-  async function publish() {
-    const note = prompt("โน้ตของเวอร์ชันนี้ (เว้นว่างได้)");
-    if (note === null) return;
+  // what publishing would change: the published version (or nothing yet) against the draft as typed
+  async function publishDiff(): Promise<Result<{ from: Snapshot; to: Snapshot }>> {
+    const versions = await listVersions(state.templateId);
+    if (!versions.ok) return versions;
+    const published = versions.data.find((v) => v.isPublished);
+    setPublishedVersion(published?.version ?? null);
+    const from = published ? await getVersion(state.templateId, published.version) : { ok: true as const, data: EMPTY };
+    return from.ok ? { ok: true, data: { from: from.data, to: typed() } } : from;
+  }
+
+  async function publish(note: string) {
     const revision = await saveAll();
     if (revision === false) return;
     const result = await publishDraft(state.templateId, revision, note);
@@ -293,6 +305,23 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           onClose={() => setRenderData(null)}
         />
       )}
+      {publishing && (
+        <DiffDialog
+          title="Publish"
+          fromLabel={publishedVersion === null ? "published (ยังไม่มี ครั้งนี้จะเป็น v1)" : `published (v${publishedVersion})`}
+          toLabel="draft (รวมที่ยังไม่บันทึก)"
+          load={publishDiff}
+          confirmLabel="Publish"
+          requireChanges
+          onConfirm={(form) => publish(String(form.get("note") ?? ""))}
+          onClose={() => setPublishing(false)}
+        >
+          <label>
+            โน้ตของเวอร์ชันนี้ (เว้นว่างได้)
+            <input name="note" maxLength={500} />
+          </label>
+        </DiffDialog>
+      )}
       <div className={styles.toolbar}>
         <b>{name}</b>
         <code>{state.templateId}</code>
@@ -307,7 +336,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         <button type="button" className={styles.secondary} onClick={preview} disabled={state.saving || state.conflict}>
           Preview
         </button>
-        <button type="button" className={styles.publish} onClick={publish} disabled={state.saving || state.conflict}>
+        <button type="button" className={styles.publish} onClick={() => setPublishing(true)} disabled={state.saving || state.conflict}>
           Publish
         </button>
         <button type="button" onClick={() => setRenderData(editor.current?.content("sample.json") ?? "{}")}>

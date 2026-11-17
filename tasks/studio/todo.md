@@ -210,8 +210,8 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 ### U4b: diff ก่อน Publish
 
-- [ ] กด Publish เปิด dialog: draft (รวมที่ยังไม่บันทึก) เทียบ published + ช่องโน้ต แทน `prompt()`; ยังไม่เคย publish แสดงว่าเป็น v1
-- [ ] ไม่มีอะไรต่างจาก published แสดงว่า "ไม่มีอะไรเปลี่ยน" และปิดปุ่มยืนยัน
+- [x] กด Publish เปิด dialog: draft (รวมที่ยังไม่บันทึก) เทียบ published + ช่องโน้ต แทน `prompt()`; ยังไม่เคย publish แสดงว่าเป็น v1
+- [x] ไม่มีอะไรต่างจาก published แสดงว่า "ไม่มีอะไรเปลี่ยน" และปิดปุ่มยืนยัน
 - [ ] E2E `full-flow.spec.ts` ผ่านกับ flow publish ใหม่
 
 **Verification:** lint/typecheck/test/build; ในเบราว์เซอร์แก้ไฟล์แล้ว Publish เห็น diff; E2E บน stack แยกที่ VM

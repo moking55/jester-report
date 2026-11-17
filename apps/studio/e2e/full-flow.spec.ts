@@ -75,9 +75,13 @@ test("report from starter to API render, history, two tabs and themes", async ({
   expect(pdf.status()).toBe(200);
   expect(pdf.headers()["content-type"]).toContain("application/pdf");
 
-  // 5. publish v1 (the note comes from a prompt)
-  page.once("dialog", (dialog) => dialog.accept("e2e v1"));
+  // 5. publish v1: the dialog shows every file as new, then takes the note
   await page.getByRole("button", { name: "Publish" }).click();
+  const publish = page.getByRole("dialog", { name: "Publish" });
+  await expect(publish.getByRole("list", { name: "ไฟล์ที่ต่างกัน" })).toContainText("template.html");
+  await publish.getByLabel("โน้ตของเวอร์ชันนี้").fill("e2e v1");
+  await publish.getByRole("button", { name: "Publish" }).click();
+  await expect(publish).toHaveCount(0);
   await expect(page.getByRole("tab", { name: "Versions" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tabpanel")).toContainText("e2e v1");
 
