@@ -215,3 +215,32 @@ def _render(env: SandboxedEnvironment, name: str, context: dict[str, Any]) -> tu
 ## Out of scope
 
 JavaScript/QR/chart, URL ภายนอก, HTML sanitizer แบบเต็ม (ป้องกันด้วย autoescape + ตรวจ resource/script หลัง render + allow-list ที่ engine), timeout ของการ render (หน้าที่ `render-service`), การดึง asset จาก object storage, ภาษาอื่นนอกจากไทย, page subtotal (ยอดยกมา/ยกไป)
+
+---
+
+# v1.1: Foundations (C1 — SVG จาก `fmt`)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ที่มา: [SPEC-data-prep.md](SPEC-data-prep.md) หัวข้อ v1.1
+หัวข้อ v1 ด้านบนยังใช้ทั้งหมด; "QR" ใน Out of scope ของ v1 หมายถึง QR ที่รัน JavaScript ซึ่งยังไม่ทำ — QR แบบ SVG ที่สร้างฝั่ง server ทำในรอบนี้ที่ `data-prep`
+
+## สมมติฐาน v1.1
+
+1. **ไม่ต้องแก้โค้ดของ binder:** `fmt.qr`/`fmt.barcode` คืน `Markup` ซึ่ง `_finalize` ปล่อยผ่านอยู่แล้ว (`Markup` เป็น `str`) และ autoescape ไม่ escape ซ้ำ
+2. **ตรวจหลัง render ยังทำเหมือนเดิม:** SVG ผ่าน `check_resources` ทุกครั้ง — ถ้าวันหนึ่ง formatter ผลิต `href` หรือ `<script>` ออกมา จะถูกจับเป็น `RESOURCE_NOT_ALLOWED`/`SCRIPT_NOT_ALLOWED` ไม่ใช่หลุดไปถึง engine
+3. `<svg xmlns="http://www.w3.org/2000/svg">` ไม่ใช่ resource ที่โหลด (`xmlns` ไม่อยู่ใน `_LOADS`) จึงไม่ถูกปฏิเสธ — ต้องมี test ยืนยัน
+
+## Testing Strategy v1.1
+
+- template ที่ใช้ `fmt.qr(fmt.promptpay(...))` และ `fmt.barcode(...)` bind แล้วไม่มี problem และ `index.html` มี `<svg` ตามจำนวนที่เรียก
+- data ที่มี `</svg><script>alert(1)</script>` ส่งเข้า `fmt.qr` และ `fmt.barcode` code128 → ผลไม่มี `<script>` และไม่มี problem
+- `ValueError` จาก formatter ใหม่ (เช่น ean13 ผิด) → `TEMPLATE_ERROR` ที่บรรทัดนั้น และข้อความไม่มีค่าจาก data (ตามกติกา v1)
+- SVG ที่ถูกแก้ให้มี `xlink:href="http://x"` (สร้างใน test ด้วย `Markup` ตรง ๆ) → `RESOURCE_NOT_ALLOWED` — ยืนยันว่าตาข่ายชั้นที่สองยังทำงาน
+
+## Success Criteria v1.1
+
+1. QR และ barcode แสดงใน PDF ได้โดยไม่แก้โค้ดของ binder
+2. test ด้านบนผ่าน, coverage และ `ruff` เท่าเดิม
+
+## Open Questions v1.1
+
+ไม่มี

@@ -189,3 +189,172 @@ SQL ตรง ๆ ใน `store.py`, ทุกการเขียนอยู�
 ## Out of scope
 
 เก็บกวาด blob ที่ไม่มีใครใช้, ลบ template/version, สิทธิ์ราย template, ประวัติ revision ของ draft (undo), diff ระหว่าง version, การ import/export template เป็นไฟล์ zip, `lastRun` (มาจาก `render-service`)
+
+---
+
+# v1.1: Foundations (A1, A2, A3, C2)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.1, [docs/ideas/foundations-v1-1.md](docs/ideas/foundations-v1-1.md)
+หัวข้อ v1 ด้านบนยังใช้ทั้งหมด ส่วนนี้เพิ่มเมธอด ตาราง และกติกาเท่านั้น; ข้อ "import/export template เป็นไฟล์ zip" ใน Out of scope ของ v1 ย้ายเข้ามาในรอบนี้
+
+## สมมติฐาน v1.1
+
+1. **ผู้ใช้ตัดสินแล้ว:** import รายงานที่ id มีอยู่แล้ว = **ทับ draft ของรายงานเดิม** (ต้องส่ง revision ปัจจุบัน); render รายงานที่ archive = **410 `TEMPLATE_ARCHIVED`** (map ที่ `public-api`)
+2. **import ได้ draft เสมอ** ไม่สร้าง version และไม่ย้าย alias published — ต้องผ่าน validate และ Publish ตามปกติ
+3. **zip แบบแบน:** ทุกไฟล์อยู่ที่ราก (ชื่อไฟล์ข้อความกับ asset ไม่ชนกัน เพราะ pattern นามสกุลแยกกันอยู่แล้ว) + manifest `jester.json`; แตก zip แก้ไฟล์แล้ว zip กลับได้
+4. **archive กลับคืนได้** ไม่ลบข้อมูล; รายงานที่ archive อ่านได้ (draft, version, export, ทำสำเนา) แต่เขียนและ render ไม่ได้
+5. **ทำสำเนา** ได้ draft ใหม่จาก draft หรือ version ของต้นฉบับ ไม่คัดลอกประวัติ version; asset ใช้ blob เดิม (content-addressed) ไม่คัดลอก bytes
+6. **ใบกำกับภาษี:** ช่องตามประมวลรัษฎากร มาตรา 86/4 ที่ระบุใน C2 มาจากความรู้ของผู้เขียน spec **ต้องตรวจกับข้อกำหนดของกรมสรรพากรอีกครั้งก่อนประกาศ**
+
+## Interface ที่เพิ่ม
+
+```python
+class TemplateStore:
+    # A1
+    async def export_zip(self, template_id: str, ref: Literal["draft"] | int) -> bytes
+    async def import_zip(self, data: bytes, expected_revision: int | None, by: str,
+                         template_id: str | None = None) -> ImportResult
+    # A2
+    async def duplicate(self, source_id: str, ref: Literal["draft"] | int,
+                        new_id: str, new_name: str, by: str) -> TemplateSummary
+    # A3
+    async def set_archived(self, template_id: str, archived: bool, by: str) -> TemplateSummary
+    async def list(self, include_archived: bool = False) -> list[TemplateSummary]   # เดิมไม่มีพารามิเตอร์
+
+@dataclass(frozen=True)
+class ImportResult:
+    summary: TemplateSummary
+    revision: int
+    created: bool          # True = รายงานใหม่, False = ทับ draft ของรายงานเดิม
+
+# TemplateSummary เพิ่ม: archived_at: datetime | None, archived_by: str | None
+# StoreError.code เพิ่ม: "ARCHIVED"
+# Starter เพิ่ม: "tax-invoice"
+```
+
+## A1: export / import zip
+
+**รูปแบบ zip (`formatVersion: 1`)**
+
+```
+jester.json                                         → manifest
+report.json  template.html  data.schema.json  …     → ไฟล์ข้อความทั้งหมดของ draft/version
+logo.png  THSarabunNew-Bold.ttf  …                  → asset ทั้งหมด
+```
+
+```json
+{
+  "formatVersion": 1,
+  "id": "quotation",
+  "name": "ใบเสนอราคา",
+  "source": { "kind": "version", "version": 3, "sha256": "…" },
+  "exportedAt": "2026-11-18T10:00:00Z",
+  "files": ["data.schema.json", "report.json", "sample.json", "template.html"],
+  "assets": [{ "name": "logo.png", "sha256": "…" }]
+}
+```
+
+`source.kind` เป็น `"draft"` (มี `revision`) หรือ `"version"` (มี `version` และ `sha256` ของ version) — บอกที่มาเท่านั้น ตอน import ไม่ใช้
+
+**export:** ref = `"draft"` หรือเลข version; รายงานที่ archive export ได้; zip ใช้ deflate, เรียง entry ตามชื่อ, เวลาของทุก entry คงที่ (`1980-01-01 00:00`) แต่ `exportedAt` ใน manifest เป็นเวลาจริง
+
+**import:**
+
+1. อ่าน manifest; id = `template_id` ที่ผู้เรียกส่ง ถ้ามี ไม่งั้นใช้ `manifest.id`
+2. id ยังไม่มี → สร้างรายงาน (`name` จาก manifest) + draft revision 1; ถ้าส่ง `expected_revision` มาด้วย → `NOT_FOUND`
+3. id มีแล้ว → `expected_revision` ต้องตรงกับ draft ปัจจุบัน แล้วแทนไฟล์และ asset **ทั้งหมด** ของ draft (แบบ `reset_draft`); ชื่อรายงานเดิมไม่เปลี่ยน; ไม่ส่ง revision → `CONFLICT` ("มีรายงานนี้แล้ว ส่ง revision เพื่อทับ draft")
+4. รายงานที่ archive → `ARCHIVED`
+5. asset ทุกตัวผ่าน `assets.detect()` แบบเดียวกับการอัปโหลด และ sha256 ต้องตรงกับ manifest
+6. เขียน DB ใน transaction เดียว; อัปโหลด blob ก่อนเปิด transaction (blob ที่ค้างเมื่อ import ล้มเป็นขยะที่ยอมรับได้ตามสมมติฐาน v1 ข้อ 5)
+
+**กติกาความปลอดภัยของ zip** (ตรวจก่อนอ่านเนื้อหา และนับซ้ำระหว่างอ่าน)
+
+| กรณี | ผล |
+| --- | --- |
+| zip ที่ส่งมาใหญ่เกิน 25 MB | `PAYLOAD_TOO_LARGE` |
+| entry เกิน 101 (manifest + 50 + 50) | `PAYLOAD_TOO_LARGE` |
+| ชื่อ entry มี `/` หรือ `\`, ขึ้นต้นด้วย `.`, เป็น directory หรือ symlink (ดูจาก `external_attr`) | `INPUT_INVALID` |
+| entry เข้ารหัส หรือวิธีบีบอัดไม่ใช่ stored/deflate | `INPUT_INVALID` |
+| ชื่อ entry ซ้ำ, มี entry นอก manifest, หรือ manifest อ้างไฟล์ที่ไม่มี | `INPUT_INVALID` |
+| ชื่อไม่ตรง pattern `TextFileName`/`AssetName` ของ contract | `INPUT_INVALID` |
+| ขาด `report.json` หรือ `template.html` | `CONFLICT` (กติกาเดิม) |
+| ขนาดหลังแตกของแต่ละไฟล์หรือรวมเกินขีดจำกัด v1 ข้อ 7 — **นับจาก bytes ที่อ่านจริง** ไม่เชื่อ `file_size` ใน header (กัน zip bomb) | `PAYLOAD_TOO_LARGE` |
+| ไฟล์ข้อความไม่ใช่ UTF-8 | `INPUT_INVALID` |
+| `formatVersion` ไม่ใช่ 1 หรือ manifest ไม่ตรง schema | `INPUT_INVALID` |
+| asset ไม่ผ่าน `detect()` / sha256 ไม่ตรง manifest | `UNSUPPORTED_MEDIA_TYPE` / `INPUT_INVALID` |
+
+store ไม่ตรวจเนื้อหาของ report (เหมือน v1) — zip ที่ definition ผิดก็ import ได้ แล้วผู้ใช้เห็น problem ใน Studio
+
+## A2: ทำสำเนา
+
+- คัดลอกไฟล์ข้อความและรายการ asset จาก draft หรือ version ของต้นฉบับ เป็นรายงานใหม่ `new_id` + `new_name` + draft revision 1, ไม่มี version
+- `new_id` ซ้ำ → `CONFLICT`; ต้นฉบับหรือ version ไม่มี → `NOT_FOUND`; ต้นฉบับที่ archive แล้วทำสำเนาได้ (ใช้ชุบรายงานเก่าในชื่อใหม่)
+
+## A3: archive
+
+- migration ใหม่ `0006_template_archive.sql`: เพิ่ม `archived_at timestamptz NULL`, `archived_by text NULL` ในตาราง `templates`
+- `set_archived(True)` ตั้งค่า, `set_archived(False)` ล้างค่า; สั่งซ้ำสถานะเดิมได้โดยไม่ error
+- `list()` ไม่รวมที่ archive เป็นค่าเริ่มต้น
+- รายงานที่ archive:
+  - เขียนไม่ได้ (`ARCHIVED`): `put_file`, `delete_file`, `add_asset`, `delete_asset`, `reset_draft`, `publish`, `set_published`, `rename`, `import_zip`
+  - `definition_input` ทุก ref → `ARCHIVED` จึง render และ preview ไม่ได้
+  - อ่านได้ตามปกติ: `get`, `get_draft`, `list_versions`, `get_version`, `export_zip`, `duplicate`
+- เช็กสถานะ archive ใน transaction เดียวกับการเขียน (`SELECT … FOR UPDATE` บนแถว `templates`) กัน archive แทรกกลางทาง
+
+## C2: starter `tax-invoice` (ใบกำกับภาษีเต็มรูป)
+
+ขึ้นกับ C1 (`fmt.qr`, `fmt.promptpay` ใน `data-prep`) สำหรับ QR ชำระเงินที่เลือกใส่ได้
+
+ช่องที่ template ต้องแสดง (มาตรา 86/4 ตามที่ทราบ — **ตรวจกับกรมสรรพากรก่อนประกาศ**):
+
+1. คำว่า "ใบกำกับภาษี" ในที่เห็นได้เด่นชัด
+2. ชื่อ ที่อยู่ เลขประจำตัวผู้เสียภาษีอากรของผู้ออก และ "สำนักงานใหญ่" หรือ "สาขาที่ …"
+3. ชื่อ ที่อยู่ของผู้ซื้อ และเลขประจำตัวผู้เสียภาษี + สำนักงานใหญ่/สาขาของผู้ซื้อเมื่อผู้ซื้อจดทะเบียนภาษีมูลค่าเพิ่ม
+4. เลขที่ใบกำกับภาษี (และเล่มที่ ถ้ามี)
+5. ชื่อ ชนิด ประเภท ปริมาณ และมูลค่าของสินค้าหรือบริการ
+6. จำนวนภาษีมูลค่าเพิ่มแยกออกจากมูลค่าสินค้าหรือบริการให้ชัดเจน
+7. วัน เดือน ปีที่ออก
+
+`data.schema.json` มี `seller`, `buyer` (`taxId` 13 หลัก, `branch` = `"00000"` สำหรับสำนักงานใหญ่หรือเลขสาขา 5 หลัก), `items`, `vatRate` (decimal, ตัวอย่าง `"7"`), `promptpay` (เลือกใส่); parameters `invoiceNo`, `issueDate`; ยอดรวม ภาษี และยอดสุทธิคำนวณใน `report.json` ด้วย `Decimal`; บาทตัวอักษรด้วย `fmt.baht_text`
+
+## Testing Strategy v1.1
+
+- **zip round-trip:** export draft แล้ว import เป็น id ใหม่ → ไฟล์และ asset sha256 ตรงกันทุกตัว; export draft เดิมสองครั้งได้ entry และเนื้อหาเหมือนกัน
+- **import ทับ:** revision ตรง → draft ถูกแทนทั้งชุด (ไฟล์ที่ไม่มีใน zip หายไป), version เดิมไม่เปลี่ยน, published ไม่ย้าย; revision ผิด → `REVISION_CONFLICT`; ไม่ส่ง revision → `CONFLICT`
+- **zip อันตราย:** หนึ่ง test ต่อแถวในตารางความปลอดภัย เช่น `../evil.html`, `a/b.html`, symlink, entry ที่ header บอก 1 KB แต่แตกได้ 30 MB, ชื่อซ้ำ, entry นอก manifest, ไฟล์ข้อความ latin-1, `formatVersion: 2` — ทุกกรณีไม่มีแถวใหม่ใน DB
+- **archive:** ทุกเมธอดเขียนในรายการ → `ARCHIVED`; ทุกเมธอดอ่านทำงานได้; unarchive แล้วเขียนได้; archive พร้อมกับ `put_file` (สอง task) → ไม่มีการเขียนที่เกิดหลัง archive
+- **duplicate:** จาก draft และจาก version; id ซ้ำ → `CONFLICT`; ไม่มี blob ใหม่ใน storage
+- **starter `tax-invoice`:** ผ่าน `load_definition` + `prepare` + `bind` ด้วย sample ของตัวเอง (test starter เดิมครอบให้) และ golden test ยอด: มูลค่ารวม, VAT 7%, ยอดสุทธิ, บาทตัวอักษร
+- **migration 0006** รันบน DB ที่มีข้อมูล v1 แล้ว รายงานเดิมไม่ถูก archive
+- coverage ของ `template_store` ≥ 90% (เท่าเดิม)
+
+## Project Structure v1.1
+
+```
+apps/api/src/jester_api/template_store/
+  bundle.py                  → อ่าน/เขียน zip + manifest (pure function ไม่แตะ DB) — ใหม่
+  store.py                   → export_zip, import_zip, duplicate, set_archived
+  starters/tax-invoice/      → report.json, template.html, data.schema.json, sample.json — ใหม่
+apps/api/src/jester_api/db/migrations/0006_template_archive.sql — ใหม่
+apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ใหม่
+```
+
+ใช้ `zipfile` ของ standard library — **module นี้ไม่มี dependency ใหม่**
+
+## Boundaries v1.1
+
+- **Always:** import เขียนเป็น draft เท่านั้น; ตรวจ zip ครบตามตารางก่อนเขียนอะไรลง DB; นับขนาดจาก bytes ที่อ่านจริง
+- **Ask first:** เปลี่ยนรูปแบบ zip หลังปล่อยแล้ว (ต้องขึ้น `formatVersion` ใหม่และยังอ่านแบบเก่าได้), ลบรายงานจริง (ไม่ใช่ archive)
+- **Never:** แตก zip ลงดิสก์, ใช้ path จากใน zip, import แล้ว publish ให้เอง, แก้ version ที่มีอยู่
+
+## Success Criteria v1.1
+
+1. รายงานที่ export จาก Jester ชุดหนึ่ง import ที่อีกชุด (หรือเป็น id ใหม่) ได้ draft ที่ไฟล์และ asset ตรงกันทุก byte
+2. zip อันตรายทุกแบบในตารางถูกปฏิเสธ โดยไม่มีอะไรถูกเขียนลง DB
+3. รายงานที่ archive เขียนและ render ไม่ได้ แต่อ่าน export และทำสำเนาได้ และ unarchive แล้วกลับมาเหมือนเดิม
+4. สร้างรายงานจาก starter `tax-invoice` แล้ว validate และ preview ผ่านทันที ยอดเงินตรงกับ golden test
+5. `ruff` สะอาด, test เดิมผ่านทั้งหมด, coverage ≥ 90%
+
+## Open Questions v1.1
+
+ไม่มีข้อค้างใน module นี้ — status code ของ `ARCHIVED` ต่อ endpoint และขนาด request ของ import ที่ HTTP layer อยู่ใน spec ของ `public-api`

@@ -169,3 +169,60 @@ async def render(self, template_id, version, params, data, caller, request_id, f
 ## Out of scope
 
 เก็บ PDF, async render/job queue/webhook, retry อัตโนมัติ, render จาก draft ผ่าน `/v1/render`, metrics/Prometheus, rate limit ต่อ API key, render หลายไฟล์รวมเป็น zip
+
+---
+
+# v1.1: Foundations (A3, B1)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.1, [SPEC-template-store.md](SPEC-template-store.md) หัวข้อ v1.1
+หัวข้อ v1 ด้านบนยังใช้ทั้งหมด ส่วนนี้เพิ่ม error สองตัวและการตรวจสิทธิ์ของ API key ต่อรายงาน
+
+## สมมติฐาน v1.1
+
+1. **A3 (ผู้ใช้ตัดสินแล้ว):** `template-store` โยน `StoreError("ARCHIVED")` จาก `definition_input` ทุก ref; module นี้แปลงเป็น `TEMPLATE_ARCHIVED` **410** ไม่ retry
+2. **B1:** `auth` ตรวจวันหมดอายุของ key ตอน `authenticate` (key หมดอายุ = 401 เหมือน key ที่ถูกเพิกถอน ไม่ถึง module นี้); module นี้ตรวจแค่ **รายการรายงานที่ key ใช้ได้**
+3. `Principal` (จาก `auth`) เพิ่มฟิลด์ `templates: frozenset[str] | None` — `None` = ใช้ได้ทุกรายงาน (key เดิมทั้งหมด และ session ของผู้ใช้ Studio)
+4. **ไม่บอกว่ารายงานมีอยู่ไหมให้ key ที่ไม่มีสิทธิ์:** key ที่ไม่มีสิทธิ์กับรายงาน X ได้ `TEMPLATE_NOT_ALLOWED` (403) เสมอ ไม่ว่า X จะมีอยู่, archive แล้ว หรือไม่มีเลย — จึงตรวจสิทธิ์ **ก่อน** เรียก store
+5. **rate limit (B2) อยู่ที่ `public-api`:** request ที่ถูกจำกัดไม่ถึง module นี้และไม่มี run
+
+## การเปลี่ยนแปลง
+
+**ตาราง error เพิ่มสองแถว** (ต่อจากตารางในสมมติฐาน v1 ข้อ 3)
+
+| ที่มา | code | HTTP |
+| --- | --- | --- |
+| API key ใช้กับรายงานนี้ไม่ได้ | `TEMPLATE_NOT_ALLOWED` | 403 |
+| รายงานถูก archive | `TEMPLATE_ARCHIVED` | 410 |
+
+**ลำดับใน `render()`**
+
+```python
+async def render(self, template_id, version, params, data, caller, request_id, filename) -> RenderOutcome:
+    if caller.templates is not None and template_id not in caller.templates:
+        raise await self._fail(template_id, caller, "TEMPLATE_NOT_ALLOWED")   # before the store: no existence leak
+    async with self._slot():
+        stored = await self._store.definition_input(template_id, version)    # StoreError ARCHIVED -> TEMPLATE_ARCHIVED
+        ...
+```
+
+- ทั้งสอง error บันทึก run แบบ `failed` พร้อม `errorCode` เหมือน error อื่น — ผู้ดูแลเห็นในหน้าประวัติว่าระบบไหนยังเรียกรายงานที่ archive หรือใช้ key ผิดรายงาน
+- `TEMPLATE_NOT_ALLOWED` ไม่จองช่องในคิว (`_slot`) เพราะไม่มีงาน render
+- `preview()` และ `validate()` ของรายงานที่ archive → `TEMPLATE_ARCHIVED` (410) เช่นกัน; สองเมธอดนี้รับแค่ session จึงไม่ต้องตรวจรายการรายงาน
+- cache ของ definition (key = sha256 ของ version) ไม่ต้องล้างตอน archive เพราะ store ปฏิเสธก่อนถึง cache ทุกครั้ง
+
+## Testing Strategy v1.1
+
+- **สิทธิ์ของ key:** key ที่ `templates = {"a"}` render `a` ได้; render `b` (มีอยู่), `c` (archive แล้ว) และ `zzz` (ไม่มี) ได้ `TEMPLATE_NOT_ALLOWED` 403 เหมือนกันทั้งสาม พร้อม run แบบ failed; key ที่ `templates = None` render ได้ทุกรายงานเหมือนเดิม
+- **archive:** render รายงานที่ archive → 410 `TEMPLATE_ARCHIVED` พร้อม run แบบ failed; preview และ validate → 410; unarchive แล้ว render version เดิมได้ (cache ไม่ทำให้ได้ผลผิด)
+- **คิว:** ส่ง `TEMPLATE_NOT_ALLOWED` 20 ครั้งพร้อมกันไม่กินช่องคิว — render ปกติที่ส่งพร้อมกันยังผ่าน
+- test เดิมทั้งหมดผ่านโดยไม่แก้ (`Principal` ที่ไม่ใส่ `templates` = `None`)
+
+## Success Criteria v1.1
+
+1. key ที่จำกัดรายงานไว้ render ได้เฉพาะรายงานในรายการ และไม่รู้ว่ารายงานอื่นมีอยู่หรือไม่
+2. รายงานที่ archive ได้ 410 พร้อม run แบบ failed และกลับมา render ได้หลัง unarchive
+3. coverage ≥ 90%, `ruff` สะอาด, test เดิมผ่าน
+
+## Open Questions v1.1
+
+ไม่มี — ข้อมูลของ key (วันหมดอายุ, รายการรายงาน) และการเก็บอยู่ใน spec ของ `auth`; การ map เป็น HTTP และ `ErrorCode` ใน contract อยู่ใน spec ของ `public-api`

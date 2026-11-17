@@ -182,3 +182,76 @@ export function Workspace({ draft }: { draft: Draft }) {
 ## Out of scope
 
 designer แบบลากวาง, หลายภาษา (UI ไทยอย่างเดียว), SSO, role, dark mode แยกต่างหาก (ทำเป็น theme ได้เอง), mobile layout, real-time collaboration, ประวัติ revision ของ draft, CSS ดิบใน theme
+
+---
+
+# v1.1: Foundations (H1, A1–A4, B1, B2, C2)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.1, [SPEC-public-api.md](SPEC-public-api.md) หัวข้อ v1.1
+หัวข้อ v1 ด้านบนยังใช้ทั้งหมด (Server Components, Server Actions, `useImmer`, browser ไม่เรียก api ตรง)
+
+## สมมติฐาน v1.1
+
+1. **H1:** `next` และ `eslint-config-next` เป็น `16.4.6` แบบ exact (แก้ advisory GHSA-mfr8-8qww-v76h; ออก 9 พ.ย. 2026 เกิน 2 สัปดาห์ตามกติกา v1) เป็นงานแรกและแยก commit
+2. **ไฟล์ zip ผ่าน Route Handler ไม่ใช่ Server Action:** Server Action จำกัด body 1 MB (เหตุผลเดียวกับการอัปโหลด asset ใน v1) — `GET /templates/[id]/export` ส่ง zip ต่อจาก api พร้อม `Content-Disposition`; `POST /templates/import` รับ multipart แล้วส่งต่อ ตรวจ same-origin แบบ route asset เดิม
+3. **ที่วางปุ่ม:**
+   - **catalog:** ปุ่ม "นำเข้า (.zip)" ข้างปุ่มสร้าง; ตัวสลับ "แสดงที่ archive" (`?archived=1`); แต่ละแถว/การ์ดมีเมนู ⋯ = export draft, ทำสำเนา, archive/unarchive
+   - **workspace:** เมนู ⋯ ใน toolbar ชุดเดียวกัน; แท็บ Versions เพิ่มปุ่ม "export" ต่อ version
+   - **settings › ผู้ใช้:** ปุ่ม "ตั้งรหัสผ่าน" ต่อแถว (ปิดในแถวของตัวเอง พร้อม title ชี้ไปแท็บรหัสผ่าน) เปิด dialog แบบเดียวกับเพิ่มผู้ใช้
+   - **settings › API key:** ฟอร์มสร้างเพิ่ม 3 ช่องที่เลือกใส่ได้; ตารางเพิ่มคอลัมน์ "หมดอายุ", "รายงาน", "จำกัด/นาที"
+4. **วันหมดอายุของ key เลือกเป็นวัน** (`<input type="date">`) แล้วส่งเป็นสิ้นวันนั้นเวลาไทย (`23:59:59+07:00`) — คนตั้งคิดเป็นวัน ไม่ใช่เวลา; ต้องเป็นวันพรุ่งนี้ถึง 5 ปี
+5. **รายงานของ key** เลือกด้วย checkbox จากรายการรายงาน (รวมที่ archive ไม่ได้); ไม่เลือกเลย = ทุกรายงาน (ข้อความใต้ช่องบอกชัด)
+6. **import ที่ id ซ้ำ:** ส่งครั้งแรกไม่มี revision; ได้ 409 → dialog ถาม "มีรายงาน `<id>` แล้ว จะทับ draft ไหม (version ที่ publish แล้วไม่เปลี่ยน)" พร้อมทางเลือก "นำเข้าเป็น id ใหม่" (ช่อง id); ยืนยันทับ → อ่าน revision ปัจจุบันแล้วส่งใหม่พร้อม `If-Match`; สำเร็จ → ไปที่ workspace ของรายงานนั้น
+7. **รายงานที่ archive ใน workspace:** แถบบอกด้านบน "รายงานนี้ถูก archive เมื่อ … โดย …" พร้อมปุ่ม unarchive; editor อ่านอย่างเดียว; ปุ่มบันทึก, Preview, Publish, Render… และเมนูแก้ไฟล์ปิด; export และทำสำเนายังใช้ได้
+8. **archive ยืนยันด้วย `confirm()`** (กลับคืนได้ จึงไม่ต้องดู diff): "archive `<name>`? ระบบที่ render รายงานนี้จะได้ 410 จนกว่าจะ unarchive"
+9. **ข้อความ error ภาษาไทยใหม่ใน `lib/messages.ts`:** `TEMPLATE_ARCHIVED`, `TEMPLATE_NOT_ALLOWED`, `RATE_LIMITED` (ของ render) และ 409 ของ import
+10. **starter ใหม่** ในฟอร์มสร้าง: `tax-invoice` = "ใบกำกับภาษีเต็มรูป"
+11. **หน้า `/api`** เพิ่ม 403/410/429 ในส่วนรูปแบบ error และอธิบาย `Retry-After`
+
+## Project Structure v1.1
+
+```
+apps/studio/
+  app/templates/[id]/export/route.ts   → ส่งต่อ zip จาก api — ใหม่
+  app/templates/import/route.ts        → รับ zip แล้วส่งต่อ — ใหม่
+  components/TemplateMenu.tsx          → เมนู ⋯ (export, ทำสำเนา, archive) ใช้ทั้ง catalog และ workspace — ใหม่
+  components/ImportDialog.tsx, DuplicateDialog.tsx, SetPasswordDialog.tsx — ใหม่
+  components/ApiKeysPanel.tsx, UsersPanel.tsx, Workspace.tsx, VersionsPanel.tsx, CreateTemplate.tsx
+  app/(app)/page.tsx                   → ปุ่มนำเข้า, ตัวสลับ archive, badge
+  lib/actions/templates.ts             → duplicate, setArchived
+  lib/actions/settings.ts              → setUserPassword, createApiKey (ช่องใหม่)
+  lib/keys.ts                          → วันที่ → สิ้นวันเวลาไทย, ตรวจช่องของ key — ใหม่ (pure, มี test)
+  lib/messages.ts, lib/types.gen.ts (gen:api)
+```
+
+## Testing Strategy v1.1
+
+- **Vitest:** `lib/keys.ts` (วันที่ → `…T23:59:59+07:00`, วันนี้/อดีต/เกิน 5 ปีถูกปฏิเสธ, limit นอก 1–10000, ไม่เลือกรายงาน = `undefined` ไม่ใช่ `[]`); ข้อความของ code ใหม่ใน `messages`
+- **เบราว์เซอร์กับ api ที่ VM ทุก task:** แบบเดียวกับ v1 (dev server + api จริง)
+- **E2E (`full-flow.spec.ts` ต่อท้าย):**
+  1. export draft ของรายงานใน flow → import เป็น id ใหม่ → workspace ของ id ใหม่มีไฟล์ครบ
+  2. import zip เดิมทับ id เดิม → dialog ถาม → ยืนยัน → revision เพิ่ม
+  3. ทำสำเนา → แถวใหม่ใน catalog
+  4. archive → หายจาก catalog, เห็นเมื่อสลับ "แสดงที่ archive", `POST /v1/render` ด้วย key ได้ 410 → unarchive → render ได้
+  5. สร้าง key ที่จำกัดรายงานอื่น → render รายงานใน flow ได้ 403
+  6. ตั้งรหัสผ่านให้ผู้ใช้ที่สองจาก settings → login ผู้ใช้นั้นด้วยรหัสใหม่ได้
+- ตรวจ network ใน E2E ต่อ: browser ไม่เรียก api ตรง (zip ผ่าน Route Handler)
+- lint, typecheck, test, build ผ่านทุก task
+
+## Boundaries v1.1
+
+- **Always:** zip ผ่าน Route Handler เท่านั้น; ทุกการกระทำที่เปลี่ยนสิ่งที่ระบบภายนอกได้รับ (archive) มีคำยืนยัน; ปุ่มที่ใช้ไม่ได้บอกเหตุผลด้วย `title`
+- **Ask first:** เพิ่ม dependency ของ Studio (เช่น ไลบรารี zip ฝั่ง browser — ไม่ควรต้องใช้), แก้ secret ของ key หลังสร้าง
+- **Never:** อ่านหรือแตก zip ใน browser, ส่ง zip ผ่าน Server Action, แสดง secret ของ key ซ้ำ
+
+## Success Criteria v1.1
+
+1. ผู้ใช้ Studio ย้ายรายงานจากเครื่อง dev ไปเครื่อง production ได้ด้วยปุ่ม export/import โดยไม่ต้องก๊อปทีละไฟล์
+2. ทำสำเนา, archive/unarchive, ตั้งรหัสผ่านให้ผู้อื่น และสร้าง key แบบจำกัดทำได้ครบจาก Studio
+3. รายงานที่ archive แก้ไม่ได้จาก Studio และบอกสถานะชัดเจน
+4. Next.js 16.4.6, `npm audit --omit=dev` ไม่มี advisory ของ `next`
+5. E2E ทั้ง 2 spec (รวมขั้นใหม่) ผ่านบน stack ใหม่ที่ VM; lint, typecheck, test, build ผ่าน
+
+## Open Questions v1.1
+
+ไม่มี

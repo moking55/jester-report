@@ -45,3 +45,24 @@ Docker Compose (ไม่ใช้ Kubernetes) 5 services: `studio` (Next.js), `
 ## Out of scope v1
 
 SSO/OIDC, role/RBAC, multi-tenant, เก็บ PDF ที่ render แล้วระยะยาว, Kubernetes/Helm, CLI, data connector, drag-drop designer, async job/schedule/email, PDF/A และ digital signature, JRXML, export XLSX/DOCX, page subtotal
+
+## v1.1: Foundations (อนุมัติ 17 พฤศจิกายน 2026)
+
+ที่มา: [docs/ideas/foundations-v1-1.md](docs/ideas/foundations-v1-1.md) · ไม่มี module ใหม่: แต่ละ spec ด้านล่างเพิ่มหัวข้อ "v1.1" ต่อท้าย
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| H1 Next.js 16.4.6 | `studio` | — |
+| H2 CI เขียว | `.github` (เจ้าของบัญชีตรวจ Actions/billing) | — |
+| A1 export/import zip | `template-store` → `public-api` → `studio` | — |
+| A2 ทำสำเนารายงาน | `template-store` → `public-api` → `studio` | — |
+| A3 archive (render ตอบ 410) | `template-store`, `render-service` → `public-api` → `studio` | — |
+| A4 แอดมินตั้งรหัสผ่านให้ผู้อื่น | `auth` → `public-api` → `studio` | — |
+| B1 API key: วันหมดอายุ + จำกัดรายงาน | `auth`, `render-service` → `public-api` → `studio` | A3 |
+| B2 rate limit ต่อ key (ปิดเป็นค่าเริ่มต้น) | `auth`, `public-api` → `studio` | B1 |
+| B3 backup/restore | `infra` (README + สคริปต์ + CLI `jester_api.ops.blobs`) | — |
+| C1 `fmt.qr()` / `fmt.barcode()` (SVG, PromptPay) | `data-prep` → `binder` | — |
+| C2 starter ใบกำกับภาษีเต็มรูป | `template-store` | C1, A1 |
+
+Build order: H1 → A1–A4 → B1 → B2 → B3 → C1 → C2 (H2 คู่ขนานได้; B3, C1 ไม่ขึ้นกับใคร)
+ลำดับเขียน spec: `template-store` → `render-service` → `auth` → `data-prep`/`binder` → `public-api` → `studio` → infra

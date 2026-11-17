@@ -135,3 +135,98 @@ route สั้น: อ่าน input → เรียก module → สร้�
 ## Out of scope
 
 Studio UI, CORS/browser เรียกตรง, rate limit ต่อ API key, metrics/Prometheus, OpenAPI client generation, TLS (ให้ reverse proxy ทำ), async render/webhook
+
+---
+
+# v1.1: Foundations (A1–A4, B1, B2, C2)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.1 และหัวข้อ v1.1 ของ [template-store](SPEC-template-store.md), [render-service](SPEC-render-service.md), [auth](SPEC-auth.md)
+หัวข้อ v1 ด้านบนยังใช้ทั้งหมด (ยังเป็นชั้นบางตาม contract); ข้อ "rate limit ต่อ API key" ใน Out of scope ย้ายเข้ามาในรอบนี้
+
+## สมมติฐาน v1.1
+
+1. **contract ก่อนเสมอ:** แก้ `public-api.yaml` → test contract บังคับ route ครบ → `npm run gen:api` ให้ Studio (ตามวิธีเดิม)
+2. **endpoint ใหม่ทั้งหมดใช้ session เท่านั้น**; API key ยังใช้ได้แค่ `POST /v1/render`
+3. **`TEMPLATE_ARCHIVED` code เดียว สอง status:** การแก้ไขจาก Studio ได้ **409** (เป็นสถานะที่ขัดกับการกระทำ เหมือน `CONFLICT`); render/preview/validate ได้ **410** ตามที่ `render-service` กำหนด (ผู้ใช้ตัดสินแล้วสำหรับ render)
+4. **rate limit ตรวจก่อนอ่าน body:** request ที่เกินโควตาจึงไม่ต้อง parse JSON ขนาดใหญ่ ไม่มี run และไม่เข้าคิว render
+5. **import มีขีดจำกัดขนาดเฉพาะ route:** zip ≤ 25 MB ตาม template-store มากกว่าค่าเริ่มต้นของทั้ง api (10 MB) จึงให้ `BodyLimit` ใช้ 26 MB เฉพาะ `POST /v1/templates/import` (เผื่อ multipart) — route อื่นเหมือนเดิม
+
+## Contract ที่เพิ่ม/เปลี่ยน
+
+**operation ใหม่ (5 ตัว; contract จาก 42 เป็น 47 + `GET /v1/openapi.yaml`)**
+
+| operation | request | response |
+| --- | --- | --- |
+| `GET /v1/templates/{templateId}/export` `exportTemplate` | query `version` = `draft` (ค่าเริ่มต้น) หรือเลข | `200 application/zip`; `Content-Disposition` = `<id>-v<N>.zip` หรือ `<id>-draft-r<revision>.zip` |
+| `POST /v1/templates/import` `importTemplate` | `multipart/form-data`: `file` (zip), `templateId` (เลือกใส่); header `If-Match` เมื่อทับรายงานเดิม | `201` (สร้างใหม่) / `200` (ทับ draft): `{template: TemplateSummary, revision, created}` |
+| `POST /v1/templates/{templateId}/duplicate` `duplicateTemplate` | `{id, name, version?: "draft" \| integer}` | `201 TemplateSummary` |
+| `PUT /v1/templates/{templateId}/archived` `setTemplateArchived` | `{archived: boolean}` | `200 TemplateSummary` |
+| `PUT /v1/users/{userId}/password` `setUserPassword` | `{newPassword}` (12–200 ตัว) | `204` |
+
+**operation ที่เปลี่ยน**
+
+- `GET /v1/templates` เพิ่ม query `includeArchived` (boolean, ค่าเริ่มต้น `false`)
+- `POST /v1/templates` body `starter` เพิ่มค่า `tax-invoice`
+- `POST /v1/api-keys` body เพิ่ม `expiresAt` (date-time), `templates` (array ของ `TemplateId`, 1–100), `rateLimitPerMinute` (integer 1–10000) — ทั้งสามเลือกใส่ได้
+- `POST /v1/render` เพิ่ม response `403` (`TEMPLATE_NOT_ALLOWED`), `410` (`TEMPLATE_ARCHIVED`), `429` (`RATE_LIMITED`, header `Retry-After` เป็นวินาที, `retryable: true`)
+- `draft/preview`, `draft/validate` เพิ่ม `410`; ทุก route ที่แก้ draft/version/alias/ชื่อ เพิ่ม `409 TEMPLATE_ARCHIVED`
+
+**schema**
+
+- `TemplateSummary` + `archivedAt` (date-time | null), `archivedBy` (string | null)
+- `ApiKey` + `expiresAt`, `templates` (array | null), `rateLimitPerMinute` (integer | null)
+- `ErrorCode` + `TEMPLATE_ARCHIVED`, `TEMPLATE_NOT_ALLOWED`
+
+## Map error ที่เพิ่ม
+
+| ที่มา | code | HTTP |
+| --- | --- | --- |
+| `StoreError("ARCHIVED")` จาก route ที่แก้ไข | `TEMPLATE_ARCHIVED` | 409 |
+| `RenderError` `TEMPLATE_ARCHIVED` | `TEMPLATE_ARCHIVED` | 410 |
+| `RenderError` `TEMPLATE_NOT_ALLOWED` | `TEMPLATE_NOT_ALLOWED` | 403 |
+| `Quota(allowed=False)` | `RATE_LIMITED` + `Retry-After` | 429 |
+| import ทับโดยไม่ส่ง `If-Match` (`StoreError CONFLICT`) | `CONFLICT` (detail บอกให้ส่ง revision) | 409 |
+| `If-Match` ไม่ใช่ตัวเลข | `INPUT_INVALID` (กติกา v1) | 422 |
+
+## ลำดับใน `POST /v1/render` (v1.1)
+
+```python
+@router.post("/v1/render")
+async def render(request: Request, caller: RenderCaller) -> Response:
+    quota = await services(request).auth.consume_render_quota(caller)        # B2: before reading the body
+    if not quota.allowed:
+        raise AuthError("RATE_LIMITED", "too many renders for this API key; retry later",
+                        retry_after=quota.retry_after_s)                     # -> 429 + Retry-After
+    body = await read_render_body(request)                                   # Decimal parse, 413 as before
+    outcome = await services(request).renders.render(..., caller=caller, ...) # 403 / 410 from render-service
+    ...
+```
+
+## Testing Strategy v1.1
+
+- **contract:** 47 operation มี route ครบและไม่มีเกิน; response ใหม่ผ่าน schema (`TemplateSummary` ที่มี `archivedAt`, `ApiKey` ที่มี limit, ผลของ import)
+- **export/import ผ่าน HTTP:** export draft → import เป็น id ใหม่ → `GET draft` ไฟล์และ asset ตรงกัน; import ทับด้วย `If-Match` ถูก → 200 `created: false`; ไม่มี `If-Match` → 409; `If-Match` ผิด → 412; zip 25.5 MB ผ่าน `BodyLimit` แต่ template-store ปฏิเสธ → 413; zip 27 MB ถูกตัดที่ `BodyLimit` → 413; route อื่นที่ส่ง 11 MB ยังได้ 413 เหมือนเดิม
+- **archive:** archive แล้ว `PUT …/files/x` → 409 `TEMPLATE_ARCHIVED`; `POST /v1/render` → 410; `GET /v1/templates` ไม่เห็น, `?includeArchived=true` เห็นพร้อม `archivedAt`; unarchive แล้วกลับมาครบ
+- **duplicate:** 201 พร้อม draft revision 1; id ซ้ำ → 409
+- **ตั้งรหัสผ่าน:** 204 แล้วเจ้าของบัญชี login ด้วยรหัสใหม่ได้ และ session เดิมของเขาได้ 401; ตั้งให้ตัวเอง → 422; API key เรียก → 401
+- **API key แบบจำกัด:** สร้างด้วย `templates: ["a"]` แล้ว render `b` → 403 `TEMPLATE_NOT_ALLOWED`; `expiresAt` ในอดีต → 422; key หมดอายุ (นาฬิกาจำลอง) → 401
+- **rate limit:** key ที่ `rateLimitPerMinute: 2` → request ที่ 3 ได้ 429 พร้อม `Retry-After` 1–60 และไม่มี run ใหม่; body ที่ใหญ่เกินของ request ที่เกินโควตาไม่ถูกอ่าน (ได้ 429 ไม่ใช่ 413); key ที่ไม่ตั้งไม่ถูกจำกัด
+- **flow ครบ (db + engine จำลอง):** สร้างจาก starter `tax-invoice` → validate ผ่าน → publish → render ด้วย key ที่จำกัดรายงานนี้ → ได้ PDF
+- coverage ≥ 90%
+
+## Boundaries v1.1
+
+- **Always:** แก้ contract ก่อน route; rate limit ก่อนอ่าน body; ขีดจำกัดขนาดพิเศษเฉพาะ route import
+- **Ask first:** ให้ API key ใช้ export/import (เช่นสำหรับ CI ของทีม), เพิ่มขีดจำกัดขนาดของ route อื่น
+- **Never:** บอกผู้ถือ key ว่ารายงานที่ไม่มีสิทธิ์มีอยู่หรือไม่, ใส่รายละเอียดของโควตาคนอื่นใน error
+
+## Success Criteria v1.1
+
+1. ทุก operation ใหม่และที่เปลี่ยนตรง contract และผ่าน test contract
+2. ย้ายรายงานระหว่างสองเครื่องได้ด้วย `curl` สองคำสั่ง (export แล้ว import)
+3. key ที่จำกัดรายงาน/หมดอายุ/เกินโควตาได้ 403/401/429 ตามตาราง และ key เดิมทำงานเหมือนเดิม
+4. coverage ≥ 90%, `ruff` สะอาด
+
+## Open Questions v1.1
+
+ไม่มี

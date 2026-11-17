@@ -198,3 +198,89 @@ def _eval(node: Node | Cond, env: Env) -> Decimal | bool:
 ## Out of scope
 
 formatter ภาษาอังกฤษ, master list ของกลุ่ม (แสดงกลุ่มว่าง), การแปลง float แบบเงียบ ๆ, เวลาปัจจุบันใน module, page subtotal
+
+---
+
+# v1.1: Foundations (C1 — QR, barcode, PromptPay)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.1 · ใช้โดย: starter `tax-invoice` ([SPEC-template-store.md](SPEC-template-store.md) หัวข้อ v1.1 ข้อ C2)
+หัวข้อ v1 ด้านบนยังใช้ทั้งหมด; ส่วนนี้เพิ่ม formatter 3 ตัวใน `fmt` และ dependency 2 ตัว
+
+## สมมติฐาน v1.1
+
+1. **engine ไม่รัน JavaScript** จึงต้องสร้างภาพ QR/barcode ฝั่ง server เป็น SVG แบบ inline ใน HTML (ไม่ใช่ไฟล์ asset) — ไม่มีการอ่านเขียนดิสก์หรือ object storage
+2. **dependency ใหม่ (ผู้ใช้อนุมัติ 17 พ.ย. 2026):** ตรวจบน PyPI 18 พ.ย. 2026
+   - `segno==1.6.6` — BSD, ออก 12 มี.ค. 2025, ไม่มี dependency บน Python ≥3.10
+   - `python-barcode==0.16.1` — MIT, ออก 27 ส.ค. 2025, ไม่มี dependency (Pillow เป็น extra ที่ไม่ใช้)
+3. **ผลลัพธ์เป็น `markupsafe.Markup`** ที่มีแต่ element `<svg>` เดียว — ไม่มี `<?xml …?>`, `<!DOCTYPE>`, `<script>`, `href`/`xlink:href` หรือข้อความจาก data; data ถูกเข้ารหัสเป็นรูปร่างเท่านั้น จึงไม่มีช่องให้ data แทรก markup
+4. **barcode ไม่พิมพ์ตัวอักษรใต้แท่ง** (`write_text=False`): ฟอนต์ใน SVG จะไม่ตรงกับฟอนต์ไทยของเอกสาร ผู้เขียน template พิมพ์ค่าเองด้วย HTML ปกติ
+5. **ผลคงที่:** input เดียวกันได้ SVG เดียวกันทุก byte (ไม่มี id สุ่มหรือ timestamp) เพื่อให้ hash ของ PDF ใน run เทียบกันได้
+6. **PromptPay** สร้าง payload ตามมาตรฐาน Thai QR Payment (EMVCo Merchant-Presented) แบบ static/dynamic ที่ผมรู้ — **ต้องสแกนจ่ายจริงด้วยแอปธนาคารอย่างน้อย 2 แอปก่อนปล่อย** (สมมติฐานใน one-pager)
+
+## Interface ที่เพิ่มใน `fmt`
+
+```python
+def qr(text: str, size_mm: int = 30, error: Literal["L", "M", "Q", "H"] = "M") -> Markup
+def barcode(text: str, kind: Literal["code128", "ean13"] = "code128",
+            height_mm: int = 12, module_mm: Decimal = Decimal("0.3")) -> Markup
+def promptpay(target: str, amount: Any = None) -> str      # payload สำหรับส่งต่อให้ fmt.qr
+```
+
+ตัวอย่างใน template:
+
+```html
+<div class="pay">{{ fmt.qr(fmt.promptpay(data.promptpay, totals.grand), size_mm=28) }}</div>
+<div>{{ fmt.barcode(params.invoiceNo) }}<br>{{ params.invoiceNo }}</div>
+```
+
+## กติกา
+
+| ฟังก์ชัน | ข้อกำหนด | ผิดกติกา |
+| --- | --- | --- |
+| `qr` | `text` เป็น str 1–1,000 ตัวอักษร; `size_mm` 10–100; quiet zone 4 module ตามมาตรฐาน; SVG มี `width`/`height` เป็น mm และ `viewBox` | `ValueError` ("QR text must be 1-1000 characters", …) |
+| `barcode` code128 | ASCII ที่พิมพ์ได้ 1–80 ตัว; `height_mm` 5–50; `module_mm` 0.2–1 | `ValueError` |
+| `barcode` ean13 | ตัวเลข 12 หลัก (เติม check digit ให้) หรือ 13 หลักที่ check digit ถูก | `ValueError` ("EAN-13 needs 12 digits or 13 with a valid check digit") |
+| `promptpay` target | เบอร์มือถือ 10 หลักขึ้นต้น `0` → tag 01 รูปแบบ `0066` + 9 หลัก; เลขประจำตัวผู้เสียภาษี/บัตรประชาชน 13 หลัก → tag 02; e-Wallet 15 หลัก → tag 03; ตัดขีดและช่องว่างให้ก่อน | `ValueError` ("PromptPay target must be a 10-digit phone, 13-digit tax ID or 15-digit e-wallet ID") |
+| `promptpay` amount | `None` → QR แบบ static (tag 01 = `11`, ไม่มี tag 54); ไม่งั้นแปลงด้วย `Decimal` (เหมือน `fmt.money`), ต้อง > 0, ปัดตามกติกาการปัดของ module เป็น 2 ตำแหน่ง, ยาวไม่เกิน 13 ตัวอักษร → แบบ dynamic (tag 01 = `12`, tag 54) | `ValueError` |
+| `promptpay` payload | tag 00 `01`, 29 (AID `A000000677010111` + target), 53 `764`, 58 `TH`, 63 = CRC-16/CCITT-FALSE (poly 0x1021, init 0xFFFF) ของทั้ง payload รวม `6304` เป็น hex ตัวใหญ่ 4 หลัก | — |
+
+ข้อความของ `ValueError` ไม่มีค่าจาก data (binder แสดงเป็น `TEMPLATE_ERROR` พร้อมบรรทัดตามกติกา v1)
+
+## Tech Stack v1.1
+
+เพิ่ม `segno==1.6.6`, `python-barcode==0.16.1` ใน `apps/api/pyproject.toml` (pin ตรงรุ่นและล็อกใน `uv.lock`); `markupsafe` มากับ Jinja2 อยู่แล้ว
+
+## Project Structure v1.1
+
+```
+apps/api/src/jester_api/data_prep/
+  codes.py          → qr, barcode, promptpay, crc16 — ใหม่
+  prepare.py        → ใส่สามฟังก์ชันลงใน fmt
+apps/api/tests/data_prep/test_codes.py — ใหม่
+```
+
+## Testing Strategy v1.1
+
+- **PromptPay:** payload ของเบอร์มือถือ, เลขภาษี, e-Wallet ทั้งแบบมีและไม่มียอด เทียบกับ test vector ที่บันทึกจาก implementation อ้างอิงที่ใช้กันแพร่หลาย (ระบุที่มาใน test); CRC ของ payload ตรงกับการคำนวณ CRC-16/CCITT-FALSE ของ vector มาตรฐาน `"123456789"` → `29B1`
+- **QR:** ถอดรหัสกลับได้ข้อความเดิม (ใช้ matrix จาก `segno` เทียบ หรือ decoder ใน dev ถ้ามี); ข้อความที่มี `</svg><script>` ได้ SVG ที่ไม่มีคำนั้น; เรียกสองครั้งได้ bytes เดียวกัน
+- **barcode:** code128 และ ean13 ได้ SVG ที่มีแต่ `<svg>`/`<rect>`/`<g>`; ean13 check digit ผิด → `ValueError`; ไม่มี `<text>` ในผล
+- **ทุกขอบในตารางกติกา** มี test (ความยาว, ขนาด, target ผิดรูปแบบ, ยอด 0 / ติดลบ / 14 ตัวอักษร)
+- **ผ่าน binder จริง:** template ที่ใช้ทั้งสามฟังก์ชัน bind แล้ว `check_resources` ไม่มี problem (test อยู่ใน binder)
+- **สแกนจริง (manual, ก่อนปล่อย C2):** QR PromptPay จาก PDF ที่ render ผ่าน engine สแกนด้วยแอปธนาคาร 2 แอปแล้วเห็นผู้รับและยอดถูก; barcode อ่านด้วยแอปสแกนทั่วไปได้
+- coverage ของ `data_prep` ≥ 90% (เท่าเดิม)
+
+## Boundaries v1.1
+
+- **Always:** คืน `Markup` เฉพาะ SVG ที่ module นี้สร้างเอง; ข้อความ error ไม่มีค่าจาก data; ผลคงที่ต่อ input
+- **Ask first:** เพิ่มชนิด barcode อื่น, ใส่ตัวอักษรใน SVG, QR ที่มีโลโก้ตรงกลาง
+- **Never:** คืน `Markup` ที่ประกอบจากข้อความของ data, เรียก network หรือเขียนไฟล์, ใช้ Pillow สร้างภาพ raster
+
+## Success Criteria v1.1
+
+1. `fmt.qr`, `fmt.barcode`, `fmt.promptpay` ใช้ใน template ได้ และ PDF ที่ได้สแกนจ่าย PromptPay ได้จริง
+2. ไม่มีทางที่ data จะกลายเป็น markup ผ่านสามฟังก์ชันนี้ (มี test)
+3. test ทุกกติกาผ่าน, coverage ≥ 90%, `ruff` สะอาด
+
+## Open Questions v1.1
+
+ไม่มี
