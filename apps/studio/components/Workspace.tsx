@@ -14,6 +14,7 @@ import {
   validateDraft,
 } from "@/lib/actions/draft";
 import { publishDraft, resetDraft } from "@/lib/actions/versions";
+import type { Snapshot } from "@/lib/diff";
 import { problemMessage } from "@/lib/messages";
 import { clampSizes, DEFAULT_SIZES, type PaneSizes, readSizes } from "@/lib/panes";
 import { defaultParams, parseParams } from "@/lib/params";
@@ -162,6 +163,12 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
       } else failed(result.problem, problemMessage(result.problem))(s);
     });
   }
+
+  // the draft as the editor holds it now, saved or not
+  const typed = (): Snapshot => ({
+    files: state.files.map((f) => ({ name: f.name, content: editor.current?.content(f.name) ?? f.content })),
+    assets: state.assets,
+  });
 
   const reset = (version: number) =>
     exclusive(async () => {
@@ -494,7 +501,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
             {state.tab === "versions" && (
               <VersionsPanel
                 key={state.lastPublished ?? 0}
-                templateId={state.templateId} busy={state.saving || state.conflict} onReset={reset} />
+                templateId={state.templateId} busy={state.saving || state.conflict} onReset={reset} draft={typed} />
             )}
           </div>
         </section>

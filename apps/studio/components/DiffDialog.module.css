@@ -1,0 +1,85 @@
+.dialog {
+  width: min(1100px, calc(100vw - 32px));
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) 1fr;
+  gap: calc(var(--sp) * 1.5);
+  min-height: 0;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 60vh;
+  overflow: auto;
+}
+
+.list button {
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  padding: 3px 6px;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.list button:disabled {
+  cursor: default;
+}
+
+.list button[aria-current="true"] {
+  background: var(--color-surfaceAlt);
+  font-weight: 600;
+}
+
+.added,
+.removed,
+.changed {
+  display: inline-block;
+  min-width: 2.2em;
+  font-size: 0.8em;
+  font-weight: 600;
+}
+
+.added {
+  color: var(--color-success);
+}
+
+.removed {
+  color: var(--color-danger);
+}
+
+.changed {
+  color: var(--color-warning);
+}
+
+.view {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  font-size: 0.85em;
+}
+
+.same {
+  margin: 0;
+  color: var(--color-textMuted);
+}
+
+.error {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+@media (max-width: 640px) {
+  .body {
+    grid-template-columns: 1fr;
+  }
+}

@@ -41,7 +41,7 @@ const jinjaHighlight = ViewPlugin.define((view) => ({ decorations: jinja.createD
   this.decorations = jinja.updateDeco(u, this.decorations);
 } }), { decorations: (v) => v.decorations });
 
-const language = (name: string): Extension =>
+export const language = (name: string): Extension =>
   name.endsWith(".json") ? json() : name.endsWith(".css") ? css() : [html(), jinjaHighlight];
 
 export function Editor({ files, active, generation, problems, onDirty, onSave, ref }: Props) {

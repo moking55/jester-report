@@ -2,6 +2,7 @@
 
 import { api } from "@/lib/api";
 import { attempt, draftPath } from "@/lib/result";
+import type { Snapshot } from "@/lib/diff";
 import type { Result, Version } from "@/lib/workspace";
 
 const templatePath = (templateId: string) => draftPath(templateId).replace(/\/draft$/, ""); // checks the id
@@ -26,4 +27,10 @@ export async function resetDraft(templateId: string, version: number, revision: 
   return attempt(() =>
     api<{ revision: number }>(`${draftPath(templateId)}/reset`, { method: "POST", body: { version }, ifMatch: revision }),
   );
+}
+
+/** A published version with its files and assets, for comparing before a rollback or reset. */
+export async function getVersion(templateId: string, version: number): Promise<Result<Snapshot>> {
+  if (!Number.isInteger(version) || version < 1) throw new Error("invalid version");
+  return attempt(() => api<Snapshot>(`${templatePath(templateId)}/versions/${version}`));
 }

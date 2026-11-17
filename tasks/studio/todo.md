@@ -201,9 +201,9 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 ### U4a: diff ในแท็บ Versions
 
-- [ ] `lib/diff.ts` เทียบไฟล์สองชุด คืน เพิ่ม/ลบ/แก้/เหมือน (asset เทียบ `sha256`) + Vitest
-- [ ] dialog แสดงรายชื่อไฟล์ที่ต่างและ diff ของไฟล์ที่เลือกด้วย `@codemirror/merge`
-- [ ] "ตั้งเป็น published" เปิด dialog vN เทียบ published; "reset draft" เปิด dialog draft เทียบ vN; ยืนยันใน dialog แทน `confirm()`
+- [x] `lib/diff.ts` เทียบไฟล์สองชุด คืน เพิ่ม/ลบ/แก้/เหมือน (asset เทียบ `sha256`) + Vitest
+- [x] dialog แสดงรายชื่อไฟล์ที่ต่างและ diff ของไฟล์ที่เลือกด้วย `@codemirror/merge`
+- [x] "ตั้งเป็น published" เปิด dialog vN เทียบ published; "reset draft" เปิด dialog draft เทียบ vN; ยืนยันใน dialog แทน `confirm()`
 
 **Verification:** test ใหม่ของ `lib/diff.ts`; lint/typecheck/test/build; ในเบราว์เซอร์สร้าง v1, v2 ที่ต่างกันแล้วดู diff ทั้งสองทาง
 **Files:** `lib/diff.ts` + test, `components/DiffDialog.tsx` + CSS, `components/VersionsPanel.tsx`, `lib/actions/versions.ts` (`getVersion`), `package.json` · **Scope:** M
