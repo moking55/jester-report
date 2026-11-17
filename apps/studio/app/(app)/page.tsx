@@ -2,7 +2,9 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 
 import { CreateTemplate } from "@/components/CreateTemplate";
+import { ImportDialog } from "@/components/ImportDialog";
 import { NewTemplateCard } from "@/components/NewTemplateCard";
+import { TemplateMenu } from "@/components/TemplateMenu";
 import { ViewToggle } from "@/components/ViewToggle";
 import { api } from "@/lib/api";
 import { when } from "@/lib/format";
@@ -32,18 +34,35 @@ function LastRun({ run }: { run: TemplateSummary["lastRun"] }) {
   );
 }
 
-export default async function CatalogPage() {
-  const templates = await api<TemplateSummary[]>("/v1/templates");
+function Archived({ t }: { t: TemplateSummary }) {
+  return t.archivedAt ? (
+    <span className={`${styles.pill} ${styles.none}`}>archive แล้ว</span>
+  ) : null;
+}
+
+export default async function CatalogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ archived?: string }>;
+}) {
+  const withArchived = (await searchParams).archived === "1";
+  const templates = await api<TemplateSummary[]>(
+    withArchived ? "/v1/templates?includeArchived=true" : "/v1/templates",
+  );
   const view =
     (await cookies()).get(VIEW_COOKIE)?.value === "cards" ? "cards" : "table";
   return (
     <section className={styles.page}>
       <div className={styles.heading}>
         <h1>รายงาน</h1>
+        <ImportDialog />
         <ViewToggle view={view} />
       </div>
       <p className={styles.sub}>
-        {templates.length} รายงาน · เปิดเพื่อแก้ template ดูตัวอย่าง PDF และ publish
+        {templates.length} รายงาน · เปิดเพื่อแก้ template ดูตัวอย่าง PDF และ publish ·{" "}
+        <Link href={withArchived ? "/" : "/?archived=1"}>
+          {withArchived ? "ซ่อนที่ archive" : "แสดงที่ archive"}
+        </Link>
       </p>
       {view === "table" ? (
         <Table templates={templates} />
@@ -70,13 +89,14 @@ function Table({ templates }: { templates: TemplateSummary[] }) {
               <th>Draft</th>
               <th>Render ล่าสุด</th>
               <th>แก้ล่าสุด</th>
+              <th aria-label="เมนู" />
             </tr>
           </thead>
           <tbody>
             {templates.map((t) => (
               <tr key={t.id}>
                 <td>
-                  <Link href={`/templates/${t.id}`}>{t.name}</Link>
+                  <Link href={`/templates/${t.id}`}>{t.name}</Link> <Archived t={t} />
                 </td>
                 <td>
                   <code>{t.id}</code>
@@ -94,6 +114,9 @@ function Table({ templates }: { templates: TemplateSummary[] }) {
                   <LastRun run={t.lastRun} />
                 </td>
                 <td>{when(t.updatedAt)}</td>
+                <td>
+                  <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -123,6 +146,7 @@ function Cards({ templates }: { templates: TemplateSummary[] }) {
             </span>
           </div>
           <div className={styles.pills}>
+            <Archived t={t} />
             <LastRun run={t.lastRun} />
             {t.draftChangedSincePublish && (
               <span className={`${styles.pill} ${styles.warn}`}>
@@ -138,6 +162,7 @@ function Cards({ templates }: { templates: TemplateSummary[] }) {
             <Link href={`/templates/${t.id}`} className={styles.open}>
               เปิด
             </Link>
+            <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} />
           </div>
         </article>
       ))}

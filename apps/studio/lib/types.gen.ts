@@ -225,6 +225,30 @@ export interface paths {
         patch: operations["renameTemplate"];
         trace?: never;
     };
+    "/v1/templates/{templateId}/archived": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Archive or restore a template
+         * @description An archived template keeps its draft and versions and can still be read, exported and
+         *     duplicated, but cannot be changed (409 `TEMPLATE_ARCHIVED`) or rendered (410). Repeating
+         *     the current state changes nothing.
+         */
+        put: operations["setTemplateArchived"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/templates/{templateId}/draft": {
         parameters: {
             query?: never;
@@ -633,7 +657,7 @@ export interface components {
         /** @description Basename only; must not collide with text files or index/header/footer.html */
         AssetName: string;
         /** @enum {string} */
-        ErrorCode: "INPUT_INVALID" | "UNAUTHORIZED" | "NOT_FOUND" | "CONFLICT" | "REVISION_CONFLICT" | "REVISION_REQUIRED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "SETUP_COMPLETED" | "SETUP_TOKEN_INVALID" | "DRAFT_INVALID" | "FONT_MISSING" | "RENDER_INPUT_INVALID" | "RENDER_RESOURCE_FAILED" | "RENDER_FAILED" | "RENDER_TIMEOUT" | "SERVICE_UNAVAILABLE" | "ENGINE_MISCONFIGURED" | "INTERNAL_ERROR";
+        ErrorCode: "INPUT_INVALID" | "UNAUTHORIZED" | "NOT_FOUND" | "CONFLICT" | "REVISION_CONFLICT" | "REVISION_REQUIRED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "SETUP_COMPLETED" | "SETUP_TOKEN_INVALID" | "DRAFT_INVALID" | "FONT_MISSING" | "RENDER_INPUT_INVALID" | "RENDER_RESOURCE_FAILED" | "RENDER_FAILED" | "RENDER_TIMEOUT" | "SERVICE_UNAVAILABLE" | "ENGINE_MISCONFIGURED" | "INTERNAL_ERROR" | "TEMPLATE_ARCHIVED";
         /** @description RFC 9457 problem details plus Jester fields */
         Problem: {
             /**
@@ -734,6 +758,12 @@ export interface components {
             lastRun?: components["schemas"]["RunSummary"] | null;
             /** Format: date-time */
             updatedAt: string;
+            /**
+             * Format: date-time
+             * @description null while active
+             */
+            archivedAt?: string | null;
+            archivedBy?: string | null;
         };
         TextFile: {
             name: components["schemas"]["TextFileName"];
@@ -991,6 +1021,24 @@ export interface components {
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
+        /** @description `TEMPLATE_ARCHIVED`: the template is archived; unarchive it to change it */
+        TemplateArchived: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description `TEMPLATE_ARCHIVED`: the template is archived and cannot be rendered */
+        TemplateGone: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
     };
     parameters: {
         TemplateId: components["schemas"]["TemplateId"];
@@ -1074,6 +1122,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["TemplateGone"];
             413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["InputInvalid"];
             502: components["responses"]["RenderFailed"];
@@ -1429,7 +1478,10 @@ export interface operations {
     };
     listTemplates: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Also list archived templates */
+                includeArchived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1543,6 +1595,38 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["TemplateArchived"];
+        };
+    };
+    setTemplateArchived: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    archived: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Template after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["InputInvalid"];
         };
     };
     getDraft: {
@@ -1599,6 +1683,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["TemplateArchived"];
             412: components["responses"]["RevisionConflict"];
             413: components["responses"]["PayloadTooLarge"];
             428: components["responses"]["RevisionRequired"];
@@ -1630,7 +1715,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
-            /** @description Required file */
+            /** @description Required file, or the template is archived (`TEMPLATE_ARCHIVED`) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1678,7 +1763,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
-            /** @description An asset with this name already exists in the draft */
+            /** @description An asset with this name already exists in the draft, or the template is archived (`TEMPLATE_ARCHIVED`) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -1759,6 +1844,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["TemplateArchived"];
             412: components["responses"]["RevisionConflict"];
             428: components["responses"]["RevisionRequired"];
         };
@@ -1785,6 +1871,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["TemplateGone"];
         };
     };
     previewDraft: {
@@ -1820,6 +1907,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["TemplateGone"];
             422: components["responses"]["InputInvalid"];
             502: components["responses"]["RenderFailed"];
             503: components["responses"]["ServiceUnavailable"];
@@ -1858,6 +1946,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["TemplateGone"];
             422: components["responses"]["InputInvalid"];
             502: components["responses"]["RenderFailed"];
             503: components["responses"]["ServiceUnavailable"];
@@ -1919,6 +2008,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["TemplateArchived"];
             412: components["responses"]["RevisionConflict"];
             /** @description Draft does not validate */
             422: {
@@ -1988,6 +2078,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["TemplateArchived"];
         };
     };
     resetDraftFromVersion: {
@@ -2021,6 +2112,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["TemplateArchived"];
             412: components["responses"]["RevisionConflict"];
             428: components["responses"]["RevisionRequired"];
         };

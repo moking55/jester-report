@@ -13,6 +13,7 @@ import {
   saveFile,
   validateDraft,
 } from "@/lib/actions/draft";
+import { setArchived } from "@/lib/actions/templates";
 import { getVersion, listVersions, publishDraft, resetDraft } from "@/lib/actions/versions";
 import { EMPTY, type Snapshot } from "@/lib/diff";
 import { problemMessage } from "@/lib/messages";
@@ -44,6 +45,7 @@ import { ProblemList } from "./ProblemList";
 import { Resizer } from "./Resizer";
 import { RenderDialog } from "./RenderDialog";
 import { RunDetails } from "./RunDetails";
+import { TemplateMenu } from "./TemplateMenu";
 import { VersionsPanel } from "./VersionsPanel";
 import styles from "./Workspace.module.css";
 
@@ -56,7 +58,17 @@ const TABS = [
   ["versions", "Versions"],
 ] as const;
 
-export function Workspace({ draft, name, today }: { draft: Draft; name: string; today: string }) {
+export function Workspace({
+  draft,
+  name,
+  today,
+  archived = false,
+}: {
+  draft: Draft;
+  name: string;
+  today: string;
+  archived?: boolean;
+}) {
   const [state, update] = useImmer(() =>
     initialState(draft, defaultParams(draft.files.find((f) => f.name === "report.json")?.content, today)),
   );
@@ -295,6 +307,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
   }
 
   const unsaved = state.dirty.length > 0;
+  const locked = state.saving || state.conflict || archived; // no writes, previews or renders
   return (
     <div className={styles.workspace}>
       {renderData !== null && (
@@ -327,22 +340,35 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
         <code>{state.templateId}</code>
         <span className={styles.revision}>draft r{state.revision}</span>
         <span className={styles.spacer} />
+        <TemplateMenu templateId={state.templateId} archived={archived} />
         <span role="status" className={styles.saveState}>
           {state.saving ? "กำลังบันทึก…" : unsaved ? `ยังไม่บันทึก ${state.dirty.length} ไฟล์` : "บันทึกแล้ว"}
         </span>
-        <button type="button" className={styles.secondary} onClick={saveAll} disabled={!unsaved || state.saving || state.conflict}>
+        <button type="button" className={styles.secondary} onClick={saveAll} disabled={!unsaved || locked}>
           บันทึก (Ctrl+S)
         </button>
-        <button type="button" className={styles.secondary} onClick={preview} disabled={state.saving || state.conflict}>
+        <button type="button" className={styles.secondary} onClick={preview} disabled={locked}>
           Preview
         </button>
-        <button type="button" className={styles.publish} onClick={() => setPublishing(true)} disabled={state.saving || state.conflict}>
+        <button type="button" className={styles.publish} onClick={() => setPublishing(true)} disabled={locked}>
           Publish
         </button>
-        <button type="button" onClick={() => setRenderData(editor.current?.content("sample.json") ?? "{}")}>
+        <button
+          type="button"
+          onClick={() => setRenderData(editor.current?.content("sample.json") ?? "{}")}
+          disabled={archived}
+        >
           Render…
         </button>
       </div>
+      {archived && (
+        <div role="status" className={styles.conflict}>
+          รายงานนี้ถูก archive แล้ว อ่านได้อย่างเดียว แก้ไข Preview และ Render ไม่ได้จนกว่าจะเลิก archive
+          <form action={setArchived.bind(null, state.templateId, false)}>
+            <button type="submit">เลิก archive</button>
+          </form>
+        </div>
+      )}
       {state.conflict && (
         <div role="alert" className={styles.conflict}>
           มีคนแก้ draft นี้แล้ว การแก้ของคุณยังไม่ถูกบันทึกและไม่ได้เขียนทับของเขา
@@ -372,7 +398,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
           assets={state.assets}
           active={state.active}
           dirty={state.dirty}
-          busy={state.saving || state.conflict}
+          busy={locked}
           onOpen={(file) => {
             setAssetPreview(null);
             update((s) => {
@@ -421,6 +447,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
             problems={state.problems}
             onDirty={(file, dirty) => update(setDirty(file, dirty))}
             onSave={saveAll}
+            readOnly={archived}
           />
         </section>
         <Resizer
@@ -508,7 +535,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
             ))}
             <span className={styles.spacer} />
             {state.tab === "prepared" && (
-              <button type="button" onClick={prepare} disabled={state.saving || state.conflict}>
+              <button type="button" onClick={prepare} disabled={locked}>
                 คำนวณใหม่
               </button>
             )}
@@ -530,7 +557,7 @@ export function Workspace({ draft, name, today }: { draft: Draft; name: string; 
             {state.tab === "versions" && (
               <VersionsPanel
                 key={state.lastPublished ?? 0}
-                templateId={state.templateId} busy={state.saving || state.conflict} onReset={reset} draft={typed} />
+                templateId={state.templateId} busy={locked} onReset={reset} draft={typed} />
             )}
           </div>
         </section>

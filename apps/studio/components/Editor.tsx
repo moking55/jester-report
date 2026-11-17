@@ -29,6 +29,7 @@ type Props = {
   problems: ValidationProblem[];
   onDirty: (name: string, dirty: boolean) => void;
   onSave: () => void;
+  readOnly?: boolean; // an archived template: read, select and copy, but no edits
   ref?: Ref<EditorHandle>;
 };
 
@@ -44,7 +45,7 @@ const jinjaHighlight = ViewPlugin.define((view) => ({ decorations: jinja.createD
 export const language = (name: string): Extension =>
   name.endsWith(".json") ? json() : name.endsWith(".css") ? css() : [html(), jinjaHighlight];
 
-export function Editor({ files, active, generation, problems, onDirty, onSave, ref }: Props) {
+export function Editor({ files, active, generation, problems, onDirty, onSave, readOnly = false, ref }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const states = useRef(new Map<string, EditorState>()); // one per file, so switching keeps edits and undo
@@ -62,6 +63,7 @@ export function Editor({ files, active, generation, problems, onDirty, onSave, r
         basicSetup,
         lintGutter(),
         language(name),
+        EditorState.readOnly.of(readOnly),
         keymap.of([{ key: "Mod-s", preventDefault: true, run: () => (callbacks.current.onSave(), true) }]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !dirty.current.has(name)) {

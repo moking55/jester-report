@@ -23,5 +23,9 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
   }
   // today in Thailand, computed once here so server and browser render the same params box
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
-  return <Workspace draft={draft} name={template.name} today={today} />;
+  const archived = Boolean(template.archivedAt);
+  // a new key when the archive state flips: the editors are made read-only (or editable) from scratch
+  return (
+    <Workspace key={String(archived)} draft={draft} name={template.name} today={today} archived={archived} />
+  );
 }

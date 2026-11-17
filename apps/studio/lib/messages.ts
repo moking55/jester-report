@@ -10,6 +10,7 @@ const BY_CODE: Record<string, string> = {
   DRAFT_INVALID: "draft ยังมีปัญหา แก้ตามรายการแล้วลองใหม่",
   RENDER_TIMEOUT: "สร้าง PDF นานเกินกำหนด",
   INTERNAL_ERROR: "เกิดข้อผิดพลาดที่ server ดูรายละเอียดใน log ของ api",
+  TEMPLATE_ARCHIVED: "รายงานนี้ถูก archive แล้ว เลิก archive ก่อนจึงจะแก้ไขหรือ render ได้",
 };
 
 const FIELD: Record<string, string> = {

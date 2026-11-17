@@ -9,6 +9,7 @@ import { problemMessage } from "@/lib/messages";
 import type { Version } from "@/lib/workspace";
 
 import { DiffDialog } from "./DiffDialog";
+import { DuplicateDialog } from "./DuplicateDialog";
 import styles from "./VersionsPanel.module.css";
 
 const when = (iso: string) =>
@@ -107,7 +108,7 @@ export function VersionsPanel({ templateId, busy, onReset, draft }: Props) {
               <td className={styles.note}>{v.note}</td>
               <td className={styles.actions}>
                 {!v.isPublished && (
-                  <button type="button" disabled={state.working} onClick={() => setAsking({ action: "alias", version: v.version })}>
+                  <button type="button" disabled={state.working || busy} onClick={() => setAsking({ action: "alias", version: v.version })}>
                     ตั้งเป็น published
                   </button>
                 )}
@@ -118,6 +119,10 @@ export function VersionsPanel({ templateId, busy, onReset, draft }: Props) {
                 >
                   reset draft จากเวอร์ชันนี้
                 </button>
+                <a href={`/export/${templateId}?version=${v.version}`} download>
+                  export
+                </a>
+                <DuplicateDialog templateId={templateId} version={v.version} label="ทำสำเนา" />
               </td>
             </tr>
           ))}

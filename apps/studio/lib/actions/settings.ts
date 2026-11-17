@@ -37,6 +37,17 @@ export async function deleteUser(id: string): Promise<string | null> {
   return null;
 }
 
+/** Someone else's password (they forgot it); their sessions end. Your own goes through changePassword. */
+export async function setUserPassword(_: FormState, form: FormData): Promise<FormState> {
+  const id = text(form, "userId");
+  const newPassword = text(form, "newPassword");
+  if (!UUID.test(id)) return { error: "id ผู้ใช้ไม่ถูกต้อง" };
+  if (newPassword !== text(form, "confirm")) return { error: "รหัสผ่านสองช่องไม่ตรงกัน" };
+  const result = await attempt(() => api(`/v1/users/${id}/password`, { method: "PUT", body: { newPassword } }));
+  if (!result.ok) return { error: problemMessage(result.problem) };
+  return { error: null, notice: "ตั้งรหัสผ่านใหม่แล้ว เซสชันเดิมของผู้ใช้นี้ถูกปิด" };
+}
+
 export type NewKey = { ok: true; id: string; name: string; secret: string } | { ok: false; error: string };
 
 /** The secret goes back to the one component that shows it; it is never stored, logged or put in a URL. */

@@ -8,6 +8,7 @@ import { when } from "@/lib/format";
 import type { components } from "@/lib/types.gen";
 
 import dialogStyles from "./RenderDialog.module.css";
+import { SetPasswordDialog } from "./SetPasswordDialog";
 import styles from "./Settings.module.css";
 
 type User = components["schemas"]["User"];
@@ -17,6 +18,7 @@ export function UsersPanel({ users, me }: { users: User[]; me: string }) {
   const [error, setError] = useState<string | null>(null);
   const [deleting, startTransition] = useTransition();
   const dialog = useRef<HTMLDialogElement>(null);
+  const [passwordFor, setPasswordFor] = useState<User | null>(null);
 
   useEffect(() => {
     if (state.notice) dialog.current?.close(); // added: the new row is already in the table
@@ -53,6 +55,11 @@ export function UsersPanel({ users, me }: { users: User[]; me: string }) {
                 <td>{when(user.createdAt)}</td>
                 <td>{when(user.lastLoginAt)}</td>
                 <td>
+                  {user.id !== me && (
+                    <button type="button" onClick={() => setPasswordFor(user)}>
+                      ตั้งรหัสผ่าน
+                    </button>
+                  )}{" "}
                   <button
                     type="button"
                     className={styles.danger}
@@ -76,6 +83,7 @@ export function UsersPanel({ users, me }: { users: User[]; me: string }) {
       </div>
 
       {/* outside .panel, whose button and input rules would override the dialog's */}
+      <SetPasswordDialog key={passwordFor?.id ?? "none"} user={passwordFor} onClose={() => setPasswordFor(null)} />
       <dialog ref={dialog} className={dialogStyles.dialog} aria-label="เพิ่มผู้ใช้">
         <form action={action} className={dialogStyles.form}>
           <div className={dialogStyles.head}>
