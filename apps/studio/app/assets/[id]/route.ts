@@ -4,7 +4,7 @@
 import { apiRaw, ApiProblem } from "@/lib/api";
 import { isTemplateId, sameOrigin } from "@/lib/result";
 
-const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|ttf|otf)$/;
+const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$/;
 
 const problem = (status: number, code: string, detail: string) =>
   Response.json({ type: "about:blank", title: code, status, code, detail, retryable: false }, { status });

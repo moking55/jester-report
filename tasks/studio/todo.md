@@ -191,12 +191,13 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 
 ### U3: upload รูป webp/avif/bmp (ยกเว้น gif)
 
-- [ ] api รับ webp, avif, bmp ตรวจจาก magic bytes; gif และไฟล์ปลอมนามสกุลยังตอบ `UNSUPPORTED_MEDIA_TYPE`
-- [ ] contract, `types.gen.ts`, Studio (ตรวจชื่อ, `accept`, ดูรูปใน Assets) รู้จักนามสกุลใหม่
-- [ ] preview PDF ที่ใช้รูป webp แสดงรูปจริง
+- [x] api รับ webp, avif, bmp ตรวจจาก magic bytes; gif และไฟล์ปลอมนามสกุลยังตอบ `UNSUPPORTED_MEDIA_TYPE`
+- [x] contract, `types.gen.ts`, Studio (ตรวจชื่อ, `accept`, ดูรูปใน Assets) รู้จักนามสกุลใหม่
+- [x] preview PDF ที่ใช้รูป webp แสดงรูปจริง
 
 **Verification:** `ruff check .`, `pytest -q` (test ใหม่: แต่ละชนิดผ่าน, gif ไม่ผ่าน, `.webp` ที่เป็น png ไม่ผ่าน); `npm run gen:api` แล้ว lint/typecheck/test/build; upload webp แล้ว preview บน VM
-**Files:** `template_store/assets.py`, `template_store/store.py`, `public-api.yaml`, tests, `lib/actions/draft.ts`, `components/FilePanel.tsx`, `lib/types.gen.ts`, `SPEC-template-store.md` · **Scope:** M
+**Files:** `template_store/assets.py`, `template_store/store.py`, `public-api.yaml`, tests, `lib/actions/draft.ts`, `components/FilePanel.tsx`, `app/assets/[id]/route.ts`, `lib/types.gen.ts`, `SPEC-template-store.md` · **Scope:** M
+- ผล 17 พ.ย. 2026: pytest 436 ผ่าน (97 ข้าม), ruff ผ่าน; upload `banner.webp` บน VM แล้ว Studio แสดงรูป 200×80 และ PDF preview มีรูปกว้าง 200 ฝังอยู่; gif ถูกปฏิเสธตั้งแต่ Studio (ชื่อไฟล์ไม่ผ่าน) และที่ api (test)
 
 ### U4a: diff ในแท็บ Versions
 
