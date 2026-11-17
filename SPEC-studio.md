@@ -19,14 +19,15 @@ Module id: `studio` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ขึ้�
    - `workspace`: ไฟล์ / editor / PDF preview / แท็บล่าง **Problems, Prepared data, Provenance, Versions** (ไม่มี Engine log — Gotenberg ไม่คืน log ต่อ request และ trace/options อยู่ใน Provenance แล้ว)
      - **ตรวจ draft อัตโนมัติ** ตอนเปิดและทุกครั้งที่ revision เปลี่ยน (บันทึก, เพิ่ม/ลบไฟล์หรือ asset, reset) — ไม่มีปุ่ม Validate; ตรวจเฉพาะสิ่งที่บันทึกแล้ว เพราะ api ตรวจจาก draft
      - ปุ่ม Preview, **Publish (สีเขียว)**, **Render… (สีหลัก)**; Render dialog พร้อมตัวอย่าง `curl` ปิดได้ด้วย × หรือปุ่มปิด; versions + rollback + reset
+     - **ดู diff ก่อนยืนยัน** (`@codemirror/merge` แบบ unified, อ่านอย่างเดียว; asset เทียบ sha256): Publish = draft ที่พิมพ์อยู่ (รวมที่ยังไม่บันทึก) เทียบ published พร้อมช่องโน้ต ปุ่มปิดเมื่อไม่มีอะไรเปลี่ยน; ตั้งเป็น published = vN เทียบ published; reset draft = draft เทียบ vN
      - ปุ่ม **"+ เพิ่มไฟล์"** เปิดเมนู: สร้างไฟล์ใหม่ (.html .css .json ว่าง) หรือ import ไฟล์ (ข้อความ → ไฟล์ draft, รูป/ฟอนต์ → asset)
      - กดรูปใน Assets (PNG/JPEG/SVG) → **ดูรูปทับ editor** พร้อมชนิด ขนาดไฟล์ และขนาด pixel; editor ยังอยู่ข้างใต้ งานที่ยังไม่บันทึกไม่หาย
      - **ลากเส้นแบ่งเพื่อปรับขนาด** ช่องไฟล์, preview และแท็บล่าง (ลูกศรบนคีย์บอร์ดได้, ดับเบิลคลิกคืนค่าเดิม) จำไว้ใน `localStorage` ของ browser; editor เล็กสุด 280×140
      - pane ชิดกันมีเส้นแบ่ง 1px ทุก theme ยกเว้น `classic` ที่เป็นกล่องแยกมีช่องว่างตาม mockup
      - ช่อง PDF preview ก่อนกด Preview ครั้งแรก: มาสคอต Jester สีจาง + "คลิก Preview เพื่อ render ตัวอย่าง PDF"
    - `api`: คู่มือสำหรับระบบอื่น — สร้าง API key, เรียก `POST /v1/render` (ตัวอย่าง `curl`), รูปแบบ error, รายงานที่ publish แล้ว และดาวน์โหลด contract (`/api/openapi.yaml` ผ่าน Studio)
-   - `history`: ประวัติ render + นโยบายเก็บ (แสดงจำนวนที่จะลบก่อนยืนยัน)
-   - `settings`: ผู้ใช้, API key (secret แสดงครั้งเดียว), เปลี่ยนรหัสผ่าน, **theme**
+   - `history`: ประวัติ render + ลิงก์ไปตั้งนโยบายเก็บ
+   - `settings`: ผู้ใช้ (เพิ่มด้วยปุ่ม "+ เพิ่มผู้ใช้" ที่เปิด dialog), API key (secret แสดงครั้งเดียว), เปลี่ยนรหัสผ่าน, **theme**, **ประวัติ Render** = นโยบายเก็บ (แสดงจำนวนที่จะลบก่อนยืนยัน)
 5. **Editor: CodeMirror 6 (ผู้ใช้ยืนยัน)** — HTML/CSS/JSON + เน้น `{{ }}`/`{% %}` ของ Jinja; problem จาก `ValidationProblem.line` แสดงเป็น gutter marker และขีดเส้นใต้บรรทัด
 6. **PDF preview:** Route Handler เรียก `draft/preview` แล้วส่ง PDF ให้ `<iframe>` (viewer ในตัวของ browser ไม่เพิ่ม pdf.js)
 7. **แก้ draft พร้อมกัน:** เก็บ revision ล่าสุดใน state; บันทึกส่ง `If-Match`; ได้ 412 → แจ้ง "มีคนแก้ draft นี้แล้ว" พร้อมปุ่มโหลดใหม่ (ไม่เขียนทับ)
@@ -124,7 +125,7 @@ apps/studio/
     (app)/page.tsx                → catalog
     (app)/templates/[id]/page.tsx → workspace
     (app)/history/page.tsx
-    (app)/settings/page.tsx       → ผู้ใช้, API key, รหัสผ่าน, theme
+    (app)/settings/page.tsx       → ผู้ใช้, API key, รหัสผ่าน, theme, นโยบายเก็บประวัติ
     (app)/api/page.tsx            → คู่มือ API สำหรับระบบอื่น; (app)/api/openapi.yaml/route.ts → ดาวน์โหลด contract
     preview/[id]/route.ts         → ส่ง PDF ให้ iframe
     assets/[id]/route.ts          → upload asset (POST) และอ่านรูปสำหรับ preview (GET)

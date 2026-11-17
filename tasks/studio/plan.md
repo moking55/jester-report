@@ -106,9 +106,9 @@ U1–U3 แยกกันอิสระ; U4b ใช้ dialog จาก U4a
 | เปลี่ยน contract (pattern ของ `AssetName`) — client ที่ตรวจชื่อไฟล์ด้วย pattern เก่าจะไม่รู้จักนามสกุลใหม่ | ต่ำ (ขยายอย่างเดียว ไม่ตัดของเดิม) | `gen:api` + CI ตรวจ `types.gen.ts`; ย้อนได้ด้วย revert commit |
 | avif ตรวจ magic ผิด (brand อื่นเช่น `mif1`) แล้วปฏิเสธไฟล์จริง | กลาง | test ด้วยไฟล์ avif จริงจาก encoder; ถ้าพบ brand อื่นค่อยเพิ่ม |
 | diff ของไฟล์ใหญ่ช้าใน browser | ต่ำ (ไฟล์ข้อความต่อ template จำกัดขนาดอยู่แล้ว) | โหลด version เมื่อเปิด dialog เท่านั้น |
-| bundle ของ workspace ใหญ่ขึ้นจาก `@codemirror/merge` | ต่ำ | `next/dynamic` โหลดเมื่อเปิด dialog |
+| bundle ของ workspace ใหญ่ขึ้นจาก `@codemirror/merge` | ต่ำ | ตอนทำจริงไม่ได้ใช้ `next/dynamic`: workspace โหลด CodeMirror อยู่แล้ว ส่วนที่เพิ่มเล็ก |
 
 ### Open questions
 
-- ชนิดรูปที่เพิ่ม webp/avif/bmp พอไหม หรือต้องการ ico ด้วย
-- ชื่อแท็บในตั้งค่า: "ประวัติ Render" หรือ "นโยบายเก็บ"
+- ชนิดรูปที่เพิ่ม webp/avif/bmp พอไหม หรือต้องการ ico ด้วย (ผู้ใช้อนุมัติแผนโดยไม่ระบุ จึงใช้ webp/avif/bmp)
+- ชื่อแท็บในตั้งค่า: ใช้ "ประวัติ Render" ตามค่าเริ่มต้นในแผน
