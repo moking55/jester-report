@@ -6,11 +6,11 @@ import { api } from "@/lib/api";
 import { attempt } from "@/lib/result";
 
 /** Keep runs for N days (form field `days`), or for ever when the field is empty. Reached only after the
- *  history page showed how many runs N days would delete. */
+ *  settings page showed how many runs N days would delete. */
 export async function setRetention(form: FormData): Promise<void> {
   const raw = String(form.get("days") ?? "").trim();
   const days = raw === "" ? null : Number(raw);
-  if (days !== null && !(Number.isInteger(days) && days >= 1 && days <= 36500)) redirect("/history?retention=invalid");
+  if (days !== null && !(Number.isInteger(days) && days >= 1 && days <= 36500)) redirect("/settings?tab=retention&retention=invalid");
   const result = await attempt(() => api("/v1/runs/retention", { method: "PUT", body: { days } }));
-  redirect(result.ok ? "/history?retention=saved" : "/history?retention=failed");
+  redirect(result.ok ? "/settings?tab=retention&retention=saved" : "/settings?tab=retention&retention=failed");
 }

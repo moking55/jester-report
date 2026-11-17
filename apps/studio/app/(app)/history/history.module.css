@@ -58,7 +58,7 @@
   cursor: pointer;
 }
 
-.page button:hover:not(.danger) {
+.page button:hover {
   background: var(--fill-button-hover);
 }
 
@@ -120,32 +120,4 @@
 
 .pager a {
   color: var(--color-primary);
-}
-
-.retention {
-  display: grid;
-  gap: calc(var(--sp) * 1.5);
-  padding: calc(var(--sp) * 2.5);
-  background: var(--fill-pane);
-  backdrop-filter: var(--blur-pane);
-  border: 1px solid var(--line-pane);
-  border-radius: var(--radius-pane);
-  box-shadow: var(--shadow-pane);
-}
-
-.retention p {
-  margin: 0;
-}
-
-.confirm {
-  padding: calc(var(--sp) * 1.5);
-  background: var(--tint-warning);
-  border-radius: var(--radius);
-}
-
-.page .danger {
-  border-color: var(--color-danger);
-  background: var(--color-danger);
-  color: var(--color-onPrimary);
-  font-weight: 600;
 }
