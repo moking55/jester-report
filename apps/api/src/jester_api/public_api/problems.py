@@ -33,6 +33,7 @@ STATUS = {
     "SETUP_TOKEN_INVALID": 403,
     "DRAFT_INVALID": 422,
     "INTERNAL_ERROR": 500,
+    "TEMPLATE_ARCHIVED": 409,  # a write to an archived template; render-service answers 410 itself
 }
 
 
@@ -83,7 +84,8 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(StoreError)
     async def _store(_: Request, exc: StoreError) -> JSONResponse:
-        return problem_response(exc.code, STATUS[exc.code], exc.message)
+        code = "TEMPLATE_ARCHIVED" if exc.code == "ARCHIVED" else exc.code
+        return problem_response(code, STATUS[code], exc.message)
 
     @app.exception_handler(AuthError)
     async def _auth(_: Request, exc: AuthError) -> JSONResponse:

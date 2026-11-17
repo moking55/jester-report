@@ -84,6 +84,7 @@ paths:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/TemplateGone' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
         '422': { $ref: '#/components/responses/InputInvalid' }
         '502': { $ref: '#/components/responses/RenderFailed' }
@@ -282,6 +283,32 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /v1/users/{userId}/password:
+    parameters:
+      - { name: userId, in: path, required: true, schema: { type: string, format: uuid } }
+    put:
+      tags: [users]
+      operationId: setUserPassword
+      summary: Set another user's password (they forgot it)
+      description: |
+        Every session of that user is revoked. Your own password is changed with `changePassword`
+        (it needs the current one); sending your own id here is a 422.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPassword]
+              additionalProperties: false
+              properties:
+                newPassword: { $ref: '#/components/schemas/Password' }
+      responses:
+        '204': { description: Password set; that user's sessions are revoked }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
   /v1/api-keys:
     get:
       tags: [api-keys]
@@ -339,6 +366,12 @@ paths:
       tags: [templates]
       operationId: listTemplates
       summary: Catalog for the Studio report list
+      parameters:
+        - name: includeArchived
+          in: query
+          required: false
+          description: Also list archived templates
+          schema: { type: boolean, default: false }
       responses:
         '200':
           description: Templates
@@ -415,7 +448,160 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/TemplateArchived' }
         '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/templates/import:
+    post:
+      tags: [templates]
+      operationId: importTemplate
+      summary: Create a template from a zip, or replace an existing draft with it
+      description: |
+        The zip is what `exportTemplate` returns: a flat zip with a `jester.json` manifest. The id is
+        `templateId` when sent, else the manifest's. A new id creates the template (201). An existing id
+        needs `If-Match` with its current draft revision and replaces the whole draft (200); the name,
+        versions and published alias stay. The result is always a draft: validate and publish it as usual.
+        The body may be up to 26 MB (zip at most 25 MB).
+      parameters:
+        - name: If-Match
+          in: header
+          required: false
+          description: Draft revision to replace, e.g. `"12"`; required when the template exists
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+                templateId: { $ref: '#/components/schemas/TemplateId' }
+      responses:
+        '200':
+          description: The existing draft was replaced
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportResult' }
+        '201':
+          description: A new template was created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ImportResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: '`CONFLICT` (exists and no If-Match, or report.json/template.html missing) or `TEMPLATE_ARCHIVED`'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '412': { $ref: '#/components/responses/RevisionConflict' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415':
+          description: An asset's bytes do not match its extension
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/templates/{templateId}/export:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    get:
+      tags: [templates]
+      operationId: exportTemplate
+      summary: Download the draft or one version as a zip
+      parameters:
+        - name: version
+          in: query
+          required: false
+          description: '`draft` (default) or a version number'
+          schema: { type: string, pattern: '^(draft|[1-9][0-9]*)$', default: draft }
+      responses:
+        '200':
+          description: 'Zip; `Content-Disposition` names it `<id>-v<N>.zip` or `<id>-draft-r<revision>.zip`'
+          headers:
+            Content-Disposition: { schema: { type: string } }
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/templates/{templateId}/duplicate:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    post:
+      tags: [templates]
+      operationId: duplicateTemplate
+      summary: Copy a template's draft or one version into a new template
+      description: |
+        The copy gets a draft at revision 1 and no versions; assets share the stored bytes.
+        Archived templates can be copied.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, name]
+              additionalProperties: false
+              properties:
+                id: { $ref: '#/components/schemas/TemplateId' }
+                name: { type: string, minLength: 1, maxLength: 120 }
+                version:
+                  description: '`"draft"` (default) or a version number of the source'
+                  oneOf:
+                    - { const: draft }
+                    - { type: integer, minimum: 1 }
+                  default: draft
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Template id taken
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/templates/{templateId}/archived:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    put:
+      tags: [templates]
+      operationId: setTemplateArchived
+      summary: Archive or restore a template
+      description: |
+        An archived template keeps its draft and versions and can still be read, exported and
+        duplicated, but cannot be changed (409 `TEMPLATE_ARCHIVED`) or rendered (410). Repeating
+        the current state changes nothing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [archived]
+              additionalProperties: false
+              properties:
+                archived: { type: boolean }
+      responses:
+        '200':
+          description: Template after the change
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
 
   /v1/templates/{templateId}/draft:
     parameters:
@@ -461,6 +647,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DraftRevision' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/TemplateArchived' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
         '428': { $ref: '#/components/responses/RevisionRequired' }
@@ -480,7 +667,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: Required file
+          description: Required file, or the template is archived (`TEMPLATE_ARCHIVED`)
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -527,7 +714,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
-          description: An asset with this name already exists in the draft
+          description: An asset with this name already exists in the draft, or the template is archived (`TEMPLATE_ARCHIVED`)
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -578,6 +765,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DraftRevision' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/TemplateArchived' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
         '428': { $ref: '#/components/responses/RevisionRequired' }
@@ -596,6 +784,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ValidationResult' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '410': { $ref: '#/components/responses/TemplateGone' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /v1/templates/{templateId}/draft/preview:
@@ -628,6 +817,7 @@ paths:
             application/pdf:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '410': { $ref: '#/components/responses/TemplateGone' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/InputInvalid' }
         '502': { $ref: '#/components/responses/RenderFailed' }
@@ -663,6 +853,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/PreparedData' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '410': { $ref: '#/components/responses/TemplateGone' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/InputInvalid' }
         '502': { $ref: '#/components/responses/RenderFailed' }
@@ -708,6 +899,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Version' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/TemplateArchived' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
         '428': { $ref: '#/components/responses/RevisionRequired' }
@@ -765,6 +957,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/TemplateArchived' }
         '404': { $ref: '#/components/responses/NotFound' }
 
   /v1/templates/{templateId}/draft/reset:
@@ -793,6 +986,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/DraftRevision' }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/TemplateArchived' }
         '404': { $ref: '#/components/responses/NotFound' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
         '428': { $ref: '#/components/responses/RevisionRequired' }
@@ -1103,6 +1297,16 @@ components:
       content:
         application/problem+json:
           schema: { $ref: '#/components/schemas/Problem' }
+    TemplateArchived:
+      description: '`TEMPLATE_ARCHIVED`: the template is archived; unarchive it to change it'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TemplateGone:
+      description: '`TEMPLATE_ARCHIVED`: the template is archived and cannot be rendered'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
 
   schemas:
     TemplateId:
@@ -1151,6 +1355,7 @@ components:
         - SERVICE_UNAVAILABLE
         - ENGINE_MISCONFIGURED
         - INTERNAL_ERROR
+        - TEMPLATE_ARCHIVED
     Problem:
       type: object
       description: RFC 9457 problem details plus Jester fields
@@ -1266,6 +1471,15 @@ components:
             - $ref: '#/components/schemas/RunSummary'
             - type: 'null'
         updatedAt: { type: string, format: date-time }
+        archivedAt: { type: [string, 'null'], format: date-time, description: null while active }
+        archivedBy: { type: [string, 'null'] }
+    ImportResult:
+      type: object
+      required: [template, revision, created]
+      properties:
+        template: { $ref: '#/components/schemas/TemplateSummary' }
+        revision: { type: integer, description: Draft revision after the import }
+        created: { type: boolean, description: 'true: a new template; false: an existing draft was replaced' }
     TextFile:
       type: object
       required: [name, content, sha256]

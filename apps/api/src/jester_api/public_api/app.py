@@ -23,16 +23,20 @@ log = logging.getLogger("jester.api")
 class BodyLimit:
     """413 for bodies over the limit, counted while receiving (Content-Length alone can lie or be absent)."""
 
-    def __init__(self, app: Any, max_bytes: int) -> None:
-        self.app, self.max_bytes = app, max_bytes
+    def __init__(self, app: Any, max_bytes: int, per_path: dict[str, int] | None = None) -> None:
+        self.app, self.default, self.per_path = app, max_bytes, per_path or {}
 
     async def __call__(self, scope: dict, receive: Any, send: Any) -> None:
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
+        limit = self.per_path.get(scope.get("path", ""), self.default)
         headers = dict(scope.get("headers") or [])
         declared = headers.get(b"content-length")
-        if declared is not None and declared.isdigit() and int(declared) > self.max_bytes:
-            return await self._too_large(scope, receive, send)
+        if declared is not None and declared.isdigit() and int(declared) > limit:
+            response = problems.problem_response(
+                "PAYLOAD_TOO_LARGE", 413, f"the request is larger than {limit} bytes"
+            )
+            return await response(scope, receive, send)
         seen = 0
 
         async def counting_receive() -> dict:
@@ -40,19 +44,11 @@ class BodyLimit:
             message = await receive()
             if message["type"] == "http.request":
                 seen += len(message.get("body", b""))
-                if seen > self.max_bytes:  # turned into 413 by the problem handlers inside the app
-                    raise problems.ApiError(
-                        "PAYLOAD_TOO_LARGE", f"the request is larger than {self.max_bytes} bytes"
-                    )
+                if seen > limit:  # turned into 413 by the problem handlers inside the app
+                    raise problems.ApiError("PAYLOAD_TOO_LARGE", f"the request is larger than {limit} bytes")
             return message
 
         await self.app(scope, counting_receive, send)
-
-    async def _too_large(self, scope: dict, receive: Any, send: Any) -> None:
-        response = problems.problem_response(
-            "PAYLOAD_TOO_LARGE", 413, f"the request is larger than {self.max_bytes} bytes"
-        )
-        await response(scope, receive, send)
 
 
 class AccessLog:
@@ -158,7 +154,9 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     limit = (
         settings.max_request_bytes if settings else int(os.environ.get("JESTER_MAX_REQUEST_BYTES", 10 << 20))
     )
-    app.add_middleware(BodyLimit, max_bytes=limit)
+    # a template zip may hold a 20 MB draft (25 MB zip + multipart overhead); every other route keeps `limit`
+    import_limit = max(limit, 26 * 1024 * 1024)
+    app.add_middleware(BodyLimit, max_bytes=limit, per_path={"/v1/templates/import": import_limit})
     app.add_middleware(AccessLog)
     return app
 

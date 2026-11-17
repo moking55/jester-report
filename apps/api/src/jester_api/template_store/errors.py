@@ -9,6 +9,7 @@ StoreErrorCode = Literal[
     "PAYLOAD_TOO_LARGE",
     "UNSUPPORTED_MEDIA_TYPE",
     "INPUT_INVALID",
+    "ARCHIVED",
 ]
 
 

@@ -131,3 +131,20 @@ async def test_full_queue_is_503(setup, pool, clock):
         busy._slots.release()
     assert (err.code, err.http_status, err.retryable) == ("SERVICE_UNAVAILABLE", 503, True)
     await asyncio.sleep(0)
+
+
+async def test_archived_template_is_410_with_a_failed_run_until_unarchived(setup):
+    store, service, _ = setup
+    await store.set_archived("quote", True, "alice")
+    err = await failure(service.render("quote", "published", PARAMS, SAMPLE, KEY))
+    assert (err.code, err.http_status) == ("TEMPLATE_ARCHIVED", 410)
+    run = await service._runs.get(err.run_id)
+    assert (run.status, run.error_code) == ("failed", "TEMPLATE_ARCHIVED")
+    for call in (
+        service.preview("quote", PARAMS, None, None, ALICE),
+        service.validate("quote"),
+    ):
+        assert (await failure(call)).http_status == 410
+    await store.set_archived("quote", False, "alice")
+    outcome = await service.render("quote", "published", PARAMS, SAMPLE, KEY)
+    assert outcome.version == 1

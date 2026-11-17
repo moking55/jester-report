@@ -2,16 +2,18 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Request, UploadFile
+from fastapi import APIRouter, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
+from pydantic import Field
 
 from ...render_service import RenderError
 from .. import views
 from ..problems import ApiError
-from ..security import Revision, SessionCaller
+from ..security import Revision, SessionCaller, expected_revision
 from ..state import services
+from .render import content_disposition
 
 router = APIRouter()
 
@@ -34,6 +36,16 @@ class VersionRef(views.Body):
     version: int
 
 
+class Archived(views.Body):
+    archived: bool
+
+
+class Duplicate(views.Body):
+    id: str
+    name: str
+    version: Literal["draft"] | Annotated[int, Field(ge=1)] = "draft"
+
+
 async def _summary(request: Request, template_id: str) -> dict:
     s = services(request)
     summary = await s.store.get(template_id)
@@ -43,9 +55,9 @@ async def _summary(request: Request, template_id: str) -> dict:
 
 # ---- templates ------------------------------------------------------------------------------------------
 @router.get("/v1/templates")
-async def list_templates(request: Request, caller: SessionCaller) -> list:
+async def list_templates(request: Request, caller: SessionCaller, includeArchived: bool = False) -> list:  # noqa: N803
     s = services(request)
-    summaries = await s.store.list()
+    summaries = await s.store.list(include_archived=includeArchived)
     last = await s.render.last_runs([t.id for t in summaries])
     return [views.template(t, last.get(t.id)) for t in summaries]
 
@@ -64,6 +76,64 @@ async def get_template(request: Request, caller: SessionCaller, templateId: str)
 @router.patch("/v1/templates/{templateId}")
 async def rename_template(request: Request, caller: SessionCaller, templateId: str, body: Rename) -> dict:  # noqa: N803
     await services(request).store.rename(templateId, body.name)
+    return await _summary(request, templateId)
+
+
+@router.get("/v1/templates/{templateId}/export")
+async def export_template(
+    request: Request,
+    caller: SessionCaller,
+    templateId: str,  # noqa: N803
+    version: str = "draft",
+) -> Response:
+    if version != "draft" and not (version.isdigit() and int(version) >= 1):
+        raise ApiError("INPUT_INVALID", 'version must be "draft" or a version number')
+    exported = await services(request).store.export_zip(
+        templateId, "draft" if version == "draft" else int(version)
+    )
+    return Response(
+        exported.data,
+        media_type="application/zip",
+        headers={"Content-Disposition": content_disposition(exported.filename)},
+    )
+
+
+@router.post("/v1/templates/import")
+async def import_template(
+    request: Request,
+    caller: SessionCaller,
+    file: UploadFile,
+    templateId: Annotated[str | None, Form()] = None,  # noqa: N803
+) -> JSONResponse:
+    revision = expected_revision(request) if request.headers.get("If-Match") is not None else None
+    result = await services(request).store.import_zip(await file.read(), revision, caller.name, templateId)
+    body = {
+        "template": views.template(result.summary),
+        "revision": result.revision,
+        "created": result.created,
+    }
+    return JSONResponse(body, status_code=201 if result.created else 200)
+
+
+@router.post("/v1/templates/{templateId}/duplicate", status_code=201)
+async def duplicate_template(
+    request: Request,
+    caller: SessionCaller,
+    templateId: str,  # noqa: N803
+    body: Duplicate,
+) -> JSONResponse:
+    copy = await services(request).store.duplicate(templateId, body.version, body.id, body.name, caller.name)
+    return JSONResponse(views.template(copy), status_code=201)
+
+
+@router.put("/v1/templates/{templateId}/archived")
+async def set_template_archived(
+    request: Request,
+    caller: SessionCaller,
+    templateId: str,  # noqa: N803
+    body: Archived,
+) -> dict:
+    await services(request).store.set_archived(templateId, body.archived, caller.name)
     return await _summary(request, templateId)
 
 

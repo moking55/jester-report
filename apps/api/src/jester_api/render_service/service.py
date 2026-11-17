@@ -155,6 +155,8 @@ class RenderService:
         except StoreError as exc:
             if exc.code == "NOT_FOUND":
                 raise RenderError("NOT_FOUND", 404, exc.message) from None
+            if exc.code == "ARCHIVED":
+                raise RenderError("TEMPLATE_ARCHIVED", 410, "the template is archived") from None
             raise
 
     async def _definition(self, stored: StoredDefinition) -> tuple[ReportDefinition | None, list[Problem]]:

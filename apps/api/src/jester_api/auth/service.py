@@ -312,6 +312,20 @@ class Auth:
             await conn.execute("DELETE FROM sessions WHERE user_id = %s", (row[0],))
         return new
 
+    async def set_password(self, user_id: uuid.UUID, new_password: str, by: uuid.UUID) -> None:
+        """An admin sets someone else's password (they forgot it); every session of that user is revoked."""
+        if user_id == by:
+            raise AuthError("INPUT_INVALID", "use change password for your own account")
+        _check_password(new_password)
+        new_hash = await hash_password(new_password)
+        async with self._db.connection() as conn, conn.transaction():
+            row = await self._one(
+                conn, "UPDATE users SET password_hash = %s WHERE id = %s RETURNING id", (new_hash, user_id)
+            )
+            if row is None:
+                raise AuthError("NOT_FOUND", "user not found")
+            await conn.execute("DELETE FROM sessions WHERE user_id = %s", (user_id,))
+
     # ---- users -----------------------------------------------------------------------------------------
     async def list_users(self) -> list[User]:
         async with self._db.connection() as conn:

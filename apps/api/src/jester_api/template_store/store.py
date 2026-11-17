@@ -6,7 +6,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from psycopg import AsyncConnection, errors
@@ -16,19 +16,19 @@ from ..report_definition.loader import content_sha256
 from ..report_definition.problems import AssetInfo
 from .assets import detect
 from .blobs import BlobStore
+from .bundle import FORMAT_VERSION, read_zip, write_zip
 from .errors import StoreError
+from .limits import (
+    ASSET_FILE,
+    MAX_ASSET_BYTES,
+    MAX_DRAFT_BYTES,
+    MAX_FILES,
+    MAX_TEXT_BYTES,
+    REQUIRED_FILES,
+    TEMPLATE_ID,
+    TEXT_FILE,
+)
 from .starter import Starter, starter_files
-
-MAX_TEXT_BYTES = 1024 * 1024
-MAX_ASSET_BYTES = 5 * 1024 * 1024
-MAX_DRAFT_BYTES = 20 * 1024 * 1024  # the engine's request limit
-MAX_FILES = 50
-REQUIRED_FILES = ("report.json", "template.html")
-
-# patterns from public-api.yaml (TemplateId, TextFileName, AssetName)
-TEMPLATE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
-TEXT_FILE = re.compile(r"^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$")
-ASSET_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$")
 
 
 @dataclass(frozen=True)
@@ -57,6 +57,8 @@ class TemplateSummary:
     draft_changed_since_publish: bool
     orientation: str | None  # from the draft's report.json when it parses
     updated_at: datetime
+    archived_at: datetime | None = None
+    archived_by: str | None = None
 
 
 @dataclass(frozen=True)
@@ -100,6 +102,19 @@ class StoredDefinition:
     sha256: str
 
 
+@dataclass(frozen=True)
+class ZipExport:
+    data: bytes
+    filename: str  # <id>-v<N>.zip or <id>-draft-r<revision>.zip
+
+
+@dataclass(frozen=True)
+class ImportResult:
+    summary: TemplateSummary
+    revision: int
+    created: bool  # True: a new template; False: the draft of an existing one was replaced
+
+
 def _sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -140,8 +155,19 @@ class TemplateStore:
         cur = await conn.execute(sql, args)  # type: ignore[arg-type]
         return await cur.fetchall()
 
+    async def _writable(self, conn: AsyncConnection, template_id: str) -> None:
+        """Lock the template row for this write; archive takes the same lock, so no write lands after it."""
+        row = await self._one(
+            conn, "SELECT archived_at FROM templates WHERE id = %s FOR UPDATE", (template_id,)
+        )
+        if row is None:
+            raise StoreError("NOT_FOUND", "template not found")
+        if row[0] is not None:
+            raise StoreError("ARCHIVED", "the template is archived; unarchive it to change it")
+
     async def _bump(self, conn: AsyncConnection, template_id: str, expected: int, by: str) -> int:
         """Next draft revision, only if the draft is still at `expected` (the row lock serialises writers)."""
+        await self._writable(conn, template_id)
         row = await self._one(
             conn,
             "UPDATE drafts SET revision = revision + 1, updated_at = now(), updated_by = %s "
@@ -226,8 +252,134 @@ class TemplateStore:
                 )
         return await self.get(template_id)
 
-    async def list(self) -> list[TemplateSummary]:
-        return await self._summaries(None)
+    async def export_zip(self, template_id: str, ref: Literal["draft"] | int) -> ZipExport:
+        """The draft or one version as a zip (bundle.py); archived templates export too."""
+        summary = await self.get(template_id)
+        if ref == "draft":
+            draft = await self.get_draft(template_id)
+            files, assets = draft.files, draft.assets
+            source: dict[str, Any] = {"kind": "draft", "revision": draft.revision}
+            filename = f"{template_id}-draft-r{draft.revision}.zip"
+        else:
+            stored = await self.get_version(template_id, ref)
+            files, assets = stored.files, stored.assets
+            source = {"kind": "version", "version": ref, "sha256": stored.version.sha256}
+            filename = f"{template_id}-v{ref}.zip"
+        manifest = {
+            "formatVersion": FORMAT_VERSION,
+            "id": template_id,
+            "name": summary.name,
+            "source": source,
+            "exportedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "files": sorted(f.name for f in files),
+            "assets": [{"name": a.name, "sha256": a.sha256} for a in sorted(assets, key=lambda a: a.name)],
+        }
+        data = write_zip(
+            manifest,
+            {f.name: f.content for f in files},
+            {a.name: await self._blobs.get(a.sha256) for a in assets},
+        )
+        return ZipExport(data, filename)
+
+    async def import_zip(
+        self, data: bytes, expected_revision: int | None, by: str, template_id: str | None = None
+    ) -> ImportResult:
+        """A new template from the zip, or the zip replaces the whole draft of an existing one."""
+        bundle = read_zip(data)  # every check of the safety table, before anything is written
+        template_id = template_id or bundle.id
+        _check(TEMPLATE_ID, template_id, "template")
+        infos = {name: detect(name, raw) for name, raw in bundle.assets.items()}
+        for name, info in infos.items():  # bytes first, like an upload; an unused blob is accepted waste
+            await self._blobs.put_if_absent(info.sha256, bundle.assets[name], info.content_type)
+        async with self._db.connection() as conn, conn.transaction():
+            row = await self._one(
+                conn, "SELECT archived_at FROM templates WHERE id = %s FOR UPDATE", (template_id,)
+            )
+            if row is None:
+                if expected_revision is not None:
+                    raise StoreError("NOT_FOUND", "template not found")
+                try:
+                    await conn.execute(
+                        "INSERT INTO templates (id, name) VALUES (%s, %s)", (template_id, bundle.name)
+                    )
+                except errors.UniqueViolation:
+                    raise StoreError("CONFLICT", "a template with this id already exists") from None
+                await conn.execute(
+                    "INSERT INTO drafts (template_id, revision, updated_by) VALUES (%s, 1, %s)",
+                    (template_id, by),
+                )
+                revision, created = 1, True
+            else:
+                if row[0] is not None:
+                    raise StoreError("ARCHIVED", "the template is archived; unarchive it to change it")
+                if expected_revision is None:
+                    raise StoreError(
+                        "CONFLICT", "this template exists; send its draft revision to replace the draft"
+                    )
+                revision, created = await self._bump(conn, template_id, expected_revision, by), False
+                await conn.execute("DELETE FROM draft_files WHERE template_id = %s", (template_id,))
+                await conn.execute("DELETE FROM draft_assets WHERE template_id = %s", (template_id,))
+                await conn.execute(
+                    "UPDATE drafts SET based_on_version = NULL WHERE template_id = %s", (template_id,)
+                )
+            for name, content in bundle.files.items():
+                await conn.execute(
+                    "INSERT INTO draft_files (template_id, name, content, sha256) VALUES (%s, %s, %s, %s)",
+                    (template_id, name, content, _sha256(content)),
+                )
+            for name, info in infos.items():
+                await conn.execute(
+                    "INSERT INTO blobs (sha256, content_type, size, font_family) VALUES (%s, %s, %s, %s) "
+                    "ON CONFLICT (sha256) DO NOTHING",
+                    (info.sha256, info.content_type, len(bundle.assets[name]), info.font_family),
+                )
+                await conn.execute(
+                    "INSERT INTO draft_assets (template_id, name, blob_sha256) VALUES (%s, %s, %s)",
+                    (template_id, name, info.sha256),
+                )
+            await self._check_draft_size(conn, template_id)
+        return ImportResult(await self.get(template_id), revision, created)
+
+    async def duplicate(
+        self, source_id: str, ref: Literal["draft"] | int, new_id: str, new_name: str, by: str
+    ) -> TemplateSummary:
+        """A new template whose draft copies the source's draft or one version; no history, same blobs."""
+        _check(TEMPLATE_ID, new_id, "template")
+        new_name = _check_name(new_name)
+        files_table, assets_table, where, args = (
+            ("draft_files", "draft_assets", "template_id = %s", (source_id,))
+            if ref == "draft"
+            else ("version_files", "version_assets", "template_id = %s AND version = %s", (source_id, ref))
+        )
+        async with self._db.connection() as conn, conn.transaction():
+            if ref == "draft":
+                found = await self._one(conn, "SELECT 1 FROM drafts WHERE template_id = %s", (source_id,))
+            else:
+                found = await self._one(conn, f"SELECT 1 FROM versions WHERE {where}", args)
+            if found is None:
+                raise StoreError("NOT_FOUND", "template not found" if ref == "draft" else "version not found")
+            try:
+                await conn.execute("INSERT INTO templates (id, name) VALUES (%s, %s)", (new_id, new_name))
+            except errors.UniqueViolation:
+                raise StoreError("CONFLICT", "a template with this id already exists") from None
+            await conn.execute(
+                "INSERT INTO drafts (template_id, revision, updated_by) VALUES (%s, 1, %s)", (new_id, by)
+            )
+            await conn.execute(
+                "INSERT INTO draft_files (template_id, name, content, sha256) "
+                f"SELECT %s, name, content, sha256 FROM {files_table} WHERE {where}",
+                (new_id, *args),
+            )
+            await conn.execute(
+                "INSERT INTO draft_assets (template_id, name, blob_sha256) "
+                f"SELECT %s, name, blob_sha256 FROM {assets_table} WHERE {where}",
+                (new_id, *args),
+            )
+        return await self.get(new_id)
+
+    async def list(self, include_archived: bool = False) -> list[TemplateSummary]:
+        found = await self._summaries(None)
+        return found if include_archived else [t for t in found if t.archived_at is None]
 
     async def get(self, template_id: str) -> TemplateSummary:
         found = await self._summaries(template_id)
@@ -240,7 +392,8 @@ class TemplateStore:
         async with self._db.connection() as conn:
             rows = await self._all(
                 conn,
-                "SELECT t.id, t.name, t.published_version, t.updated_at, d.revision, pv.sha256, "
+                "SELECT t.id, t.name, t.published_version, t.updated_at, t.archived_at, t.archived_by, "
+                "d.revision, pv.sha256, "
                 "(SELECT max(version) FROM versions v WHERE v.template_id = t.id), "
                 "(SELECT content FROM draft_files f WHERE f.template_id = t.id AND f.name = 'report.json') "
                 "FROM templates t JOIN drafts d ON d.template_id = t.id "
@@ -249,25 +402,54 @@ class TemplateStore:
                 args,
             )
             out = []
-            for tid, name, published, updated_at, revision, published_sha, latest, report_json in rows:
+            for row in rows:
+                tid, name, published, updated_at, archived_at, archived_by = row[:6]
+                revision, published_sha, latest, report_json = row[6:]
                 changed = published_sha is None or await self._hashes(conn, tid) != published_sha
                 out.append(
                     TemplateSummary(
-                        tid, name, published, latest, revision, changed, _orientation(report_json), updated_at
+                        tid,
+                        name,
+                        published,
+                        latest,
+                        revision,
+                        changed,
+                        _orientation(report_json),
+                        updated_at,
+                        archived_at,
+                        archived_by,
                     )
                 )
         return out
 
     async def rename(self, template_id: str, name: str) -> TemplateSummary:
         name = _check_name(name)
-        async with self._db.connection() as conn:
-            row = await self._one(
-                conn,
-                "UPDATE templates SET name = %s, updated_at = now() WHERE id = %s RETURNING id",
-                (name, template_id),
+        async with self._db.connection() as conn, conn.transaction():
+            await self._writable(conn, template_id)
+            await conn.execute(
+                "UPDATE templates SET name = %s, updated_at = now() WHERE id = %s", (name, template_id)
             )
-        if row is None:
-            raise StoreError("NOT_FOUND", "template not found")
+        return await self.get(template_id)
+
+    async def set_archived(self, template_id: str, archived: bool, by: str) -> TemplateSummary:
+        """Archive or restore; repeating the current state changes nothing (the first archiver stays)."""
+        async with self._db.connection() as conn, conn.transaction():
+            row = await self._one(
+                conn, "SELECT archived_at FROM templates WHERE id = %s FOR UPDATE", (template_id,)
+            )
+            if row is None:
+                raise StoreError("NOT_FOUND", "template not found")
+            if archived and row[0] is None:
+                # clock_timestamp, not now(): read after the lock, so it is later than every write before it
+                await conn.execute(
+                    "UPDATE templates SET archived_at = clock_timestamp(), archived_by = %s WHERE id = %s",
+                    (by, template_id),
+                )
+            elif not archived and row[0] is not None:
+                await conn.execute(
+                    "UPDATE templates SET archived_at = NULL, archived_by = NULL WHERE id = %s",
+                    (template_id,),
+                )
         return await self.get(template_id)
 
     # ---- draft -----------------------------------------------------------------------------------------
@@ -399,6 +581,7 @@ class TemplateStore:
         if note is not None and len(note) > 500:
             raise StoreError("INPUT_INVALID", "note is at most 500 characters")
         async with self._db.connection() as conn, conn.transaction():
+            await self._writable(conn, template_id)
             row = await self._one(
                 conn, "SELECT revision FROM drafts WHERE template_id = %s FOR UPDATE", (template_id,)
             )
@@ -481,6 +664,7 @@ class TemplateStore:
 
     async def set_published(self, template_id: str, version: int) -> TemplateSummary:
         async with self._db.connection() as conn, conn.transaction():
+            await self._writable(conn, template_id)
             exists = await self._one(
                 conn, "SELECT 1 FROM versions WHERE template_id = %s AND version = %s", (template_id, version)
             )
@@ -496,6 +680,10 @@ class TemplateStore:
     async def definition_input(
         self, template_id: str, ref: Literal["draft", "published"] | int
     ) -> StoredDefinition:
+        async with self._db.connection() as conn:
+            row = await self._one(conn, "SELECT archived_at FROM templates WHERE id = %s", (template_id,))
+        if row is not None and row[0] is not None:
+            raise StoreError("ARCHIVED", "the template is archived")
         if ref == "draft":
             draft = await self.get_draft(template_id)
             files, assets, version, revision = draft.files, draft.assets, None, draft.revision

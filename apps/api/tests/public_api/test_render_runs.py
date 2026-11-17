@@ -125,3 +125,27 @@ async def test_prepared_data_of_the_starter(api, admin, published):
         "/v1/templates/quote/draft/prepared", headers=admin, json={"params": PARAMS, "data": {"items": "x"}}
     )
     assert bad.status_code == 422 and bad.json()["code"] == "INPUT_INVALID" and bad.json()["problems"]
+
+
+async def test_archive_blocks_writes_and_renders_until_restored(api, admin, published):
+    archived = await api.put("/v1/templates/quote/archived", headers=admin, json={"archived": True})
+    assert archived.status_code == 200 and archived.json()["archivedAt"] and archived.json()["archivedBy"]
+    write = await api.put(
+        "/v1/templates/quote/draft/files/extra.css", headers={**admin, "If-Match": "1"}, content=b"p {}"
+    )
+    assert (write.status_code, write.json()["code"]) == (409, "TEMPLATE_ARCHIVED")
+    render = await api.post(
+        "/v1/render", headers=published, json={"template": {"id": "quote", "version": 1}, "data": {}}
+    )
+    assert (render.status_code, render.json()["code"]) == (410, "TEMPLATE_ARCHIVED")
+    assert render.json()["runId"]
+    preview = await api.post("/v1/templates/quote/draft/preview", headers=admin, json={"params": PARAMS})
+    assert preview.status_code == 410
+    assert (await api.get("/v1/templates", headers=admin)).json() == []
+    listed = (await api.get("/v1/templates?includeArchived=true", headers=admin)).json()
+    assert [t["id"] for t in listed] == ["quote"] and listed[0]["archivedAt"]
+    restored = await api.put("/v1/templates/quote/archived", headers=admin, json={"archived": False})
+    assert restored.json()["archivedAt"] is None
+    assert [t["id"] for t in (await api.get("/v1/templates", headers=admin)).json()] == ["quote"]
+    by_key = await api.put("/v1/templates/quote/archived", headers=published, json={"archived": True})
+    assert by_key.status_code == 401

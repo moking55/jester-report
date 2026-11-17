@@ -83,6 +83,8 @@ def template(t: TemplateSummary, last: Run | None = None) -> dict[str, Any]:
         "draftChangedSincePublish": t.draft_changed_since_publish,
         "lastRun": run_summary(last) if last else None,
         "updatedAt": iso(t.updated_at),
+        "archivedAt": iso(t.archived_at),
+        "archivedBy": t.archived_by,
     }
     if t.orientation:
         out["page"] = {"size": "A4", "orientation": t.orientation}

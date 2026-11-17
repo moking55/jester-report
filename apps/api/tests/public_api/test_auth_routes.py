@@ -88,3 +88,21 @@ async def test_users_and_api_keys(api, admin):
     last = await api.delete(f"/v1/users/{me['id']}", headers=admin)
     assert (last.status_code, last.json()["code"]) == (409, "CONFLICT")
     assert (await api.delete("/v1/users/not-a-uuid", headers=admin)).status_code == 422
+
+
+async def test_set_another_users_password(api, admin):
+    bob = (await api.post("/v1/users", headers=admin, json={"username": "bob", "password": PASSWORD})).json()
+    login = await api.post("/v1/auth/login", json={"username": "bob", "password": PASSWORD})
+    old = {"Authorization": f"Bearer {login.json()['token']}"}
+    url = f"/v1/users/{bob['id']}/password"
+    new = {"newPassword": "a brand new password"}
+    assert (await api.put(url, headers=admin, json=new)).status_code == 204
+    assert (await api.get("/v1/auth/me", headers=old)).status_code == 401
+    again = await api.post("/v1/auth/login", json={"username": "bob", "password": "a brand new password"})
+    assert again.status_code == 200
+    me = (await api.get("/v1/auth/me", headers=admin)).json()
+    own = await api.put(f"/v1/users/{me['id']}/password", headers=admin, json={"newPassword": PASSWORD})
+    assert own.status_code == 422
+    key = (await api.post("/v1/api-keys", headers=admin, json={"name": "erp"})).json()["secret"]
+    by_key = await api.put(url, headers={"Authorization": f"Bearer {key}"}, json={"newPassword": PASSWORD})
+    assert by_key.status_code == 401

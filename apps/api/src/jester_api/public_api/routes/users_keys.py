@@ -21,6 +21,10 @@ class NewKey(views.Body):
     name: str
 
 
+class NewPassword(views.Body):
+    newPassword: str
+
+
 @router.get("/v1/users")
 async def list_users(request: Request, caller: SessionCaller) -> list:
     return [views.user(u) for u in await services(request).auth.list_users()]
@@ -35,6 +39,18 @@ async def create_user(request: Request, caller: SessionCaller, body: NewUser) ->
 @router.delete("/v1/users/{userId}", status_code=204)
 async def delete_user(request: Request, caller: SessionCaller, userId: uuid.UUID) -> Response:  # noqa: N803
     await services(request).auth.delete_user(userId)
+    return Response(status_code=204)
+
+
+@router.put("/v1/users/{userId}/password", status_code=204)
+async def set_user_password(
+    request: Request,
+    caller: SessionCaller,
+    userId: uuid.UUID,  # noqa: N803
+    body: NewPassword,
+) -> Response:
+    assert caller.user is not None  # SessionCaller is always a signed-in user
+    await services(request).auth.set_password(userId, body.newPassword, caller.user.id)
     return Response(status_code=204)
 
 

@@ -113,3 +113,69 @@ async def test_publish_validates_at_the_given_revision(api, admin):
     assert {"files", "assets", "sha256"} <= files.keys()
     alias = await api.put("/v1/templates/quote/published", headers=admin, json={"version": 1})
     assert alias.json()["publishedVersion"] == 1
+
+
+async def test_duplicate(api, admin):
+    await api.post("/v1/templates", headers=admin, json={"id": "quote", "name": "Q", "starter": "quotation"})
+    url = "/v1/templates/quote/duplicate"
+    copy = await api.post(url, headers=admin, json={"id": "quote-2", "name": "Q2"})
+    assert copy.status_code == 201
+    body = copy.json()
+    assert (body["id"], body["draftRevision"], body["publishedVersion"]) == ("quote-2", 1, None)
+    taken = await api.post(url, headers=admin, json={"id": "quote-2", "name": "x"})
+    assert (taken.status_code, taken.json()["code"]) == (409, "CONFLICT")
+    no_version = await api.post(
+        "/v1/templates/quote/duplicate", headers=admin, json={"id": "quote-3", "name": "x", "version": 4}
+    )
+    assert no_version.status_code == 404
+    bad = await api.post(
+        "/v1/templates/quote/duplicate", headers=admin, json={"id": "quote-3", "name": "x", "version": "v1"}
+    )
+    assert bad.status_code == 422
+
+
+async def test_export_and_import_over_http(api, admin):
+    await api.post("/v1/templates", headers=admin, json={"id": "quote", "name": "Q", "starter": "quotation"})
+    exported = await api.get("/v1/templates/quote/export", headers=admin)
+    assert exported.status_code == 200 and exported.headers["content-type"] == "application/zip"
+    assert "quote-draft-r1.zip" in exported.headers["content-disposition"]
+    zip_file = {"file": ("quote.zip", exported.content, "application/zip")}
+
+    created = await api.post(
+        "/v1/templates/import", headers=admin, files=zip_file, data={"templateId": "moved"}
+    )
+    assert created.status_code == 201
+    assert (created.json()["created"], created.json()["template"]["id"]) == (True, "moved")
+    draft = (await api.get("/v1/templates/moved/draft", headers=admin)).json()
+    source = (await api.get("/v1/templates/quote/draft", headers=admin)).json()
+    assert [f["sha256"] for f in draft["files"]] == [f["sha256"] for f in source["files"]]
+
+    no_match = await api.post("/v1/templates/import", headers=admin, files=zip_file)
+    assert (no_match.status_code, no_match.json()["code"]) == (409, "CONFLICT")
+    stale = await api.post("/v1/templates/import", headers={**admin, "If-Match": '"9"'}, files=zip_file)
+    assert stale.status_code == 412
+    replaced = await api.post("/v1/templates/import", headers={**admin, "If-Match": '"1"'}, files=zip_file)
+    assert replaced.status_code == 200 and replaced.json() | {"template": None} == {
+        "template": None,
+        "revision": 2,
+        "created": False,
+    }
+    bad_version = await api.get("/v1/templates/quote/export?version=v1", headers=admin)
+    assert bad_version.status_code == 422
+    junk = await api.post("/v1/templates/import", headers=admin, files={"file": ("x.zip", b"junk")})
+    assert junk.status_code == 422
+
+
+async def test_import_body_limit_is_26_mb_on_that_route_only(api, admin):
+    big = {"file": ("big.zip", b"PK" + b"\0" * (25 * 1024 * 1024 + 512 * 1024), "application/zip")}
+    over_store = await api.post("/v1/templates/import", headers=admin, files=big)
+    assert (over_store.status_code, over_store.json()["code"]) == (413, "PAYLOAD_TOO_LARGE")
+    huge = {"file": ("huge.zip", b"PK" + b"\0" * (27 * 1024 * 1024), "application/zip")}
+    assert (await api.post("/v1/templates/import", headers=admin, files=huge)).status_code == 413
+    await api.post("/v1/templates", headers=admin, json={"id": "t1", "name": "T", "starter": "blank"})
+    other = await api.put(
+        "/v1/templates/t1/draft/files/big.css",
+        headers={**admin, "If-Match": "1"},
+        content=b"a" * (11 * 1024 * 1024),
+    )
+    assert other.status_code == 413

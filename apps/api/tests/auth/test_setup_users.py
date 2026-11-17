@@ -1,4 +1,5 @@
 import asyncio
+import uuid
 
 import pytest
 
@@ -73,3 +74,20 @@ async def test_deleted_users_sessions_stop_working(auth, alice):
     assert (await auth.authenticate(session.token)).name == "bob"
     await auth.delete_user(bob.id)
     assert await code_of(auth.authenticate(session.token)) == "UNAUTHORIZED"
+
+
+async def test_set_password_for_someone_else(auth, alice):
+    bob = await auth.create_user("bob", PASSWORD)
+    old = await auth.login("bob", PASSWORD, "10.0.0.1")
+    await auth.set_password(bob.id, "a brand new password", alice.user.id)
+    assert await code_of(auth.authenticate(old.token)) == "UNAUTHORIZED"
+    assert await code_of(auth.login("bob", PASSWORD, "10.0.0.2")) == "UNAUTHORIZED"
+    assert (await auth.login("bob", "a brand new password", "10.0.0.1")).user.username == "bob"
+    assert (await auth.authenticate(alice.token)).name == "alice"  # the admin stays signed in
+    assert await code_of(auth.set_password(alice.user.id, "a brand new password", alice.user.id)) == (
+        "INPUT_INVALID"
+    )
+    assert await code_of(auth.set_password(bob.id, "short", alice.user.id)) == "INPUT_INVALID"
+    assert (
+        await code_of(auth.set_password(uuid.uuid4(), "a brand new password", alice.user.id)) == "NOT_FOUND"
+    )
