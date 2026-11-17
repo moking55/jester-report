@@ -168,3 +168,58 @@ studio: `cd apps/studio && npm run lint && npm run typecheck && npm test && npm 
 ผลตรวจในเครื่องก่อนปิดงาน: backend `pytest -q` ผ่าน 427 tests, ข้าม 97 tests ที่ต้องใช้บริการจริง; `ruff check .` ผ่าน; Studio `npm test` ผ่าน 47 tests, `npm run lint`, `npm run typecheck` และ `npm run build` ผ่านทั้งหมด
 
 ข้อจำกัดที่ยังคงอยู่: รอบปิดงานไม่ได้รัน E2E บน VM ซ้ำ; ปัญหา logout ที่เคยล้มหนึ่งรอบยังไม่ทราบสาเหตุ; ยังไม่ได้ยืนยัน load/concurrency และความพร้อม production
+
+## รอบ 2: ปรับปรุงหลังปิดงาน
+
+แผน: [plan.md](plan.md#รอบ-2-ปรับปรุงหลังปิดงาน-16-พฤศจิกายน-2026) · สถานะ: ผู้ใช้อนุมัติแผน 17 พ.ย. 2026
+
+### U1: ปุ่มเพิ่มผู้ใช้
+
+- [x] ปุ่ม "+ เพิ่มผู้ใช้" เหนือตาราง เปิด dialog ที่มีฟอร์มเดิม (ชื่อ, รหัสผ่าน, ยืนยัน)
+- [x] สำเร็จแล้ว dialog ปิดและผู้ใช้ใหม่ขึ้นในตาราง; error แสดงใน dialog; ปุ่ม × และ Esc ปิดได้
+
+**Verification:** lint, typecheck, test, build; เปิดในเบราว์เซอร์เพิ่มผู้ใช้จริงกับ api ที่ VM
+**Files:** `components/UsersPanel.tsx`, `components/Settings.module.css` · **Scope:** S
+
+### U2: ย้ายนโยบายเก็บประวัติไปตั้งค่า
+
+- [x] แท็บ "ประวัติ Render" ใน `/settings` มีนโยบายเก็บครบ (ค่าปัจจุบัน, ดูจำนวนที่จะลบก่อน, ยืนยัน, กลับไปเก็บตลอด)
+- [x] บันทึกแล้วกลับมาที่แท็บนี้พร้อมข้อความผล; หน้า history ไม่มีส่วนนี้ เหลือลิงก์ไปแท็บ
+
+**Verification:** lint, typecheck, test, build; ลองดูจำนวนที่จะลบและยกเลิกในเบราว์เซอร์ (ไม่กดยืนยันลบบน stack หลัก)
+**Files:** `app/(app)/settings/page.tsx`, `app/(app)/history/page.tsx`, `lib/actions/runs.ts`, component ใหม่ `RetentionPanel.tsx`, CSS · **Scope:** S
+
+### U3: upload รูป webp/avif/bmp (ยกเว้น gif)
+
+- [ ] api รับ webp, avif, bmp ตรวจจาก magic bytes; gif และไฟล์ปลอมนามสกุลยังตอบ `UNSUPPORTED_MEDIA_TYPE`
+- [ ] contract, `types.gen.ts`, Studio (ตรวจชื่อ, `accept`, ดูรูปใน Assets) รู้จักนามสกุลใหม่
+- [ ] preview PDF ที่ใช้รูป webp แสดงรูปจริง
+
+**Verification:** `ruff check .`, `pytest -q` (test ใหม่: แต่ละชนิดผ่าน, gif ไม่ผ่าน, `.webp` ที่เป็น png ไม่ผ่าน); `npm run gen:api` แล้ว lint/typecheck/test/build; upload webp แล้ว preview บน VM
+**Files:** `template_store/assets.py`, `template_store/store.py`, `public-api.yaml`, tests, `lib/actions/draft.ts`, `components/FilePanel.tsx`, `lib/types.gen.ts`, `SPEC-template-store.md` · **Scope:** M
+
+### U4a: diff ในแท็บ Versions
+
+- [ ] `lib/diff.ts` เทียบไฟล์สองชุด คืน เพิ่ม/ลบ/แก้/เหมือน (asset เทียบ `sha256`) + Vitest
+- [ ] dialog แสดงรายชื่อไฟล์ที่ต่างและ diff ของไฟล์ที่เลือกด้วย `@codemirror/merge`
+- [ ] "ตั้งเป็น published" เปิด dialog vN เทียบ published; "reset draft" เปิด dialog draft เทียบ vN; ยืนยันใน dialog แทน `confirm()`
+
+**Verification:** test ใหม่ของ `lib/diff.ts`; lint/typecheck/test/build; ในเบราว์เซอร์สร้าง v1, v2 ที่ต่างกันแล้วดู diff ทั้งสองทาง
+**Files:** `lib/diff.ts` + test, `components/DiffDialog.tsx` + CSS, `components/VersionsPanel.tsx`, `lib/actions/versions.ts` (`getVersion`), `package.json` · **Scope:** M
+
+### U4b: diff ก่อน Publish
+
+- [ ] กด Publish เปิด dialog: draft (รวมที่ยังไม่บันทึก) เทียบ published + ช่องโน้ต แทน `prompt()`; ยังไม่เคย publish แสดงว่าเป็น v1
+- [ ] ไม่มีอะไรต่างจาก published แสดงว่า "ไม่มีอะไรเปลี่ยน" และปิดปุ่มยืนยัน
+- [ ] E2E `full-flow.spec.ts` ผ่านกับ flow publish ใหม่
+
+**Verification:** lint/typecheck/test/build; ในเบราว์เซอร์แก้ไฟล์แล้ว Publish เห็น diff; E2E บน stack แยกที่ VM
+**Files:** `components/Workspace.tsx`, `components/DiffDialog.tsx`, `e2e/full-flow.spec.ts` · **Scope:** S
+
+### Checkpoint C
+
+- [ ] backend: ruff + pytest; Studio: lint, typecheck, test, build
+- [ ] deploy Studio + api บน VM แล้วลองครบ 4 ข้อในเบราว์เซอร์
+- [ ] E2E 2 spec ผ่านบน stack ใหม่ (`-p jester-e2e`) แล้ว `down -v`
+- [ ] `SPEC-studio.md` อัปเดต (screens: settings แท็บใหม่, history, versions/publish diff)
+- [ ] ผู้ใช้ตรวจรับ
