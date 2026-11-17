@@ -13,7 +13,7 @@
 
 ## Phase 0: Hygiene
 
-- [ ] **T1 H1: Next.js 16.4.6**
+- [x] **T1 H1: Next.js 16.4.6** (18 พ.ย. 2026: 4 คำสั่งผ่าน, audit prod สะอาด, E2E 2 spec ผ่านบน stack ใหม่ ครั้งแรกล้มบน stack ที่เพิ่ง build จับสาเหตุไม่ได้)
   - Acceptance: `next` และ `eslint-config-next` = 16.4.6; `npm audit --omit=dev` ไม่มี advisory ของ `next`
   - Verify: studio ครบ 4 คำสั่ง, E2E 2 spec เดิมผ่านบน stack ใหม่
   - Files: `apps/studio/package.json`, `package-lock.json`
