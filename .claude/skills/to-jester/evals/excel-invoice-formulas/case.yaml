@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: excel-invoice-formulas
+expected_outcome: |
+  A zip importable into Jester where the Excel formulas become report.json computed/totals (line amount, subtotal, VAT 7% after discount, 3% withholding with if() in advanced mode, amount due) so the sample reproduces the workbook's numbers, the PromptPay number becomes an optional QR via fmt.promptpay, and every field has a Thai title.
+context:
+  scaffold_script: place-files.sh

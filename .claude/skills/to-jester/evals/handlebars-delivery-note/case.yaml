@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: handlebars-delivery-note
+expected_outcome: |
+  A zip importable into Jester: the Handlebars placeholders become Jester data/params, the external font/script/logo URLs are removed (logo.png included as an asset), the <tfoot> total quantity becomes a computed total outside tfoot, the date uses fmt.thai_date, and every field has a Thai title.
+context:
+  scaffold_script: place-files.sh

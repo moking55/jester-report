@@ -8,3 +8,6 @@ spikes/m0/out/
 
 # real secrets for docker compose (copy from infra/.env.example)
 infra/.env
+
+# skill-creator test runs of .claude/skills/to-jester
+.claude/skills/to-jester-workspace/

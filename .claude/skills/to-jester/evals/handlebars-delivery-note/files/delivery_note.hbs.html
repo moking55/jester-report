@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/handlebars@4.7.8/dist/handlebars.min.js"></script>
+  <style>
+    body { font-family: 'Sarabun', sans-serif; font-size: 14px; }
+    .head { display: flex; justify-content: space-between; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #999; padding: 4px; }
+    .num { text-align: right; }
+    tfoot td { font-weight: bold; }
+  </style>
+</head>
+<body>
+  <div class="head">
+    <div>
+      <img src="https://cdn.example.com/acme/logo.png" height="48">
+      <h2>{{company.name}}</h2>
+      <div>{{company.address}}</div>
+    </div>
+    <div>
+      <h1>ใบส่งของ / Delivery Note</h1>
+      <div>เลขที่: {{deliveryNo}}</div>
+      <div>วันที่: {{formatDate deliveryDate}}</div>
+    </div>
+  </div>
+  <p>ส่งถึง: <b>{{customer.name}}</b><br>{{customer.address}}<br>โทร {{customer.phone}}</p>
+  <table>
+    <thead><tr><th>#</th><th>รหัสสินค้า</th><th>รายการ</th><th class="num">จำนวน</th><th>หน่วย</th></tr></thead>
+    <tbody>
+      {{#each items}}
+      <tr><td>{{@index}}</td><td>{{sku}}</td><td>{{name}}</td><td class="num">{{qty}}</td><td>{{unit}}</td></tr>
+      {{/each}}
+    </tbody>
+    <tfoot><tr><td colspan="3">จำนวนรวม</td><td class="num">{{totalQty items}}</td><td></td></tr></tfoot>
+  </table>
+  {{#if note}}<p>หมายเหตุ: {{note}}</p>{{/if}}
+  <table style="margin-top:40px"><tr>
+    <td>ผู้ส่งของ ..................</td><td>ผู้รับของ ..................</td>
+  </tr></table>
+  <script>
+    Handlebars.registerHelper('formatDate', d => new Date(d).toLocaleDateString('th-TH'));
+    Handlebars.registerHelper('totalQty', items => items.reduce((s, i) => s + i.qty, 0));
+  </script>
+</body>
+</html>

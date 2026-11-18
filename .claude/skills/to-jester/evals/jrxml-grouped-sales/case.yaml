@@ -1,0 +1,6 @@
+schema_version: "1.1"
+name: jrxml-grouped-sales
+expected_outcome: |
+  A zip importable into Jester whose report groups sales rows by branch with a subtotal and count per branch and a grand total computed by Jester (sort + groupBy + totals), dates as date parameters, money as decimal strings, a page number footer, no <tfoot>, and Thai titles on every parameter and schema field.
+context:
+  scaffold_script: place-files.sh
