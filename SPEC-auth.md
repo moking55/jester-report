@@ -207,7 +207,7 @@ class Quota:
 
 class Auth:
     # A4
-    async def set_password(self, user_id: UUID, new_password: str, by: User) -> None
+    async def set_password(self, user_id: UUID, new_password: str, by: UUID) -> None  # by = id ของผู้ตั้ง
     # B1 + B2: พารามิเตอร์ใหม่เป็น keyword และมีค่าเริ่มต้น
     async def create_api_key(self, name: str, created_by: str, *, expires_at: datetime | None = None,
                              templates: Sequence[str] | None = None,

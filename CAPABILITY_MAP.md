@@ -66,3 +66,6 @@ SSO/OIDC, role/RBAC, multi-tenant, เก็บ PDF ที่ render แล้�
 
 Build order: H1 → A1–A4 → B1 → B2 → B3 → C1 → C2 (H2 คู่ขนานได้; B3, C1 ไม่ขึ้นกับใคร)
 ลำดับเขียน spec: `template-store` → `render-service` → `auth` → `data-prep`/`binder` → `public-api` → `studio` → infra
+
+**สถานะ (18 พ.ย. 2026):** ปล่อยทีละ phase — H1 + A1–A4 = `v1.1.0`, B1–B3 = `v1.2.0`, C1–C2 พร้อมปล่อยเป็น `v1.3.0`
+หลังผู้ใช้สแกน QR; H2 ยังค้างที่ผู้ใช้ (Actions/billing) · บันทึกผลและจุดที่ต่างจาก spec: [tasks/v1.1/todo.md](tasks/v1.1/todo.md)

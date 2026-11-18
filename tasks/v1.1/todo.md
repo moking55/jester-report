@@ -120,18 +120,27 @@
 
 ## Phase C: เอกสารไทย
 
-- [ ] **T17 C1 data-prep: `fmt.qr` / `fmt.barcode` / `fmt.promptpay`**
+- [x] **T17 C1 data-prep: `fmt.qr` / `fmt.barcode` / `fmt.promptpay`**
   - Acceptance: เพิ่ม `segno==1.6.6`, `python-barcode==0.16.1`; คืน `Markup` SVG เท่านั้น ไม่มี `<text>`; PromptPay EMVCo + CRC-16/CCITT-FALSE ตรง test vector; ทุกขอบในตารางกติกามี test
   - Verify: `pytest tests/data_prep`, coverage ≥ 90%, ruff
   - Files: `data_prep/codes.py`, `data_prep/prepare.py`, `pyproject.toml` + `uv.lock`, `tests/data_prep/test_codes.py`
-- [ ] **T18 C1 binder: test SVG**
+- [x] **T18 C1 binder: test SVG**
   - Acceptance: test 4 ข้อใน SPEC-binder v1.1 ผ่านโดยไม่แก้โค้ด binder (ถ้าต้องแก้ = หยุดถามผู้ใช้)
   - Verify: `pytest tests/binder`
   - Files: `tests/binder/test_codes_svg.py`
-- [ ] **T19 C2: starter `tax-invoice`**
+- [x] **T19 C2: starter `tax-invoice`**
   - Acceptance: 7 ฟิลด์ตาม ม.86/4; คำเตือนใน README ของ starter และ comment ใน `template.html` ว่าไม่มีผู้เชี่ยวชาญภาษีตรวจ ผู้ใช้ต้องตรวจกับสรรพากรเอง; golden test มูลค่ารวม, VAT 7%, ยอดสุทธิ, บาทตัวอักษร; มี QR PromptPay; ปรากฏในตัวเลือก starter ของ Studio และ contract
   - Verify: pytest template_store + public_api flow (สร้าง → validate → publish → render ด้วย key จำกัด → PDF); เบราว์เซอร์สร้างจาก starter แล้ว preview ได้
   - Files: `template_store/starters/tax-invoice/*`, `public-api.yaml`, `components/CreateTemplate.tsx`, tests
+
+บันทึก 18 พ.ย. 2026 (T17–T19): commit `9322fad` (codes + binder tests + autocomplete), `0e53791` (starter)
+- api: 637 passed, 3 skipped (บน VM); coverage data_prep/codes 98%, template_store/store 97%, รวม 3 module 97%; ruff สะอาด
+- studio: lint, typecheck, 70 test, build ผ่าน
+- PromptPay: CRC ตรงค่า check มาตรฐานของ CRC-16/CCITT-FALSE (`29B1`) และ payload ตรงตัวอย่างใน README ของ promptpay-qr
+- render จริงผ่าน engine บน VM: ใบกำกับภาษีจาก starter ได้ PDF หน้าเดียว ครบ 7 ช่อง ยอด 25,417.85 พร้อม QR
+- ต่างจากแผน: คำเตือนเรื่องภาษีอยู่ใน comment `{# #}` ของ `template.html` (starter มีได้แค่ไฟล์ .html/.json/.css
+  และ asset จึงใส่ README ไม่ได้); `sample.json` ใช้เลขผู้เสียภาษีสมมติเป็น PromptPay — สแกนแล้วแอปจะไม่รู้จักผู้รับ
+  ต้องใส่หมายเลข PromptPay จริงของผู้ทดสอบก่อนสแกน
 
 ### Checkpoint C (ปิด v1.1)
 - [ ] api + studio ครบทุกคำสั่ง, E2E 2 spec ผ่านบน stack ใหม่, `down -v`

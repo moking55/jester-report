@@ -315,6 +315,8 @@ store ไม่ตรวจเนื้อหาของ report (เหมื�
 6. จำนวนภาษีมูลค่าเพิ่มแยกออกจากมูลค่าสินค้าหรือบริการให้ชัดเจน
 7. วัน เดือน ปีที่ออก
 
+คำเตือนว่ายังไม่มีผู้เชี่ยวชาญภาษีตรวจอยู่ใน comment `{# #}` บนสุดของ `template.html` (starter มีได้แค่ไฟล์ .html/.json/.css และ asset) และมี barcode ของเลขที่ใบกำกับ (18 พ.ย. 2026)
+
 `data.schema.json` มี `seller`, `buyer` (`taxId` 13 หลัก, `branch` = `"00000"` สำหรับสำนักงานใหญ่หรือเลขสาขา 5 หลัก), `items`, `vatRate` (decimal, ตัวอย่าง `"7"`), `promptpay` (เลือกใส่); parameters `invoiceNo`, `issueDate`; ยอดรวม ภาษี และยอดสุทธิคำนวณใน `report.json` ด้วย `Decimal`; บาทตัวอักษรด้วย `fmt.baht_text`
 
 ## Testing Strategy v1.1
