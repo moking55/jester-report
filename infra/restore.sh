@@ -17,7 +17,7 @@ for file in manifest.json db.dump blobs.tar; do
   [ -f "$dir/$file" ] || { echo "missing $dir/$file" >&2; exit 1; }
 done
 field() { sed -n "s/.*\"$1\": *\"\{0,1\}\([^\",]*\)\"\{0,1\},\{0,1\}$/\1/p" "$dir/manifest.json"; }
-[ "$(field formatVersion)" = 1 ] || { echo "unknown backup format" >&2; exit 1; }
+case "$(field formatVersion)" in 1 | 2) ;; *) echo "unknown backup format" >&2; exit 1 ;; esac # 2: v1.5, with documents
 [ "$(sha256sum "$dir/db.dump" | cut -d' ' -f1)" = "$(field dbSha256)" ] || { echo "db.dump does not match manifest.json" >&2; exit 1; }
 [ "$(sha256sum "$dir/blobs.tar" | cut -d' ' -f1)" = "$(field blobsSha256)" ] || { echo "blobs.tar does not match manifest.json" >&2; exit 1; }
 last=$(field lastMigration)
@@ -39,7 +39,7 @@ fi
 echo "database..." >&2
 "${compose[@]}" exec -T postgres pg_restore -U jester -d jester --single-transaction --no-owner <"$dir/db.dump"
 
-echo "assets..." >&2
+echo "assets and documents..." >&2
 "${compose[@]}" run --rm --no-deps -T api python -m jester_api.ops.blobs import <"$dir/blobs.tar"
 
 echo "starting the stack..." >&2
