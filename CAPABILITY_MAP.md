@@ -90,11 +90,12 @@ Build order: F0 → F1 · ปล่อยเป็น `v1.4.0` · ลำดั�
 
 | งาน | module | ขึ้นกับ |
 | --- | --- | --- |
-| D1 เก็บ PDF + params + data ของทุก render ที่สำเร็จจาก version ที่ publish (ทั้งฟอร์มใน Studio และ API key) ในตาราง `documents` ที่ผูกกับ run; ลบตาม `run_retention` เดิม | `render-service` | — |
+| D1 เก็บเอกสารของทุก render ที่สำเร็จจาก version ที่ publish (ทั้งฟอร์มใน Studio และ API key): PDF ใน rustfs ที่ `documents/<run_id>`, params + data ในตาราง `documents` ที่ผูกกับ run; ลบทั้งสองที่ตาม `run_retention` เดิม + คำสั่งเก็บกวาดไฟล์กำพร้า | `render-service` | — |
 | D2 `GET /v1/documents` (รายการ + ค้นหา) และ `GET /v1/documents/{runId}` (PDF) — session เท่านั้น; `Run` เพิ่ม `hasDocument` | `public-api` | D1 |
 | D3 หน้า "เอกสาร" (กรองรายงาน, ค้นหา, ดาวน์โหลด) + ทางเข้าจาก catalog, โหมดออกเอกสาร และหน้าประวัติ | `studio` | D2 |
 
-Build order: D1 → D2 → D3 · ปล่อยเป็น `v1.5.0` · ลำดับเขียน spec: `render-service` → `public-api` → `studio` → infra (README backup)
+Build order: D1 → D2 → D3 · ปล่อยเป็น `v1.5.0` · ลำดับเขียน spec: `render-service` → `public-api` → `studio` → infra (backup รวม PDF ของเอกสาร)
+ผู้ใช้ตัดสิน 19 พ.ย. 2026: PDF เก็บใน rustfs ไม่ใช่ PostgreSQL · ผู้ใช้ Studio ทุกคนเห็นทุกใบ รวมใบที่ออกผ่าน API key
 **กลับข้อตัดสินใจ v1:** เดิม "ไม่เก็บ params, data หรือ PDF" — ตั้งแต่ v1.5 ฐานข้อมูลมีข้อมูลลูกค้าจริง (ผู้ใช้ยืนยัน 19 พ.ย. 2026)
 
-**ไม่ทำ:** เลขรันอัตโนมัติ · ห้ามแก้/ห้ามลบเพื่อเป็นหลักฐาน · ลบทีละใบ · อายุเก็บแยกจากประวัติ · API ให้ระบบอื่นดึงใบเดิม (API key) · role · เก็บ preview/draft/run ที่ล้มเหลว
+**ไม่ทำ:** เลขรันอัตโนมัติ · ห้ามแก้/ห้ามลบเพื่อเป็นหลักฐาน · ลบทีละใบ · อายุเก็บแยกจากประวัติ · API ให้ระบบอื่นดึงใบเดิม (API key) · role · เก็บ preview/draft/run ที่ล้มเหลว · ตัวเลือก "ไม่เก็บ" ต่อ API key/รายงาน (ทำเมื่อมีแผนต่อระบบเงินเดือน)

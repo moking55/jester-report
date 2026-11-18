@@ -252,7 +252,8 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 - `DocumentSummary`: `runId`, `createdAt`, `templateId`, `version`, `caller` (`type`/`id`/`name` แบบ `Run`), `filename`, `pages`, `params`
 - `Run` เพิ่ม `hasDocument: boolean` (required) — หน้าประวัติใช้แสดงลิงก์ดาวน์โหลด
-- run ที่ถูกลบตาม retention → เอกสารหายด้วย → `getDocument` ได้ 404
+- run ที่ถูกลบตาม retention → เอกสารหายด้วย → `getDocument` ได้ 404; มีแถวแต่ PDF หายจาก object storage หรือ sha256 ไม่ตรง → 404 เช่นกัน (api log error)
+- `renderReport`: เขียน PDF ลง object storage ไม่ได้ → `503 SERVICE_UNAVAILABLE` (มีใน contract อยู่แล้ว ไม่เพิ่ม code ใหม่)
 
 ## Testing Strategy v1.5
 

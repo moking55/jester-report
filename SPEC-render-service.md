@@ -242,68 +242,89 @@ Success Criteria v1 ข้อ 4 ส่วน "ไม่มี params, data ห�
 2. **ใบที่เก็บ (ผู้ใช้ตัดสิน):** ทุก `render()` ที่**สำเร็จ** — มาจากฟอร์มใน Studio (session) หรือระบบอื่น (API key) ก็ได้; ใช้ version ที่ publish
    (`published` หรือเลข version เจาะจง) **ไม่เก็บ:** `preview()` ของ draft (ลายน้ำ DRAFT), run ที่ล้มเหลว
 3. **เก็บอะไร:** PDF ไบต์เดิมที่ส่งออกไป (ดาวน์โหลดซ้ำได้ไฟล์เดิมทุกไบต์ ไม่ render ใหม่), params, data และชื่อไฟล์ที่ตอบกลับ
-4. **เก็บใน PostgreSQL ไม่ใช่ rustfs:** ตาราง `documents` ผูก `runs(id)` ด้วย `ON DELETE CASCADE`
-   - insert ใน transaction เดียวกับ run: ไม่มีทางได้ run ที่ไม่มีเอกสาร หรือเอกสารที่ไม่มี run
-   - retention เดิม (`DELETE FROM runs …`) ลบเอกสารไปด้วยโดยไม่ต้องแก้โค้ด; `run_retention` ค่าเริ่มต้นยังเป็นเก็บตลอด (ผู้ใช้ตัดสิน)
-   - backup เดิม (`pg_dump`) ครอบเอกสารโดยไม่ต้องแก้สคริปต์
-   - `BlobStore` ของ asset เป็นแบบ content-addressed และไม่มี delete จึงไม่เหมาะกับของที่ต้องลบตามอายุ
-   - ข้อจำกัด: PDF ~100 KB × 1,000 ใบ/วัน ≈ 36 GB/ปี ใน DB; ใส่ comment `shortcut:` ว่าย้าย PDF ไป object storage เมื่อขนาด DB/backup เป็นปัญหา
-5. **ค้นหา:** ข้อความ `q` (ตัด space หัวท้าย, 1–100 ตัวอักษร) จับคู่แบบไม่สนตัวพิมพ์กับ `params::text || ' ' || data::text`
-   (`ILIKE` และ escape `%` `_` `\` ของผู้ใช้) — ไม่มี index ใหม่; ไล่ตามรายงานด้วย index `runs_template` เดิม
+4. **ที่เก็บ (ผู้ใช้ตัดสิน 19 พ.ย. 2026):** PDF อยู่ใน object storage เดิม (RustFS หรือ S3 อื่นตาม `JESTER_S3_*`) ที่ key `documents/<run_id>`;
+   params, data, ชื่อไฟล์, ขนาดและ sha256 ของ PDF อยู่ในตาราง `documents` ของ PostgreSQL ผูก `runs(id)` ด้วย `ON DELETE CASCADE`
+   - DB ไม่โตตามขนาด PDF; ราคาที่จ่ายคือ object storage กับ DB ไม่อยู่ใน transaction เดียวกัน จึงต้องมีกติกาลำดับเขียน/ลบ และการเก็บกวาดไฟล์กำพร้า (ด้านล่าง)
+   - `BlobStore` ของ asset ไม่เปลี่ยน (content-addressed, ไม่มี delete); เอกสารใช้ store แยกที่ลบได้ ใน bucket เดียวกันคนละ prefix
+5. **ใครเห็น (ผู้ใช้ตัดสิน):** ผู้ใช้ Studio ทุกคนเห็นทุกใบ รวมใบที่ระบบอื่นออกผ่าน API key (ไม่มี role เหมือน v1.4)
+6. **ค้นหา:** ข้อความ `q` (ตัด space หัวท้าย, 1–100 ตัวอักษร) จับคู่แบบไม่สนตัวพิมพ์กับ `params::text || ' ' || data::text`
+   (`ILIKE` และ escape `%` `_` `\` ของผู้ใช้) — ไม่มี index ใหม่; ไล่ตามรายงานด้วย index `documents_template`
    ใส่ comment `shortcut:` ว่าเปลี่ยนเป็น `pg_trgm` เมื่อรายงานเดียวมีเอกสารเกินหลักแสน
-6. **ไม่มีสวิตช์ปิดการเก็บ** (ไม่มีใครขอ) — ระบุใน README ว่าตั้งแต่ v1.5 ฐานข้อมูลและ backup มีข้อมูลลูกค้า
+7. **ไม่มีสวิตช์ปิดการเก็บ** (ไม่มีใครขอ) — ตัวเลือก "ไม่เก็บ" ต่อ API key หรือต่อรายงานทำเมื่อมีแผนต่อระบบเงินเดือนจริง;
+   README ระบุว่าตั้งแต่ v1.5 ฐานข้อมูล, object storage และ backup มีข้อมูลลูกค้า
 
 ## การเปลี่ยนแปลง v1.5
 
 **`0008_documents.sql`**
 
 ```sql
--- v1.5: documents a successful /v1/render produced; deleted with their run (retention)
+-- v1.5: documents a successful /v1/render produced; the PDF itself is in object storage at documents/<run_id>
 CREATE TABLE documents (
     run_id      text PRIMARY KEY REFERENCES runs (id) ON DELETE CASCADE,
     template_id text NOT NULL,
     filename    text NOT NULL,
     params      json NOT NULL,   -- json, not jsonb: jsonb rejects "\u0000", which callers may send
     data        json NOT NULL,
-    pdf         bytea NOT NULL
+    pdf_size    integer NOT NULL,
+    pdf_sha256  text NOT NULL
 );
 CREATE INDEX documents_template ON documents (template_id, run_id DESC);
 ```
 
-**`runs.py`:** `NewRun` เพิ่ม `document: NewDocument | None` (filename, params, data, pdf); `record()` insert ทั้งสองแถวใน transaction เดิม
+**`DocumentFiles`** (ใหม่ใน `render_service`, มีแบบ S3 และแบบ memory สำหรับ test): `put(run_id, pdf)`, `get(run_id)`,
+`delete(run_ids)` (S3 `DeleteObjects` ทีละไม่เกิน 1,000 key; key ที่ไม่มีอยู่แล้วไม่ถือว่าผิด), `list_older_than(cutoff)` สำหรับเก็บกวาด
+ใช้ endpoint, bucket และ credential ชุดเดียวกับ asset
+
+**ลำดับเขียน (render):** `record()` สร้าง `run_id` ก่อน → `put` PDF → transaction เดียว insert `runs` + `documents`
+- `put` ล้ม → render ตอบ `503 SERVICE_UNAVAILABLE` (retryable) และบันทึก run เป็น failed ไม่มีเอกสาร; ผู้เรียกไม่ได้ PDF ที่ไม่ถูกเก็บ
+- transaction ล้มหลัง `put` → ลบ object ทันทีแบบ best effort; ถ้าลบไม่ได้ก็เหลือไฟล์กำพร้าให้การเก็บกวาดจัดการ
+- ผลคือ: แถวใน `documents` มี object เสมอ (ยกเว้นข้อ "backup" ใน SPEC-infra); object อาจไม่มีแถวได้ชั่วคราว
+
+**`runs.py`:** `NewRun` เพิ่ม `document: NewDocument | None` (filename, params, data, pdf)
 - `list_documents(template_id | None, q | None, limit, before) -> (list[DocumentSummary], cursor)` — ใหม่สุดก่อน; `DocumentSummary` = run_id, created_at,
   template_id, version, caller, filename, pages, params (ไม่มี data/pdf ในรายการ)
-- `document_pdf(run_id) -> (filename, pdf) | None`
+- `document(run_id) -> (filename, pdf_sha256) | None`; `RenderService.document_pdf(run_id)` อ่าน object แล้วตรวจ sha256
+  — ไม่มีแถว → `None` (404); มีแถวแต่ object หายหรือ sha256 ไม่ตรง → `StoreError("NOT_FOUND")` และ log error พร้อม run_id
 - `Run` เพิ่ม `has_document: bool` (`EXISTS` ใน query เดิม)
 
 **`service.py`:** `_run()` คำนวณ `default_name` ก่อน `_record()` แล้วส่งเอกสารเข้า run เมื่อ `kind == "render"` และสำเร็จ;
 params/data ที่เก็บคือค่าที่ผู้เรียกส่งมา: ใส่ด้วย `Json(value, dumps=…)` ของ psycopg โดยส่ง dumps ที่แปลง `Decimal` เป็นข้อความเดิม
 (`default=str` เหมือน `canonical_sha256`) — ค่าเริ่มต้นของ psycopg ใช้ `json.dumps` เฉย ๆ ซึ่งโยน `TypeError` กับ Decimal
+คอลัมน์ `json` (ไม่ใช่ `jsonb`) รับทุกค่าที่ JSON ของผู้เรียก parse ได้ รวม `"\u0000"` ซึ่ง `jsonb` ปฏิเสธ — test ครอบกรณีนี้
 
-**ถ้าเขียนเอกสารไม่ได้ render ล้ม:** เอกสารอยู่ใน transaction เดียวกับ run จึงไม่มี run ครึ่ง ๆ; คอลัมน์ `json` (ไม่ใช่ `jsonb`) รับทุกค่าที่ JSON
-ของผู้เรียก parse ได้ รวม `"\u0000"` ซึ่ง `jsonb` ปฏิเสธ — test ครอบกรณีนี้
+**retention ลบเป็นชุด แล้วลบ PDF หลัง commit:** `_apply_retention` (ทุก run ที่ 100, ภายใน transaction ของ `record()`)
+- ลบไม่เกิน 500 run ต่อรอบ: `DELETE FROM runs WHERE id IN (SELECT id … ORDER BY id LIMIT 500)`; ส่วนที่เหลือถูกลบในรอบถัด ๆ ไป
+  (ครั้งแรกที่ admin ตั้ง N วันหลังเก็บตลอดมานาน อาจมีหลายหมื่นใบ)
+- เก็บ `run_id` ที่มีเอกสารก่อนลบ (`DELETE FROM documents … RETURNING run_id` ในชุดเดียวกัน) แล้ว**หลัง commit** เรียก `DocumentFiles.delete(...)`
+- ลบ object ล้ม → log warning ไม่ทำให้ render ล้ม; ไฟล์ที่เหลือเป็นไฟล์กำพร้าให้การเก็บกวาดจัดการ
+- ลำดับนี้ (DB ก่อน object) ทำให้ไม่มีแถวที่ชี้ไป object ที่ถูกลบแล้ว
 
-**retention ลบเป็นชุด:** `_apply_retention` ลบภายใน request ของ render ทุก run ที่ 100; ตอนนี้แต่ละแถวพา PDF ไปด้วย
-ครั้งแรกที่ admin ตั้ง N วันหลังเก็บตลอดมานานอาจลบหลาย GB ในครั้งเดียว — เปลี่ยนเป็นลบไม่เกิน 500 run ต่อรอบ
-(`DELETE … WHERE id IN (SELECT id … LIMIT 500)`) ส่วนที่เหลือถูกลบในรอบถัด ๆ ไป
-`RenderService` เพิ่ม `list_documents(...)` และ `document_pdf(run_id)`
+**เก็บกวาดไฟล์กำพร้า:** `python -m jester_api.ops.blobs sweep-documents` ลบ object ใต้ `documents/` ที่ไม่มีแถวใน `documents`
+และเก่ากว่า 1 ชั่วโมง (ไม่ชน render ที่กำลังเขียนอยู่) พิมพ์จำนวนที่ลบ; README แนะนำ cron วันละครั้ง
+ใส่ comment `shortcut:` ว่าไล่ทั้ง prefix ทุกครั้ง พอสำหรับหลักแสน object ต่อวัน
+
+`RenderService` เพิ่ม `list_documents(...)` และ `document_pdf(run_id)`; `build_services` สร้าง `DocumentFiles` จาก settings เดิม
 
 ## Testing Strategy v1.5
 
-- render ที่สำเร็จ (session และ API key) มีเอกสาร: PDF ไบต์เท่ากับที่ตอบ, params/data/filename ตรง; `"12345678901234567.89"` กลับมาตรงทุกหลัก
+- render ที่สำเร็จ (session และ API key) มีเอกสาร: PDF จาก `document_pdf` ไบต์เท่ากับที่ตอบ, params/data/filename ตรง; `"12345678901234567.89"` กลับมาตรงทุกหลัก
 - data ที่มีข้อความ `"\u0000"` และ Decimal ใน params render สำเร็จและมีเอกสาร
-- preview, render ที่ล้มเหลว (422, 403 `TEMPLATE_NOT_ALLOWED`, 410) ไม่มีเอกสาร
+- preview, render ที่ล้มเหลว (422, 403 `TEMPLATE_NOT_ALLOWED`, 410) ไม่มีเอกสารและไม่มี object
+- `put` ล้ม → 503 และไม่มีแถว; insert ล้มหลัง `put` → object ถูกลบ
+- object หายหรือ sha256 ไม่ตรง → `document_pdf` โยน `NOT_FOUND` (ไม่ส่งไบต์ผิดออกไป)
 - ค้นหา: เจอจากค่าใน params และใน data (ไทย, ไม่สนตัวพิมพ์อังกฤษ); `%` และ `_` ของผู้ใช้ไม่เป็น wildcard; กรองรายงาน; paging ด้วย cursor
-- retention: ตั้ง 90 วันแล้ว run เก่าถูกลบพร้อมเอกสาร ไม่เกิน 500 ต่อรอบ; ค่าเริ่มต้นไม่ลบ
+- retention: ตั้ง 90 วันแล้ว run เก่าถูกลบพร้อมแถวและ object ไม่เกิน 500 ต่อรอบ; ลบ object ล้มแล้ว render ยังสำเร็จ; ค่าเริ่มต้นไม่ลบ
+- sweep: ลบเฉพาะ object ที่ไม่มีแถวและเก่ากว่า 1 ชั่วโมง; object ที่มีแถวหรือใหม่กว่าไม่ถูกแตะ
+- test แบบ S3 จริง (RustFS ใน compose dev, ตามแบบ test ของ `S3BlobStore`): put/get/delete/list
 - `has_document` ถูกต้องใน `get_run`/`list_runs`; test เดิมผ่าน **ยกเว้น** test "ไม่มี params/data/PDF ใน DB" ซึ่งเปลี่ยนเป็น "ไม่มีใน `runs` และ log" (ยังจริง)
 
 ## Success Criteria v1.5
 
 1. ทุก render ที่สำเร็จจาก version ที่ publish ดาวน์โหลด PDF เดิมได้ทุกไบต์; draft/preview/ล้มเหลวไม่ถูกเก็บ
-2. ค้นเอกสารด้วยค่าใน params หรือ data ได้ และเอกสารถูกลบพร้อม run ตามนโยบายเดิม
-3. coverage ≥ 90%, `ruff` สะอาด
+2. ค้นเอกสารด้วยค่าใน params หรือ data ได้; เอกสารถูกลบทั้งแถวและ object ตามนโยบายเดิม และไม่มีแถวที่ชี้ไป object ที่ไม่มี
+3. ไม่มี PDF ในตาราง PostgreSQL ใด
+4. coverage ≥ 90%, `ruff` สะอาด
 
 ## Open Questions v1.5
 
-1. **ที่เก็บ PDF:** ผมเลือก PostgreSQL (ข้อ 4) เพราะ retention และ backup ใช้ของเดิมได้ทันที — ถ้าคาดว่าจะออกเกินหลายพันใบต่อวัน ควรเลือก rustfs ตั้งแต่แรก (ต้องเพิ่ม delete และกันไฟล์กำพร้า)
-2. **ใครเห็น:** ใบที่ระบบอื่นออกผ่าน API (เช่นสลิปเงินเดือน) จะอยู่ใน DB และผู้ใช้ Studio ทุกคนเห็น เพราะไม่มี role — ยืนยันว่ารับได้ในรอบนี้
+ไม่มี — ที่เก็บ (rustfs) และใครเห็น (ทุกคน) ผู้ใช้ตัดสินแล้ว 19 พ.ย. 2026
