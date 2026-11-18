@@ -68,10 +68,22 @@
     หน้าประวัติมีลิงก์ดาวน์โหลดเมื่อ `hasDocument`; `RetentionPanel` ยืนยันด้วยทั้งสองจำนวน
   - Verify: studio 4 คำสั่ง; Vitest ของข้อความยืนยัน
   - Files: `app/(app)/page.tsx`, `components/Workspace.tsx`, `app/(app)/history/page.tsx`, `components/RetentionPanel.tsx`
-- [ ] **T10 E2E `documents.spec.ts`**
+- [ ] **T10 E2E `issued-documents.spec.ts`**
   - Acceptance: ตาม Testing Strategy v1.5 ของ SPEC-studio (ฟอร์ม → ค้นเจอ → ไบต์ตรง; API key ขึ้นเป็น "API: <ชื่อ>"; preview ไม่ขึ้น)
   - Verify: E2E ทุก spec ผ่านบน `jester-e2e`
-  - Files: `e2e/documents.spec.ts`
+  - Files: `e2e/issued-documents.spec.ts`
+
+บันทึก 19 พ.ย. 2026 (โค้ดครบ T1–T10, commit f5c0db0..feda668; ยังไม่ติ๊กเพราะยังตรวจไม่ครบ):
+- ผ่านแล้ว: ruff สะอาด · บน VM `test_document_files` (รวม `DeleteObjects`/list กับ RustFS จริง), `test_runs`, `test_service`, `tests/public_api`
+  = 83 passed, 2 failed — ทั้งสองเป็นข้อผิดของ test (run id ในมิลลิวินาทีเดียวกัน, ส่ง Decimal ให้ช่องที่ schema ต้องการข้อความ) แก้แล้วแต่ยังไม่ได้รันซ้ำ ·
+  studio lint/typecheck/test (80)/build ผ่าน · ฝั่ง api บน stack E2E: PDF ที่เก็บ sha256 ตรงกับ `outputSha256` ของ run ทุกใบ
+- ยังไม่ผ่าน/ยังไม่รู้ผล: pytest ทั้งชุดหลุดกลางทาง (VM ต่อไม่ได้เมื่อเครือข่ายเปลี่ยนเป็น hotspot; ก่อนหลุดมี 1 F ยังไม่รู้ว่าตัวไหน) ·
+  `tests/ops` ใหม่ (T6) ยังไม่เคยรัน · backup → restore บน VM (T7) ยังไม่ได้ทำ ·
+  E2E รอบแรก: 1 passed, 4 failed — checkpoint-a หมดเวลาตอน setup (VM โหลดหนักจาก pytest), spec ใหม่ทำให้ catalog ไม่ว่างก่อน full-flow
+  (เปลี่ยนชื่อเป็น `issued-documents.spec.ts` ให้เรียงหลัง), lifecycle พังตาม full-flow, และไบต์ที่ดาวน์โหลดไม่ตรงกับ `response.body()` ของ
+  การออก (ฝั่ง api ตรง; เปลี่ยน test ให้ใช้ `Jester-Run-Id` แล้ว ต้องรันซ้ำเพื่อดูว่ายังไม่ตรงไหม)
+- ต่างจาก spec: ตารางเอกสารแสดง `key: ค่า` ของ params (ไม่ใช่ `title`) เพราะรายการไม่มี title ของ version — ถ้าต้องการ title ต้องอ่าน `report.json` ของแต่ละ version เพิ่ม
+- image ทดสอบบน VM ใช้ tag `1.5.0-rc` (แก้เฉพาะสำเนาใน `/opt/jester-e2e`) เพื่อไม่ทับ `1.4.0` ของ stack หลัก
 
 ## Checkpoint: ปล่อย v1.5.0
 
