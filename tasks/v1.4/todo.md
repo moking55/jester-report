@@ -62,6 +62,10 @@
 - แก้ E2E: helper `login` รอ 30 วินาที (scrypt บน VM ช้า), `issue.spec` รอให้ publish เสร็จก่อนไป catalog และหาช่องในฟอร์มสร้างรายงานแบบเจาะจง
 - Chromium แบบ headless ไม่แสดง PDF ใน iframe (ไม่มีตัวแสดง PDF) — E2E ตรวจ content-type แทน; ในเบราว์เซอร์จริงแสดงปกติ
 
+ผู้ใช้ขอเพิ่ม 18 พ.ย. 2026 (`ed2c488`, `1ba33e4`): ปุ่ม "ออกเอกสาร" แทนที่ Render… ใน toolbar, ลบ Render dialog และ `/render/[id]`,
+curl ย้ายไปปุ่ม "สำหรับนักพัฒนา" ในโหมดออกเอกสาร; แก้ปุ่มที่ยังกดไม่ได้หลัง Publish ครั้งแรก (router.refresh) ·
+E2E 4 spec ผ่าน 46.5 วินาทีบน stack ใหม่ · deploy บน VM ต้องลบ `apps/` ก่อนแตกไฟล์ (ไฟล์ที่ลบจาก repo ค้างอยู่ทำ build พัง)
+
 ### Checkpoint (ปล่อย v1.4.0)
 - [x] api + studio ครบทุกคำสั่ง; E2E 4 spec ผ่านบน stack ใหม่ แล้ว `down -v`
 - [ ] deploy ขึ้น main stack บน VM; ผู้ใช้ลองออกใบกำกับภาษีจากปุ่มใน catalog เอง
