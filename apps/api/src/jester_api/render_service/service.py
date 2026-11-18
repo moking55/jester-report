@@ -8,6 +8,7 @@ import dataclasses
 import hashlib
 import io
 import json
+import logging
 import time
 from collections import OrderedDict
 from collections.abc import AsyncIterator, Callable, Mapping
@@ -28,9 +29,22 @@ from ..report_definition.loader import ReportDefinition
 from ..report_definition.model import parse_report_json
 from ..report_definition.problems import Problem, error, has_errors
 from ..template_store import StoredDefinition, StoreError, TemplateStore
+from .document_files import DocumentFiles
 from .fonts import EngineFonts
-from .runs import Caller, NewRun, Retention, Run, Runs, canonical_sha256
+from .runs import (
+    Caller,
+    DocumentStorageError,
+    DocumentSummary,
+    NewDocument,
+    NewRun,
+    Retention,
+    Run,
+    Runs,
+    canonical_sha256,
+)
 from .worker import WorkerTimeout, prepare_in_worker, run_in_worker
+
+log = logging.getLogger("jester.api")
 
 
 @dataclass(frozen=True)
@@ -124,11 +138,12 @@ class RenderService:
         db: AsyncConnectionPool,
         settings: RenderSettings | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        documents: DocumentFiles | None = None,
     ) -> None:
         self._store, self._engine, self._db = store, engine, db
         self._settings = settings or RenderSettings()
         self._now = clock
-        self._runs = Runs(db, clock)
+        self._runs = Runs(db, clock, documents)
         self._fonts = EngineFonts(engine)
         self._slots = asyncio.Semaphore(self._settings.max_concurrent)
         self._definitions = _Lru(self._settings.definition_cache)
@@ -337,26 +352,40 @@ class RenderService:
                 kind, template_id, stored, caller, request_id, started, params, data, None, bound, exc
             )
             raise
-        run_id = await self._record(
-            kind,
-            template_id,
-            stored,
-            caller,
-            request_id,
-            started,
-            params,
-            data,
-            result,
-            bound,
-            None,
-            warnings,
-        )
         default_name = (
             f"{template_id}-v{stored.version}.pdf"
             if stored.version
             else f"{template_id}-draft-r{stored.revision}.pdf"
         )
-        return RenderOutcome(result.pdf, run_id, stored.version, filename or default_name, warnings)
+        name = filename or default_name
+        # v1.5: every successful render of a published version is kept; previews of drafts are not
+        document = NewDocument(name, params, data, result.pdf) if kind == "render" else None
+        try:
+            run_id = await self._record(
+                kind,
+                template_id,
+                stored,
+                caller,
+                request_id,
+                started,
+                params,
+                data,
+                result,
+                bound,
+                None,
+                warnings,
+                document,
+            )
+        except DocumentStorageError as exc:
+            log.error("render %s: the document could not be stored: %s", template_id, exc)
+            failure = RenderError(
+                "SERVICE_UNAVAILABLE", 503, "the document could not be stored; retry shortly", retryable=True
+            )
+            failure.run_id = await self._record(
+                kind, template_id, stored, caller, request_id, started, params, data, None, bound, failure
+            )
+            raise failure from None
+        return RenderOutcome(result.pdf, run_id, stored.version, name, warnings)
 
     async def _record(
         self,
@@ -372,6 +401,7 @@ class RenderService:
         bound: Bound | None,
         failure: RenderError | None,
         warnings: list[Problem] | None = None,
+        document: NewDocument | None = None,
     ) -> str:
         provenance = await self._provenance(stored, params, data, result, bound) if stored else {}
         return await self._runs.record(
@@ -388,6 +418,7 @@ class RenderService:
                 duration_ms=int((time.monotonic() - started) * 1000),
                 provenance=provenance,
                 problems=failure.problems if failure else (warnings or []),
+                document=document,
             )
         )
 
@@ -485,6 +516,28 @@ class RenderService:
         self, template_id: str | None, status: str | None, limit: int = 50, before: str | None = None
     ) -> tuple[list[Run], str | None]:
         return await self._runs.list(template_id, status, limit, before)
+
+    async def list_documents(
+        self, template_id: str | None, q: str | None, limit: int = 50, before: str | None = None
+    ) -> tuple[list[DocumentSummary], str | None]:
+        try:
+            return await self._runs.list_documents(template_id, q, limit, before)
+        except ValueError as exc:
+            raise RenderError("INPUT_INVALID", 422, str(exc)) from None
+
+    async def document_pdf(self, run_id: str) -> tuple[str, bytes]:
+        """(filename, the PDF bytes that were sent); a lost or changed file is a 404, never wrong bytes."""
+        stored = await self._runs.document(run_id)
+        if stored is None:
+            raise RenderError("NOT_FOUND", 404, "document not found")
+        try:
+            pdf = await self._runs.documents.get(run_id)
+        except StoreError:
+            pdf = None
+        if pdf is None or hashlib.sha256(pdf).hexdigest() != stored.pdf_sha256:
+            log.error("document %s: the PDF is missing from storage or does not match its sha256", run_id)
+            raise RenderError("NOT_FOUND", 404, "the document's PDF is missing from storage")
+        return stored.filename, pdf
 
     async def get_run(self, run_id: str) -> Run:
         run = await self._runs.get(run_id)

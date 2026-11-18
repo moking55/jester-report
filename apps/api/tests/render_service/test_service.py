@@ -182,3 +182,64 @@ async def test_refused_keys_do_not_take_queue_slots(setup, pool, clock):
         )
     assert results[-1].version == 1
     assert {r.code for r in results[:-1]} == {"TEMPLATE_NOT_ALLOWED"}
+
+
+# ---- v1.5: documents ----------------------------------------------------------------------------------
+async def test_successful_renders_keep_their_document(setup):
+    _, service, _ = setup
+    params = {**PARAMS, "quoteId": "Q-77"}
+    by_user = await service.render("quote", "published", params, SAMPLE, ALICE, None, "ใบเสนอราคา Q-77.pdf")
+    by_key = await service.render("quote", 1, PARAMS, SAMPLE, KEY)
+    assert await service.document_pdf(by_user.run_id) == ("ใบเสนอราคา Q-77.pdf", by_user.pdf)
+    assert await service.document_pdf(by_key.run_id) == ("quote-v1.pdf", by_key.pdf)
+    docs, _ = await service.list_documents("quote", "Q-77")
+    assert [d.run_id for d in docs] == [by_user.run_id] and docs[0].params == params
+    assert (await service.get_run(by_user.run_id)).has_document
+
+
+async def test_previews_and_failures_keep_no_document(setup, pool):
+    store, service, _ = setup
+    preview = await service.preview("quote", PARAMS, SAMPLE, None, ALICE)
+    bad = await failure(service.render("quote", "published", PARAMS, {"items": "nope"}, ALICE))
+    limited = Principal("api_key", "api-key:pos", api_key_id=KEY.api_key_id, templates=frozenset({"other"}))
+    refused = await failure(service.render("quote", "published", PARAMS, SAMPLE, limited))
+    await store.set_archived("quote", True, "alice")
+    archived = await failure(service.render("quote", "published", PARAMS, SAMPLE, ALICE))
+    assert (bad.http_status, refused.http_status, archived.http_status) == (422, 403, 410)
+    for run_id in (preview.run_id, bad.run_id, refused.run_id, archived.run_id):
+        assert not (await service.get_run(run_id)).has_document
+        assert (await failure(service.document_pdf(run_id))).http_status == 404
+    assert service._runs.documents.objects == {}
+
+
+async def test_storage_down_is_503_and_a_failed_run(setup):
+    _, service, _ = setup
+    service._runs.documents.fail_put = True
+    exc = await failure(service.render("quote", "published", PARAMS, SAMPLE, ALICE))
+    assert (exc.code, exc.http_status, exc.retryable) == ("SERVICE_UNAVAILABLE", 503, True)
+    run = await service.get_run(exc.run_id)
+    assert (run.status, run.error_code, run.has_document) == ("failed", "SERVICE_UNAVAILABLE", False)
+
+
+async def test_lost_or_changed_pdf_is_404_not_wrong_bytes(setup, caplog):
+    _, service, _ = setup
+    outcome = await service.render("quote", "published", PARAMS, SAMPLE, ALICE)
+    files = service._runs.documents
+    files.objects[outcome.run_id] = (b"%PDF-other", None)
+    assert (await failure(service.document_pdf(outcome.run_id))).http_status == 404
+    del files.objects[outcome.run_id]
+    assert (await failure(service.document_pdf(outcome.run_id))).http_status == 404
+    assert "does not match its sha256" in caplog.text
+    assert (await failure(service.list_documents(None, " "))).http_status == 422
+
+
+async def test_big_decimals_and_nul_characters_are_kept(setup):
+    _, service, _ = setup
+    # the schema wants decimal strings; Decimals in params are covered in test_runs
+    data = {**SAMPLE, "customer": {"name": "ลูกค้า\u0000X"}, "discount": "12345678901234567.89"}
+    outcome = await service.render("quote", "published", PARAMS, data, ALICE)
+    docs, _ = await service.list_documents(None, "ลูกค้า")
+    assert [d.run_id for d in docs] == [outcome.run_id]
+    async with service._db.connection() as conn:
+        row = await (await conn.execute("SELECT data::text FROM documents")).fetchone()
+    assert "12345678901234567.89" in row[0] and "\u0000" in row[0]

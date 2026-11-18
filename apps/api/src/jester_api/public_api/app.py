@@ -97,6 +97,7 @@ async def build_services(settings: Settings) -> Services:
     from ..db import migrate
     from ..engine_client import EngineClient
     from ..render_service import RenderService, RenderSettings
+    from ..render_service.document_files import S3DocumentFiles
     from ..template_store import S3BlobStore, TemplateStore
     from ..themes import Themes
 
@@ -111,7 +112,13 @@ async def build_services(settings: Settings) -> Services:
     engine = EngineClient(settings.gotenberg_url)
     store = TemplateStore(pool, blobs)
     auth = Auth(pool)
-    render = RenderService(store, engine, pool, RenderSettings(engine_image=settings.engine_image))
+    render = RenderService(
+        store,
+        engine,
+        pool,
+        RenderSettings(engine_image=settings.engine_image),
+        documents=S3DocumentFiles(blobs.client, blobs.bucket),
+    )
     token = await auth.prepare_setup()
     if token:
         banner = "=" * 72
