@@ -277,6 +277,7 @@ CREATE INDEX documents_template ON documents (template_id, run_id DESC);
 
 **ลำดับเขียน (render):** `record()` สร้าง `run_id` ก่อน → `put` PDF → transaction เดียว insert `runs` + `documents`
 - `put` ล้ม → render ตอบ `503 SERVICE_UNAVAILABLE` (retryable) และบันทึก run เป็น failed ไม่มีเอกสาร; ผู้เรียกไม่ได้ PDF ที่ไม่ถูกเก็บ
+  (ผู้ใช้ตัดสิน 19 พ.ย. 2026: ยอมให้ระบบที่เรียกผ่าน API key ออก PDF ไม่ได้ระหว่าง rustfs ล่ม ดีกว่าออกใบที่ไม่มีที่เก็บ)
 - transaction ล้มหลัง `put` → ลบ object ทันทีแบบ best effort; ถ้าลบไม่ได้ก็เหลือไฟล์กำพร้าให้การเก็บกวาดจัดการ
 - ผลคือ: แถวใน `documents` มี object เสมอ (ยกเว้นข้อ "backup" ใน SPEC-infra); object อาจไม่มีแถวได้ชั่วคราว
 
