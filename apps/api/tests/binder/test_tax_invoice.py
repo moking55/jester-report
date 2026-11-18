@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from jester_api.binder import bind
 from jester_api.data_prep import prepare
-from jester_api.data_prep.codes import promptpay, qr
+from jester_api.data_prep.codes import barcode, promptpay, qr
 
 from ..data_prep.conftest import fixture_files, load_fixture, sample
 from .test_bind import ASSETS
@@ -57,6 +57,7 @@ def test_every_required_field_is_printed():
     ):
         assert text in html, text
     assert str(qr(promptpay("0105500000001", Decimal("25417.85")), size_mm=28)) in html
+    assert str(barcode("INV-2026-0001", height_mm=8)) in html
 
 
 def test_promptpay_and_book_number_are_optional():
@@ -67,7 +68,8 @@ def test_promptpay_and_book_number_are_optional():
 
     _, result = run({"invoiceNo": "INV-2", "issueDate": "2026-11-18"}, plain)
     html = result.bound.index_html.decode()
-    assert result.problems == [] and "<svg" not in html and "เล่มที่" not in html and "สาขาที่" not in html
+    assert result.problems == [] and html.count("<svg") == 1  # the invoice-number barcode only
+    assert "เล่มที่" not in html and "สาขาที่" not in html
 
 
 def test_the_template_warns_that_no_tax_expert_checked_it():

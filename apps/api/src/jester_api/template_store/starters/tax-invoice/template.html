@@ -33,6 +33,7 @@
       {% if params.bookNo %}เล่มที่ {{ params.bookNo }}<br>{% endif %}
       เลขที่ <b>{{ params.invoiceNo }}</b><br>
       วันที่ {{ fmt.thai_date(params.issueDate) }}
+      <div class="code">{{ fmt.barcode(params.invoiceNo, height_mm=8) }}</div>
     </td>
   </tr>
 </table>
