@@ -298,6 +298,7 @@ params/data ที่เก็บคือค่าที่ผู้เรี�
 - เก็บ `run_id` ที่มีเอกสารก่อนลบ (`DELETE FROM documents … RETURNING run_id` ในชุดเดียวกัน) แล้ว**หลัง commit** เรียก `DocumentFiles.delete(...)`
 - ลบ object ล้ม → log warning ไม่ทำให้ render ล้ม; ไฟล์ที่เหลือเป็นไฟล์กำพร้าให้การเก็บกวาดจัดการ
 - ลำดับนี้ (DB ก่อน object) ทำให้ไม่มีแถวที่ชี้ไป object ที่ถูกลบแล้ว
+- `retention(preview_days)` เพิ่ม `would_delete_documents` (นับแถว `documents` ของ run ที่จะถูกลบ) เพื่อให้ admin เห็นว่าจะเสีย PDF กี่ใบก่อนยืนยัน
 
 **เก็บกวาดไฟล์กำพร้า:** `python -m jester_api.ops.blobs sweep-documents` ลบ object ใต้ `documents/` ที่ไม่มีแถวใน `documents`
 และเก่ากว่า 1 ชั่วโมง (ไม่ชน render ที่กำลังเขียนอยู่) พิมพ์จำนวนที่ลบ; README แนะนำ cron วันละครั้ง

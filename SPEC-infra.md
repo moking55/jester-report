@@ -125,8 +125,9 @@ async def export(conn, blobs: BlobStore, out: BinaryIO) -> int:
   - ข้อจำกัดที่รับได้: export อ่านตารางหลัง `pg_dump`; แถวที่ retention ลบในช่วงนั้นอยู่ใน `db.dump` แต่ไม่มี PDF —
     ใบพวกนี้เกินอายุเก็บอยู่แล้ว หลัง restore ดาวน์โหลดได้ 404 และถูกลบในรอบ retention ถัดไป; ใบที่ออกหลัง `pg_dump` มี PDF แต่ไม่มีแถว → sweep ลบ
 - **`ops.blobs import`:** รับ entry ชื่อ sha256 (asset, ตรวจ sha256 เดิม) หรือ `documents/<run_id>` (ใส่ทับได้, run_id ต้องเป็น hex 22 ตัว); ชื่ออื่น → ล้มก่อนเขียน
+- **comment หัว `backup.sh`:** ข้อความ "assets … never deleted" ไม่ครอบเอกสารแล้ว — แก้ให้อธิบายข้อจำกัดด้านบนแทน
 - **`ops.blobs sweep-documents`:** คำสั่งใหม่ตาม SPEC-render-service v1.5 (ต้องมี `DATABASE_URL`)
-- **`manifest.json`:** `formatVersion: 2`, เพิ่ม `documentCount`; `restore.sh` รับ 1 และ 2 (backup ก่อน v1.5 restore ได้เหมือนเดิม)
+- **`manifest.json`:** `formatVersion: 2`; `blobCount` นับเฉพาะ asset (นับ entry ที่ไม่ขึ้นต้น `documents/`), เพิ่ม `documentCount` นับเอกสาร; `restore.sh` รับ 1 และ 2 (backup ก่อน v1.5 restore ได้เหมือนเดิม)
 - **`infra/README.md`:**
   - ตาราง backup: `blobs.tar` มี asset และ PDF ของเอกสาร; ลบแถว "PDFs: Jester does not store them"
   - ตั้งแต่ v1.5 ฐานข้อมูล, object storage และ backup มีข้อมูลลูกค้าจริง (เข้ารหัสก่อนส่งออกจากเครื่องตามที่แนะนำอยู่แล้ว); ขนาด `blobs.tar` โตตามจำนวนใบ
