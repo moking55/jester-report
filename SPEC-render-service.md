@@ -232,7 +232,9 @@ async def render(self, template_id, version, params, data, caller, request_id, f
 # v1.5: เก็บเอกสารที่ออก (D1)
 
 สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5 (interview 19 พ.ย. 2026)
-หัวข้อ v1 และ v1.1 ด้านบนยังใช้ ยกเว้นสมมติฐาน v1 ข้อ 6 เรื่อง "ไม่เก็บ params, data หรือ PDF" ซึ่ง v1.5 กลับข้อตัดสินใจ (ผู้ใช้ยืนยัน)
+หัวข้อ v1 และ v1.1 ด้านบนยังใช้ ยกเว้นข้อที่ v1.5 กลับข้อตัดสินใจ (ผู้ใช้ยืนยัน) และ**ถูกแทนที่ด้วยหัวข้อนี้**:
+สมมติฐาน v1 ข้อ 6 ("ไม่เก็บ params, data หรือ PDF"), Boundaries **Always** "ไม่เก็บ params/data/PDF" และ **Ask first** "เก็บ PDF",
+Success Criteria v1 ข้อ 4 ส่วน "ไม่มี params, data หรือ PDF ใน DB" (ยังจริงสำหรับตาราง `runs` และ log) และ Out of scope "เก็บ PDF"
 
 ## สมมติฐาน v1.5
 
@@ -261,8 +263,8 @@ CREATE TABLE documents (
     run_id      text PRIMARY KEY REFERENCES runs (id) ON DELETE CASCADE,
     template_id text NOT NULL,
     filename    text NOT NULL,
-    params      jsonb NOT NULL,
-    data        jsonb NOT NULL,
+    params      json NOT NULL,   -- json, not jsonb: jsonb rejects "\u0000", which callers may send
+    data        json NOT NULL,
     pdf         bytea NOT NULL
 );
 CREATE INDEX documents_template ON documents (template_id, run_id DESC);
@@ -275,15 +277,24 @@ CREATE INDEX documents_template ON documents (template_id, run_id DESC);
 - `Run` เพิ่ม `has_document: bool` (`EXISTS` ใน query เดิม)
 
 **`service.py`:** `_run()` คำนวณ `default_name` ก่อน `_record()` แล้วส่งเอกสารเข้า run เมื่อ `kind == "render"` และสำเร็จ;
-params/data ที่เก็บคือค่าที่ผู้เรียกส่งมา (Decimal เก็บเป็นข้อความเดิมผ่าน `default=str` เหมือน `canonical_sha256` — ไม่ผ่าน float)
+params/data ที่เก็บคือค่าที่ผู้เรียกส่งมา: ใส่ด้วย `Json(value, dumps=…)` ของ psycopg โดยส่ง dumps ที่แปลง `Decimal` เป็นข้อความเดิม
+(`default=str` เหมือน `canonical_sha256`) — ค่าเริ่มต้นของ psycopg ใช้ `json.dumps` เฉย ๆ ซึ่งโยน `TypeError` กับ Decimal
+
+**ถ้าเขียนเอกสารไม่ได้ render ล้ม:** เอกสารอยู่ใน transaction เดียวกับ run จึงไม่มี run ครึ่ง ๆ; คอลัมน์ `json` (ไม่ใช่ `jsonb`) รับทุกค่าที่ JSON
+ของผู้เรียก parse ได้ รวม `"\u0000"` ซึ่ง `jsonb` ปฏิเสธ — test ครอบกรณีนี้
+
+**retention ลบเป็นชุด:** `_apply_retention` ลบภายใน request ของ render ทุก run ที่ 100; ตอนนี้แต่ละแถวพา PDF ไปด้วย
+ครั้งแรกที่ admin ตั้ง N วันหลังเก็บตลอดมานานอาจลบหลาย GB ในครั้งเดียว — เปลี่ยนเป็นลบไม่เกิน 500 run ต่อรอบ
+(`DELETE … WHERE id IN (SELECT id … LIMIT 500)`) ส่วนที่เหลือถูกลบในรอบถัด ๆ ไป
 `RenderService` เพิ่ม `list_documents(...)` และ `document_pdf(run_id)`
 
 ## Testing Strategy v1.5
 
 - render ที่สำเร็จ (session และ API key) มีเอกสาร: PDF ไบต์เท่ากับที่ตอบ, params/data/filename ตรง; `"12345678901234567.89"` กลับมาตรงทุกหลัก
+- data ที่มีข้อความ `"\u0000"` และ Decimal ใน params render สำเร็จและมีเอกสาร
 - preview, render ที่ล้มเหลว (422, 403 `TEMPLATE_NOT_ALLOWED`, 410) ไม่มีเอกสาร
 - ค้นหา: เจอจากค่าใน params และใน data (ไทย, ไม่สนตัวพิมพ์อังกฤษ); `%` และ `_` ของผู้ใช้ไม่เป็น wildcard; กรองรายงาน; paging ด้วย cursor
-- retention: ตั้ง 90 วันแล้ว run เก่าถูกลบพร้อมเอกสาร; ค่าเริ่มต้นไม่ลบ
+- retention: ตั้ง 90 วันแล้ว run เก่าถูกลบพร้อมเอกสาร ไม่เกิน 500 ต่อรอบ; ค่าเริ่มต้นไม่ลบ
 - `has_document` ถูกต้องใน `get_run`/`list_runs`; test เดิมผ่าน **ยกเว้น** test "ไม่มี params/data/PDF ใน DB" ซึ่งเปลี่ยนเป็น "ไม่มีใน `runs` และ log" (ยังจริง)
 
 ## Success Criteria v1.5
@@ -294,4 +305,5 @@ params/data ที่เก็บคือค่าที่ผู้เรี�
 
 ## Open Questions v1.5
 
+2. **ใครเห็น:** ใบที่ระบบอื่นออกผ่าน API (เช่นสลิปเงินเดือน) จะอยู่ใน DB และผู้ใช้ Studio ทุกคนเห็น เพราะไม่มี role — ยืนยันว่ารับได้ในรอบนี้
 1. **ที่เก็บ PDF:** ผมเลือก PostgreSQL (ข้อ 4) เพราะ retention และ backup ใช้ของเดิมได้ทันที — ถ้าคาดว่าจะออกเกินหลายพันใบต่อวัน ควรเลือก rustfs ตั้งแต่แรก (ต้องเพิ่ม delete และกันไฟล์กำพร้า)
