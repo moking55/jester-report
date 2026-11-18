@@ -22,7 +22,7 @@ last=$("${compose[@]}" exec -T postgres psql -U jester -d jester -Atc "SELECT ma
 
 echo "assets..." >&2
 "${compose[@]}" exec -T api python -m jester_api.ops.blobs export >"$dest/blobs.tar"
-count=$(tar -tf "$dest/blobs.tar" | grep -c . || true)
+count=$(tar -tf "$dest/blobs.tar" 2>/dev/null | grep -c . || true) # GNU tar warns about our pax header
 
 db_sha=$(sha256sum "$dest/db.dump" | cut -d' ' -f1)
 blobs_sha=$(sha256sum "$dest/blobs.tar" | cut -d' ' -f1)

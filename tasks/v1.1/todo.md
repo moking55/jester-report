@@ -76,34 +76,45 @@
 
 ## Phase B: Production readiness
 
-- [ ] **T11 B1 auth: วันหมดอายุ + รายการรายงานของ key**
+- [x] **T11 B1 auth: วันหมดอายุ + รายการรายงานของ key**
   - Acceptance: migration 0007 (`expires_at`, `templates`, `rate_limit_per_minute`, ตาราง `api_key_usage`); `authenticate` ปฏิเสธ key หมดอายุด้วยข้อความเดียวกับ key ที่เพิกถอน; ตรวจค่าตอนสร้าง (อดีต/เกิน 5 ปี/ว่าง/เกิน 100/id ผิด); key เดิมไม่จำกัด
   - Verify: pytest auth -m db ด้วย `clock` จำลอง
   - Files: `db/migrations/0007_api_key_limits.sql`, `auth/service.py`, `tests/auth/test_api_key_limits.py`
-- [ ] **T12 B1 render-service + api: 403 และ body สร้าง key**
+- [x] **T12 B1 render-service + api: 403 และ body สร้าง key**
   - Acceptance: `TEMPLATE_NOT_ALLOWED` 403 ก่อน store และก่อนกินช่องคิว (b, archive, ไม่มี ได้ผลเหมือนกัน) + run failed; `Principal.templates` default None; สร้าง key รับ 3 ช่องใหม่
   - Verify: pytest render_service + public_api; 20 คำขอ 403 พร้อมกันไม่บล็อก render ปกติ
   - Files: `render_service/service.py`, `public-api.yaml`, `routes/users_keys.py`, tests
-- [ ] **T13 B2: rate limit ต่อ key**
+- [x] **T13 B2: rate limit ต่อ key**
   - Acceptance: `consume_render_quota` → `Quota(allowed, retry_after_s)` (UPSERT…RETURNING, ลบแถวเก่าเมื่อ count == 1, comment `shortcut:` เรื่อง fixed window); render เกิน → 429 + `Retry-After` 1–60 ก่อนอ่าน body, ไม่มี run ใหม่; key/session ที่ไม่ตั้งไม่มี query เพิ่ม
   - Verify: 10 task พร้อมกันกับ limit 5 ผ่าน 5 พอดี; request ใหญ่ที่เกินโควตาได้ 429 ไม่ใช่ 413
   - Files: `auth/service.py` (quota), `routes/render.py`, `public-api.yaml`, tests
-- [ ] **T14 B1+B2 studio: ฟอร์ม API key**
+- [x] **T14 B1+B2 studio: ฟอร์ม API key**
   - Acceptance: `lib/keys.ts` (วันที่ → `…T23:59:59+07:00`, ตรวจช่อง, ไม่เลือกรายงาน = `undefined`); ฟอร์มมีวันหมดอายุ, checkbox รายงาน, limit ต่อนาที; ตารางมีคอลัมน์ใหม่; ข้อความ 403/429/410 ใน `messages`
   - Verify: Vitest `tests/keys.test.ts`; studio 4 คำสั่ง + เบราว์เซอร์
   - Files: `lib/keys.ts`, `tests/keys.test.ts`, `components/ApiKeysPanel.tsx`, `lib/actions/settings.ts`, `lib/messages.ts`
-- [ ] **T15 B3: CLI `jester_api.ops.blobs`**
+- [x] **T15 B3: CLI `jester_api.ops.blobs`**
   - Acceptance: `export` อ่านรายการจากตาราง `blobs` เขียน tar ชื่อ entry = sha256, object หาย → exit ≠ 0; `import` สร้าง bucket ถ้าไม่มี, ตรวจ sha256 ทุก entry, ปฏิเสธชื่อแปลก
   - Verify: `pytest tests/ops` (MemoryBlobStore + db marker), ruff
   - Files: `ops/__init__.py`, `ops/blobs.py`, `tests/ops/test_blobs.py`
-- [ ] **T16 B3: สคริปต์ backup/restore + restore drill**
+- [x] **T16 B3: สคริปต์ backup/restore + restore drill**
   - Acceptance: `infra/backup.sh`, `infra/restore.sh` ตาม SPEC-infra (ตรวจ sha256, DB ต้องว่าง, backup ใหม่กว่า image = หยุด, `umask 077`); README หัวข้อ Backup and restore + cron
   - Verify: shellcheck; drill บน VM: e2e stack → backup → `down -v` → restore เข้า project ใหม่ → login, รายการรายงาน, asset sha256, render 200; restore ทับ stack ที่มีข้อมูลถูกปฏิเสธ; บันทึกผลพร้อมวันที่ในไฟล์นี้
   - Files: `infra/backup.sh`, `infra/restore.sh`, `infra/README.md`
 
+บันทึก 18 พ.ย. 2026 (T11–T16): commit `916a912` (api), `3328ed2` (studio), `92bd3e2` + `aa48fe0` (infra), `a72710e` (`.gitattributes`)
+- api: 587 passed, 3 skipped + `tests/ops` และ `test_api_key_limits` 17 passed (บน VM); coverage auth/service 99%,
+  routes/render 99%, ops/blobs 79% (ส่วนที่ต่อ S3 จริงครอบด้วย drill)
+- studio: lint, typecheck, 70 test, build ผ่าน
+- ต่างจากแผน: E2E ขั้น 5 อยู่ใน `lifecycle.spec.ts`; test 429 ใช้ body ที่ไม่ใช่ JSON แทน body ใหญ่ (BodyLimit ตอบ 413
+  จาก Content-Length ก่อนถึง route จึงพิสูจน์ "ไม่อ่าน body" ด้วย 429 แทน 422); `set_password` รับ `by` เป็น user id
+- เจอระหว่าง drill: `git archive` บนเครื่อง Windows ที่ตั้ง `core.autocrlf` ทำให้ `*.sh` เป็น CRLF จนรันไม่ได้ → เพิ่ม `.gitattributes`
+- แก้ bug ที่ผู้ใช้แจ้งระหว่าง Phase B (`a5d1161`): autocomplete ใน `{{ }}`/`{% %}` (fmt., params., lists., totals.) และปุ่ม export ใน Versions
+
 ### Checkpoint B
-- [ ] E2E ขั้น 5 (key จำกัดรายงาน → 403) ผ่าน พร้อมขั้นเดิมทั้งหมด
-- [ ] restore drill ผ่านและบันทึกผลแล้ว
+- [x] E2E ขั้น 5 (key จำกัดรายงาน → 403) ผ่าน พร้อมขั้นเดิมทั้งหมด (3 spec ผ่าน 37 วินาที)
+- [x] restore drill ผ่านและบันทึกผลแล้ว — 18 พ.ย. 2026 บน VM: backup e2e stack (ไม่หยุดระบบ) → `down -v` →
+  backup ที่ถูกแก้ db.dump ถูกปฏิเสธ → restore เข้า project ใหม่ `jester-restore` → login ผู้ใช้เดิมได้, รายการรายงาน 3 รายการ
+  ตรงกัน, `logo.png` sha256 เดิม, render v1 ได้ 200 PDF → restore ซ้ำเข้า stack ที่มีข้อมูลถูกปฏิเสธ → `down -v`
 - [ ] ผู้ใช้ทบทวนก่อนเริ่ม Phase C
 - [ ] ผู้ใช้อนุมัติแล้ว: เลข version → 1.2.0, tag `v1.2.0`, push `master` + tag
 
