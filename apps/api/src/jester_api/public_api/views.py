@@ -8,7 +8,7 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict
 
 from ..auth import ApiKey, Session, User
-from ..render_service import Retention, Run
+from ..render_service import DocumentSummary, Retention, Run
 from ..template_store import Asset, Draft, TemplateSummary, TextFile, Version, VersionFiles
 from ..themes import Theme
 from .problems import problem_dict
@@ -73,6 +73,20 @@ def run(r: Run) -> dict[str, Any]:
         "durationMs": r.duration_ms,
         "provenance": r.provenance,
         "problems": r.problems,
+        "hasDocument": r.has_document,
+    }
+
+
+def document(d: DocumentSummary) -> dict[str, Any]:
+    return {
+        "runId": d.run_id,
+        "createdAt": iso(d.created_at),
+        "templateId": d.template_id,
+        "version": d.version,
+        "caller": {"type": d.caller.type, "id": d.caller.id, "name": d.caller.name},
+        "filename": d.filename,
+        "pages": d.pages,
+        "params": d.params,
     }
 
 
@@ -135,7 +149,13 @@ def version_files(v: VersionFiles) -> dict[str, Any]:
 
 
 def retention(r: Retention) -> dict[str, Any]:
-    return {"days": r.days, "setBy": r.set_by, "setAt": iso(r.set_at), "wouldDelete": r.would_delete}
+    return {
+        "days": r.days,
+        "setBy": r.set_by,
+        "setAt": iso(r.set_at),
+        "wouldDelete": r.would_delete,
+        "wouldDeleteDocuments": r.would_delete_documents,
+    }
 
 
 def problems(items: list[Any]) -> list[dict[str, Any]]:

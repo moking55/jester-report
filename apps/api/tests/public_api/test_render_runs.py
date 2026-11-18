@@ -104,6 +104,7 @@ async def test_preview_runs_and_retention(api, admin, published):
         "setBy": None,
         "setAt": None,
         "wouldDelete": 0,
+        "wouldDeleteDocuments": 0,
     }
     saved = await api.put("/v1/runs/retention", headers=admin, json={"days": 90})
     assert saved.json()["days"] == 90 and saved.json()["setBy"] == "alice"
@@ -183,3 +184,42 @@ async def test_limited_api_keys(api, admin, published):
     )
     assert 1 <= int(limited.headers["Retry-After"]) <= 60  # refused before the body is read: 429, not 422
     assert statuses[2] == 429
+
+
+async def test_documents_list_search_and_download(api, admin, published):
+    body = {"template": {"id": "quote", "version": "published"}, "params": PARAMS, "filename": "ใบ Q-1.pdf"}
+    rendered = await api.post(
+        "/v1/render", headers={**published, "Content-Type": "application/json"},
+        content=json.dumps(body, ensure_ascii=False)[:-1] + ', "data": ' + DATA_JSON + "}",
+    )  # fmt: skip
+    assert rendered.status_code == 200
+    run_id = rendered.headers["Jester-Run-Id"]
+    await api.post("/v1/templates/quote/draft/preview", headers=admin, json={"params": PARAMS})
+
+    listed = await api.get("/v1/documents?templateId=quote&q=ลูกค้า", headers=admin)
+    assert listed.status_code == 200
+    page = listed.json()
+    assert [d["runId"] for d in page["items"]] == [run_id] and page["next"] is None
+    for item in page["items"]:
+        assert_fits("DocumentSummary", item)
+    assert page["items"][0]["caller"] == {
+        "type": "api-key",
+        "id": page["items"][0]["caller"]["id"],
+        "name": "api-key:erp",
+    }
+    assert (await api.get("/v1/documents?q=nothing-like-this", headers=admin)).json()["items"] == []
+
+    pdf = await api.get(f"/v1/documents/{run_id}", headers=admin)
+    assert pdf.status_code == 200 and pdf.content == rendered.content
+    assert pdf.headers["Content-Type"] == "application/pdf"
+    assert unquote(pdf.headers["Content-Disposition"].split("filename*=UTF-8''", 1)[1]) == "ใบ Q-1.pdf"
+
+    run = (await api.get(f"/v1/runs/{run_id}", headers=admin)).json()
+    assert run["hasDocument"] is True
+    preview_id = (await api.get("/v1/runs?templateId=quote", headers=admin)).json()["items"][0]["id"]
+    assert (await api.get(f"/v1/documents/{preview_id}", headers=admin)).status_code == 404
+    assert (await api.get("/v1/documents/nope", headers=admin)).status_code == 404
+    for bad in ("", "x" * 101, "%20%20"):
+        assert (await api.get(f"/v1/documents?q={bad}", headers=admin)).status_code == 422
+    for path in ("/v1/documents", f"/v1/documents/{run_id}"):
+        assert (await api.get(path, headers=published)).status_code == 401  # API keys cannot read documents

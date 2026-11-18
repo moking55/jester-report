@@ -31,6 +31,7 @@ tags:
   - name: draft
   - name: versions
   - name: runs
+  - name: documents
   - name: themes
   - name: system
 
@@ -1024,7 +1025,7 @@ paths:
     get:
       tags: [runs]
       operationId: listRuns
-      summary: Render history (metadata only; PDFs are not stored in v1)
+      summary: Render history (metadata; `hasDocument` says whether the PDF can be downloaded again)
       parameters:
         - { name: templateId, in: query, schema: { $ref: '#/components/schemas/TemplateId' } }
         - { name: status, in: query, schema: { $ref: '#/components/schemas/RunStatus' } }
@@ -1055,6 +1056,53 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Run' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/documents:
+    get:
+      tags: [documents]
+      operationId: listDocuments
+      summary: Documents successful renders of published versions produced, newest first (Studio sessions only)
+      description: |
+        `q` matches any text in the params or data the caller sent, case-insensitively; `%` and `_` are
+        ordinary characters. Documents are deleted with their run (see /v1/runs/retention).
+      parameters:
+        - { name: templateId, in: query, schema: { $ref: '#/components/schemas/TemplateId' } }
+        - { name: q, in: query, schema: { type: string, minLength: 1, maxLength: 100 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+        - { name: before, in: query, description: Cursor from the previous page, schema: { type: string } }
+      responses:
+        '200':
+          description: Documents, newest first
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next]
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/DocumentSummary' } }
+                  next: { type: [string, 'null'] }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/documents/{runId}:
+    parameters:
+      - { name: runId, in: path, required: true, schema: { type: string } }
+    get:
+      tags: [documents]
+      operationId: getDocument
+      summary: The exact PDF a render returned (Studio sessions only)
+      responses:
+        '200':
+          description: PDF
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename*=UTF-8''''<filename>` with the name the render returned'
+              schema: { type: string }
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
@@ -1575,9 +1623,10 @@ components:
       allOf:
         - $ref: '#/components/schemas/RunSummary'
         - type: object
-          required: [kind, templateId, caller]
+          required: [kind, templateId, caller, hasDocument]
           properties:
             kind: { type: string, enum: [render, preview] }
+            hasDocument: { type: boolean, description: "The PDF is kept: /v1/documents/{runId} returns it" }
             templateId: { $ref: '#/components/schemas/TemplateId' }
             version: { type: [integer, 'null'], description: null for draft previews }
             draftRevision: { type: [integer, 'null'] }
@@ -1611,6 +1660,25 @@ components:
                 engineTrace: { type: [string, 'null'] }
             problems: { type: array, items: { $ref: '#/components/schemas/ValidationProblem' } }
 
+    DocumentSummary:
+      type: object
+      required: [runId, createdAt, templateId, version, caller, filename, pages, params]
+      properties:
+        runId: { type: string }
+        createdAt: { type: string, format: date-time }
+        templateId: { $ref: '#/components/schemas/TemplateId' }
+        version: { type: [integer, 'null'] }
+        caller:
+          type: object
+          required: [type, id]
+          properties:
+            type: { type: string, enum: [user, api-key] }
+            id: { type: string }
+            name: { type: [string, 'null'] }
+        filename: { type: string }
+        pages: { type: [integer, 'null'] }
+        params: { type: object, description: The params the caller sent (decimals as decimal strings) }
+
     RunRetention:
       type: object
       required: [days]
@@ -1619,6 +1687,9 @@ components:
         setBy: { type: [string, 'null'] }
         setAt: { type: [string, 'null'], format: date-time }
         wouldDelete: { type: [integer, 'null'], description: Only with previewDays }
+        wouldDeleteDocuments:
+          type: [integer, 'null']
+          description: Only with previewDays; stored PDFs among the runs that would be deleted
 
     PreparedData:
       type: object

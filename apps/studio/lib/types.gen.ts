@@ -585,7 +585,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Render history (metadata only; PDFs are not stored in v1) */
+        /** Render history (metadata; `hasDocument` says whether the PDF can be downloaded again) */
         get: operations["listRuns"];
         put?: never;
         post?: never;
@@ -605,6 +605,46 @@ export interface paths {
             cookie?: never;
         };
         get: operations["getRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Documents successful renders of published versions produced, newest first (Studio sessions only)
+         * @description `q` matches any text in the params or data the caller sent, case-insensitively; `%` and `_` are
+         *     ordinary characters. Documents are deleted with their run (see /v1/runs/retention).
+         */
+        get: operations["listDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        /** The exact PDF a render returned (Studio sessions only) */
+        get: operations["getDocument"];
         put?: never;
         post?: never;
         delete?: never;
@@ -919,6 +959,8 @@ export interface components {
         Run: components["schemas"]["RunSummary"] & {
             /** @enum {string} */
             kind: "render" | "preview";
+            /** @description The PDF is kept: /v1/documents/{runId} returns it */
+            hasDocument: boolean;
             templateId: components["schemas"]["TemplateId"];
             /** @description null for draft previews */
             version?: number | null;
@@ -950,6 +992,23 @@ export interface components {
             };
             problems?: components["schemas"]["ValidationProblem"][];
         };
+        DocumentSummary: {
+            runId: string;
+            /** Format: date-time */
+            createdAt: string;
+            templateId: components["schemas"]["TemplateId"];
+            version: number | null;
+            caller: {
+                /** @enum {string} */
+                type: "user" | "api-key";
+                id: string;
+                name?: string | null;
+            };
+            filename: string;
+            pages: number | null;
+            /** @description The params the caller sent (decimals as decimal strings) */
+            params: Record<string, never>;
+        };
         RunRetention: {
             /** @description null means runs are kept for ever (the default) */
             days: number | null;
@@ -958,6 +1017,8 @@ export interface components {
             setAt?: string | null;
             /** @description Only with previewDays */
             wouldDelete?: number | null;
+            /** @description Only with previewDays; stored PDFs among the runs that would be deleted */
+            wouldDeleteDocuments?: number | null;
         };
         /** @description data-prep's view model; every Decimal is a decimal string */
         PreparedData: {
@@ -2466,6 +2527,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Run"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listDocuments: {
+        parameters: {
+            query?: {
+                templateId?: components["schemas"]["TemplateId"];
+                q?: string;
+                limit?: number;
+                /** @description Cursor from the previous page */
+                before?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Documents, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        items: components["schemas"]["DocumentSummary"][];
+                        next: string | null;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            422: components["responses"]["InputInvalid"];
+        };
+    };
+    getDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PDF */
+            200: {
+                headers: {
+                    /** @description `attachment; filename*=UTF-8''<filename>` with the name the render returned */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
                 };
             };
             401: components["responses"]["Unauthorized"];
