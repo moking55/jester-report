@@ -290,7 +290,7 @@ CREATE INDEX documents_template ON documents (template_id, run_id DESC);
 
 **`service.py`:** `_run()` คำนวณ `default_name` ก่อน `_record()` แล้วส่งเอกสารเข้า run เมื่อ `kind == "render"` และสำเร็จ;
 params/data ที่เก็บคือค่าที่ผู้เรียกส่งมา: ใส่ด้วย `Json(value, dumps=…)` ของ psycopg โดยส่ง dumps ที่แปลง `Decimal` เป็นข้อความเดิม
-(`default=str` เหมือน `canonical_sha256`) — ค่าเริ่มต้นของ psycopg ใช้ `json.dumps` เฉย ๆ ซึ่งโยน `TypeError` กับ Decimal
+(`ensure_ascii=False, default=str` เหมือน `canonical_sha256`; `ensure_ascii=False` ให้ ILIKE ค้นภาษาไทยเจอ) — ค่าเริ่มต้นของ psycopg ใช้ `json.dumps` เฉย ๆ ซึ่งโยน `TypeError` กับ Decimal
 คอลัมน์ `json` (ไม่ใช่ `jsonb`) รับทุกค่าที่ JSON ของผู้เรียก parse ได้ รวม `"\u0000"` ซึ่ง `jsonb` ปฏิเสธ — test ครอบกรณีนี้
 
 **retention ลบเป็นชุด แล้วลบ PDF หลัง commit:** `_apply_retention` (ทุก run ที่ 100, ภายใน transaction ของ `record()`)
