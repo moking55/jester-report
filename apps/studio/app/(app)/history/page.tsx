@@ -88,6 +88,13 @@ export default async function HistoryPage({ searchParams }: { searchParams: Prom
                   {run.pages ?? "–"} · {run.durationMs ?? "–"}
                 </span>
               </summary>
+              {run.hasDocument && (
+                <p className={styles.download}>
+                  <a href={`/documents/${run.id}`} download>
+                    ดาวน์โหลด PDF
+                  </a>
+                </p>
+              )}
               <RunDetails run={run} />
             </details>
           ))}

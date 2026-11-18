@@ -60,6 +60,7 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
   const [errors, setErrors] = useState<Errors>({});
   const [general, setGeneral] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [kept, setKept] = useState(false); // v1.5: every issued PDF is stored
 
   useEffect(() => {
     onBody?.(renderBody(templateId, spec, values, filename));
@@ -82,6 +83,7 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
     const found = validate(spec, values);
     setErrors(found);
     setGeneral([]);
+    setKept(false);
     if (Object.keys(found).length) return focusFirst(found);
     setBusy(true);
     try {
@@ -94,6 +96,7 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
         const blob = await response.blob();
         const fallback = filename.trim() || `${templateId}-v${source.version}.pdf`;
         onPdf({ url: URL.createObjectURL(blob), filename: filenameOf(response.headers.get("content-disposition"), fallback) });
+        setKept(true);
         return;
       }
       if (response.status === 401) return setGeneral(["session หมดอายุ กรุณาเข้าสู่ระบบอีกครั้ง"]);
@@ -290,6 +293,11 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
           {busy ? "กำลังออก PDF…" : "ออก PDF"}
         </button>
       </div>
+      {kept && (
+        <p role="status" className={styles.kept}>
+          เก็บแล้ว · <a href={`/documents?template=${templateId}`}>ดูเอกสารที่ออก</a>
+        </p>
+      )}
       {general.length > 0 && (
         <ul role="alert" className={styles.general}>
           {general.map((m, i) => (

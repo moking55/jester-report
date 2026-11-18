@@ -154,3 +154,12 @@
 .add {
   justify-self: start;
 }
+
+.kept {
+  margin: 0;
+  color: var(--color-success);
+}
+
+.kept a {
+  color: var(--color-primary);
+}

@@ -44,6 +44,16 @@ function IssueLink({ t, className }: { t: TemplateSummary; className?: string })
   );
 }
 
+/** Documents exist only for templates that were published; an archived one keeps its documents. */
+function DocumentsLink({ t, className }: { t: TemplateSummary; className?: string }) {
+  if (t.publishedVersion === null) return null;
+  return (
+    <Link href={`/documents?template=${t.id}`} className={className}>
+      เอกสารที่ออก
+    </Link>
+  );
+}
+
 function Archived({ t }: { t: TemplateSummary }) {
   return t.archivedAt ? (
     <span className={`${styles.pill} ${styles.none}`}>archive แล้ว</span>
@@ -126,6 +136,7 @@ function Table({ templates, back }: { templates: TemplateSummary[]; back: string
                 <td>{when(t.updatedAt)}</td>
                 <td className={styles.actions}>
                   <IssueLink t={t} className={styles.issue} />
+                  <DocumentsLink t={t} className={styles.documents} />
                   <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
                 </td>
               </tr>
@@ -174,6 +185,7 @@ function Cards({ templates, back }: { templates: TemplateSummary[]; back: string
               เปิด
             </Link>
             <IssueLink t={t} className={styles.issue} />
+            <DocumentsLink t={t} className={styles.documents} />
             <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
           </div>
         </article>

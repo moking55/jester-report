@@ -339,6 +339,9 @@ export function Workspace({
           <code>{state.templateId}</code>
           <span className={styles.revision}>ออกเอกสาร</span>
           <span className={styles.spacer} />
+          <a className={styles.secondary} href={`/documents?template=${state.templateId}`}>
+            เอกสารที่ออก
+          </a>
           <button type="button" className={styles.secondary} onClick={() => setShowDev(true)}>
             สำหรับนักพัฒนา
           </button>

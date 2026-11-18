@@ -305,3 +305,18 @@ a.issue {
   font-weight: 600;
   text-decoration: none;
 }
+
+a.documents {
+  display: inline-block;
+  margin-right: calc(var(--sp) * 1);
+  padding: 2px 12px;
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+a.documents:hover {
+  background: var(--fill-button-hover);
+}

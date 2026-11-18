@@ -51,8 +51,9 @@ export function RetentionPanel({
       ) : (
         <div className={styles.secret}>
           <p>
-            ถ้าเก็บ {previewDays} วัน จะลบ run ที่เก่ากว่านั้น <b>{retention.wouldDelete ?? 0} รายการ</b> ทันที และลบต่อไปเรื่อย ๆ
-            (ลบแล้วกู้คืนไม่ได้)
+            ถ้าเก็บ {previewDays} วัน จะลบประวัติที่เก่ากว่านั้น <b>{(retention.wouldDelete ?? 0).toLocaleString("th-TH")} รายการ</b>{" "}
+            และเอกสาร PDF <b>{(retention.wouldDeleteDocuments ?? 0).toLocaleString("th-TH")} ใบ</b> และลบต่อไปเรื่อย ๆ
+            (ลบทีละชุดระหว่างการ render · กู้คืนไม่ได้)
           </p>
           <form action={setRetention} className={styles.row}>
             <input type="hidden" name="days" value={previewDays} />

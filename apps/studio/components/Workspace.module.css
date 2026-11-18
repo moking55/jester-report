@@ -14,6 +14,7 @@
 }
 
 .toolbar button,
+.toolbar a.secondary,
 .conflict button {
   border: 1px solid var(--line-primary);
   border-radius: var(--radius);
@@ -27,6 +28,7 @@
 }
 
 .toolbar .secondary {
+  text-decoration: none;
   border-color: var(--line-button);
   background: var(--fill-button);
   box-shadow: none;

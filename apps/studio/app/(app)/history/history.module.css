@@ -121,3 +121,11 @@
 .pager a {
   color: var(--color-primary);
 }
+
+.download {
+  margin: 0;
+}
+
+.download a {
+  color: var(--color-primary);
+}
