@@ -205,7 +205,7 @@ export function Workspace({
   // the Problems tab follows the saved draft: opening it and every new revision (save, add, delete, reset)
   // check again; an answer for a revision already replaced is dropped
   useEffect(() => {
-    if (state.conflict) return;
+    if (state.conflict || archived) return; // an archived draft is not checked (the api answers 410)
     let current = true;
     validateDraft(state.templateId).then((result) => {
       if (current) update(result.ok ? validated(result.data) : failed(result.problem, problemMessage(result.problem)));
@@ -213,7 +213,7 @@ export function Workspace({
     return () => {
       current = false;
     };
-  }, [state.templateId, state.revision, state.conflict, update]);
+  }, [state.templateId, state.revision, state.conflict, archived, update]);
 
   /** Params from the box, or the box's error shown in the bar. */
   function params(): Record<string, unknown> | null {
@@ -541,7 +541,12 @@ export function Workspace({
             )}
           </div>
           <div role="tabpanel" className={styles.panel}>
-            {state.tab === "problems" && <ProblemList problems={state.problems} checked={state.checked} onPick={pick} />}
+            {state.tab === "problems" &&
+              (archived ? (
+                <p className={styles.hint}>รายงานที่ archive ไม่ถูกตรวจ เลิก archive แล้วจะตรวจให้อีกครั้ง</p>
+              ) : (
+                <ProblemList problems={state.problems} checked={state.checked} onPick={pick} />
+              ))}
             {state.tab === "prepared" &&
               (state.prepared ? (
                 <>

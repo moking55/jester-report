@@ -55,7 +55,7 @@ export default async function CatalogPage({
     <section className={styles.page}>
       <div className={styles.heading}>
         <h1>รายงาน</h1>
-        <ImportDialog />
+        <ImportDialog className={styles.import} />
         <ViewToggle view={view} />
       </div>
       <p className={styles.sub}>

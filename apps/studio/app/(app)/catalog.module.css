@@ -230,7 +230,7 @@
   width: 100%;
   border-collapse: separate; /* collapse ignores border-radius */
   border-spacing: 0;
-  overflow: hidden;
+  /* no overflow: hidden here, or the ⋯ menu of the last rows is cut off; the corner cells round instead */
   background: var(--fill-pane);
   backdrop-filter: var(--blur-pane);
   border: 1px solid var(--line-pane);
@@ -263,4 +263,27 @@
 .changed {
   color: var(--color-warning);
   font-size: 0.85em;
+}
+
+/* the header row's background stays inside the table's rounded corners */
+.table th:first-child {
+  border-top-left-radius: var(--radius-pane);
+}
+
+.table th:last-child {
+  border-top-right-radius: var(--radius-pane);
+}
+
+.import {
+  padding: 4px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.import:hover {
+  background: var(--color-surfaceAlt);
 }

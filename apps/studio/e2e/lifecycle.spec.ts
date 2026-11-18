@@ -9,6 +9,8 @@ import { login, watchRequests } from "./shared";
 const ID = "e2e-quote";
 
 const menu = (page: Page, id: string) => page.getByLabel(`เมนูของ ${id}`);
+// by href: e2e-moved was imported from e2e-quote's zip, so both carry the same name
+const row = (page: Page, id: string) => page.locator(`a[href="/templates/${id}"]`);
 
 async function importZip(page: Page, zip: Buffer, id: string) {
   await page.goto("/");
@@ -80,15 +82,15 @@ test("export, import, duplicate, archive and set a password", async ({ page, req
   await page.goto("/");
   await menu(page, ID).click();
   await page.getByRole("button", { name: "Archive" }).click();
-  await expect(page.getByRole("link", { name: "ใบเสนอราคา E2E" })).toHaveCount(0);
+  await expect(row(page, ID)).toHaveCount(0);
   await page.getByRole("link", { name: "แสดงที่ archive" }).click();
-  await expect(page.getByRole("link", { name: "ใบเสนอราคา E2E" })).toBeVisible();
+  await expect(row(page, ID)).toBeVisible();
   await expect(page.getByText("archive แล้ว")).toBeVisible();
   const gone = await render();
   expect(gone.status()).toBe(410);
   expect((await gone.json()).code).toBe("TEMPLATE_ARCHIVED");
 
-  await page.getByRole("link", { name: "ใบเสนอราคา E2E" }).click();
+  await row(page, ID).click();
   await expect(page.getByText(/ถูก archive แล้ว อ่านได้อย่างเดียว/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Preview", exact: true })).toBeDisabled();
   await page.getByRole("button", { name: "เลิก archive" }).first().click();
