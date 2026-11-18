@@ -405,12 +405,12 @@ apps/studio/
   app/(app)/page.tsx                 → ปุ่ม "เอกสารที่ออก"
   app/(app)/history/page.tsx         → ลิงก์ดาวน์โหลดเมื่อ hasDocument
   components/Workspace.tsx           → ปุ่มใน toolbar ของโหมดออกเอกสาร + ข้อความหลังออก PDF
-  e2e/documents.spec.ts              → ใหม่
+  e2e/issued-documents.spec.ts       → ใหม่ (ชื่อเรียงหลัง full-flow ซึ่งต้องการ catalog ว่าง)
 ```
 
 ## Testing Strategy v1.5
 
-- **E2E (`documents.spec.ts`):** ออกใบกำกับภาษีจากฟอร์มด้วยเลขเอกสารสุ่ม → เปิด "เอกสารที่ออก" → ค้นด้วยเลขนั้นเจอหนึ่งแถว → ดาวน์โหลดได้
+- **E2E (`issued-documents.spec.ts`):** ออกใบกำกับภาษีจากฟอร์มด้วยเลขเอกสารสุ่ม → เปิด "เอกสารที่ออก" → ค้นด้วยเลขนั้นเจอหนึ่งแถว → ดาวน์โหลดได้
   `application/pdf` ไบต์เท่ากับที่ออก; render ผ่าน API key แล้วใบขึ้นในรายการโดยผู้ออกเป็น "API: <ชื่อ>"; preview ของ draft ไม่ขึ้น
 - E2E เดิมทุก spec ผ่าน; lint, typecheck, test, build ผ่าน
 
