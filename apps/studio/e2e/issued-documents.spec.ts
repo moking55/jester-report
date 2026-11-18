@@ -27,17 +27,41 @@ test("find an issued document and download it again", async ({ page, request }) 
   const publish = page.getByRole("dialog", { name: "Publish" });
   await publish.getByRole("button", { name: "Publish" }).click();
   await expect(publish).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Versions" })).toHaveAttribute("aria-selected", "true"); // published
 
   // issued from the form: the page says it was kept
   await page.goto(`/templates/${ID}?mode=issue`);
-  await page.getByRole("button", { name: "ใช้ข้อมูลตัวอย่าง" }).click();
+  await expect(page.getByRole("form", { name: "ฟอร์มออกเอกสาร" })).toBeVisible({ timeout: 30_000 });
   await page.getByLabel("เลขที่ใบเสนอราคา").fill(number);
-  await page.locator("#f-params-docDate").fill("2026-11-19");
+  if ((await page.locator("#f-data-items-0-id").count()) === 0) await page.getByRole("button", { name: "+ เพิ่มแถว" }).click();
+  for (const [pointer, value] of [
+    ["/params/docDate", "2026-11-19"],
+    ["/data/company/name", "บริษัท ผู้ขาย จำกัด"],
+    ["/data/customer/name", "บริษัท สมชาย จำกัด"],
+    ["/data/discount", "0"],
+    ["/data/items/0/id", "A"],
+    ["/data/items/0/description", "บริการติดตั้ง"],
+    ["/data/items/0/qty", "1"],
+    ["/data/items/0/unitPrice", "1500.00"],
+  ]) {
+    await page.locator(`#f${pointer.replaceAll("/", "-")}`).fill(value);
+  }
   const response = page.waitForResponse((r) => r.url().endsWith(`/issue/${ID}`) && r.request().method() === "POST");
   await page.getByRole("button", { name: "ออก PDF" }).click();
   const issued = await response;
   expect(issued.status(), await issued.text().catch(() => "")).toBe(200);
-  const issuedPdf = await issued.body();
+  // response.body() is empty for a stream the page already read; take the bytes the page shows instead
+  const blobUrl = await page.getByRole("link", { name: "ดาวน์โหลด" }).getAttribute("href");
+  const issuedPdf = Buffer.from(
+    await page.evaluate(async (url) => {
+      const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+      let text = "";
+      for (const b of bytes) text += String.fromCharCode(b);
+      return btoa(text);
+    }, blobUrl!),
+    "base64",
+  );
+  expect(issuedPdf.subarray(0, 4).toString()).toBe("%PDF");
   const runId = issued.headers()["jester-run-id"];
   expect(runId).toMatch(/^[0-9a-f]{22}$/);
   await expect(page.getByRole("status").getByText("เก็บแล้ว")).toBeVisible();
