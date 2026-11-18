@@ -39,7 +39,7 @@ test("report from starter to API render, history, two tabs and themes", async ({
   // 1. create from the quotation starter (the + card is already open on an empty catalog)
   const addCard = page.getByRole("button", { name: /รายงานใหม่จาก starter/ });
   if (await addCard.isVisible()) await addCard.click();
-  await page.getByLabel("id").fill(ID);
+  await page.getByLabel("id", { exact: true }).fill(ID);
   await page.getByLabel("ชื่อรายงาน").fill("ใบเสนอราคา E2E");
   await page.getByLabel("เริ่มจาก").selectOption({ label: "ใบเสนอราคา" });
   await page.getByRole("button", { name: "สร้างรายงาน" }).click();

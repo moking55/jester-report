@@ -42,15 +42,15 @@ export async function chooseCatalogView(view: string): Promise<void> {
   refresh();
 }
 
-/** Archive or restore from the catalog or the workspace; both pages re-read the template afterwards. */
-export async function setArchived(templateId: string, archived: boolean): Promise<void> {
+/** Archive or restore, then back to the page it came from (a redirect also works before hydration). */
+export async function setArchived(templateId: string, archived: boolean, back: string): Promise<void> {
   try {
     await api(`/v1/templates/${templateId}/archived`, { method: "PUT", body: { archived } });
   } catch (error) {
     if (error instanceof ApiProblem && error.status === 401) redirect("/login");
     throw error;
   }
-  refresh();
+  redirect(back.startsWith("/") && !back.startsWith("//") ? back : "/");
 }
 
 /** Copy a template's draft (or one version) into a new template, then open the copy. */

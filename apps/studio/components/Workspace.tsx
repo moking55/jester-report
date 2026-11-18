@@ -340,7 +340,7 @@ export function Workspace({
         <code>{state.templateId}</code>
         <span className={styles.revision}>draft r{state.revision}</span>
         <span className={styles.spacer} />
-        <TemplateMenu templateId={state.templateId} archived={archived} />
+        <TemplateMenu templateId={state.templateId} archived={archived} back={`/templates/${state.templateId}`} />
         <span role="status" className={styles.saveState}>
           {state.saving ? "กำลังบันทึก…" : unsaved ? `ยังไม่บันทึก ${state.dirty.length} ไฟล์` : "บันทึกแล้ว"}
         </span>
@@ -364,7 +364,7 @@ export function Workspace({
       {archived && (
         <div role="status" className={styles.conflict}>
           รายงานนี้ถูก archive แล้ว อ่านได้อย่างเดียว แก้ไข Preview และ Render ไม่ได้จนกว่าจะเลิก archive
-          <form action={setArchived.bind(null, state.templateId, false)}>
+          <form action={setArchived.bind(null, state.templateId, false, `/templates/${state.templateId}`)}>
             <button type="submit">เลิก archive</button>
           </form>
         </div>

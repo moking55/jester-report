@@ -65,15 +65,15 @@ export default async function CatalogPage({
         </Link>
       </p>
       {view === "table" ? (
-        <Table templates={templates} />
+        <Table templates={templates} back={withArchived ? "/?archived=1" : "/"} />
       ) : (
-        <Cards templates={templates} />
+        <Cards templates={templates} back={withArchived ? "/?archived=1" : "/"} />
       )}
     </section>
   );
 }
 
-function Table({ templates }: { templates: TemplateSummary[] }) {
+function Table({ templates, back }: { templates: TemplateSummary[]; back: string }) {
   return (
     <>
       <CreateTemplate />
@@ -115,7 +115,7 @@ function Table({ templates }: { templates: TemplateSummary[] }) {
                 </td>
                 <td>{when(t.updatedAt)}</td>
                 <td>
-                  <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} />
+                  <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
                 </td>
               </tr>
             ))}
@@ -126,7 +126,7 @@ function Table({ templates }: { templates: TemplateSummary[] }) {
   );
 }
 
-function Cards({ templates }: { templates: TemplateSummary[] }) {
+function Cards({ templates, back }: { templates: TemplateSummary[]; back: string }) {
   return (
     <div className={styles.grid}>
       {templates.map((t) => (
@@ -162,7 +162,7 @@ function Cards({ templates }: { templates: TemplateSummary[] }) {
             <Link href={`/templates/${t.id}`} className={styles.open}>
               เปิด
             </Link>
-            <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} />
+            <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
           </div>
         </article>
       ))}
