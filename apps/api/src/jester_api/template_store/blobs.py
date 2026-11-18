@@ -69,6 +69,11 @@ class S3BlobStore:
             config=Config(s3={"addressing_style": "path"}, retries={"max_attempts": 3, "mode": "standard"}),
         )
 
+    @property
+    def client(self) -> Any:
+        """The boto3 client, shared with S3DocumentFiles (same bucket, other prefix)."""
+        return self._s3
+
     async def ensure_bucket(self) -> None:
         try:
             await asyncio.to_thread(self._s3.head_bucket, Bucket=self.bucket)
