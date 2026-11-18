@@ -71,8 +71,8 @@
 - [x] api: ruff + pytest ทั้งหมด (รวม db/storage) ผ่าน, coverage template_store/auth ≥ 90% (576 passed, 96%)
 - [x] studio: 4 คำสั่งผ่าน; E2E ขั้นใหม่ 1–4 และ 6 ผ่านบน stack ใหม่ แล้ว `down -v` (18 พ.ย. 2026: แยกเป็น
   `e2e/lifecycle.spec.ts` แทนการต่อท้าย `full-flow.spec.ts`; 3 spec ผ่าน 30.9 วินาที)
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม Phase B
-- [ ] ผู้ใช้อนุมัติแล้ว: เลข version api/studio/compose → 1.1.0, tag `v1.1.0`, push `master` + tag
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม Phase B (18 พ.ย. 2026: "ผ่าน ปล่อย v1.1.0")
+- [x] ผู้ใช้อนุมัติแล้ว: เลข version api/studio/compose → 1.1.0, tag `v1.1.0`, push `master` + tag
 
 ## Phase B: Production readiness
 
