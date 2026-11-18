@@ -82,4 +82,19 @@ Build order: H1 → A1–A4 → B1 → B2 → B3 → C1 → C2 (H2 คู่ข�
 Build order: F0 → F1 · ปล่อยเป็น `v1.4.0` · ลำดับเขียน spec: `report-definition` → `template-store` → `studio`
 ไม่มี endpoint ใหม่: อ่านไฟล์ของ version ด้วย `getVersion` และออก PDF ด้วย `POST /v1/render` เดิมผ่าน session ของ Studio
 
-**ไม่ทำในรอบนี้ (รอ feedback):** designer ลากวาง · `form.json` และตัวจัดฟอร์มแบบลากเรียง · role · เก็บเอกสารที่ออกและเลขรันอัตโนมัติ
+**ไม่ทำในรอบนี้ (รอ feedback):** designer ลากวาง · `form.json` และตัวจัดฟอร์มแบบลากเรียง · role · เก็บเอกสารที่ออก (เลขรันอัตโนมัติตัดออกจากแผน 18 พ.ย. 2026)
+
+## v1.5: เก็บเอกสารที่ออก (ร่าง 19 พ.ย. 2026 หลัง interview — รออนุมัติ)
+
+เป้า: หัวหน้าเปิดใบที่ออกไปแล้วกลับมาดาวน์โหลด PDF เดิมได้ โดยไม่ต้องกรอกใหม่ (ไม่ใช่หลักฐานเพื่อตรวจสอบ: ไม่มีห้ามแก้/ห้ามลบเพิ่ม)
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| D1 เก็บ PDF + params + data ของทุก render ที่สำเร็จจาก version ที่ publish (ทั้งฟอร์มใน Studio และ API key) ในตาราง `documents` ที่ผูกกับ run; ลบตาม `run_retention` เดิม | `render-service` | — |
+| D2 `GET /v1/documents` (รายการ + ค้นหา) และ `GET /v1/documents/{runId}` (PDF) — session เท่านั้น; `Run` เพิ่ม `hasDocument` | `public-api` | D1 |
+| D3 หน้า "เอกสาร" (กรองรายงาน, ค้นหา, ดาวน์โหลด) + ทางเข้าจาก catalog, โหมดออกเอกสาร และหน้าประวัติ | `studio` | D2 |
+
+Build order: D1 → D2 → D3 · ปล่อยเป็น `v1.5.0` · ลำดับเขียน spec: `render-service` → `public-api` → `studio` → infra (README backup)
+**กลับข้อตัดสินใจ v1:** เดิม "ไม่เก็บ params, data หรือ PDF" — ตั้งแต่ v1.5 ฐานข้อมูลมีข้อมูลลูกค้าจริง (ผู้ใช้ยืนยัน 19 พ.ย. 2026)
+
+**ไม่ทำ:** เลขรันอัตโนมัติ · ห้ามแก้/ห้ามลบเพื่อเป็นหลักฐาน · ลบทีละใบ · อายุเก็บแยกจากประวัติ · API ให้ระบบอื่นดึงใบเดิม (API key) · role · เก็บ preview/draft/run ที่ล้มเหลว

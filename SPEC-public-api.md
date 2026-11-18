@@ -230,3 +230,37 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 ## Open Questions v1.1
 
 ไม่มี
+
+---
+
+# v1.5: เก็บเอกสารที่ออก (D2)
+
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5, [SPEC-render-service.md](SPEC-render-service.md) หัวข้อ v1.5
+
+## สมมติฐาน v1.5
+
+1. **contract ก่อนเสมอ** (เหมือน v1.1): แก้ `public-api.yaml` → test contract → `npm run gen:api`
+2. **session เท่านั้น** (ผู้ใช้ตัดสิน: ไม่มี API ให้ระบบอื่นดึงใบเดิม) — API key เรียกสอง operation นี้ได้ 401/403 เหมือน endpoint session อื่น
+3. **ไม่มี role:** ผู้ใช้ Studio ทุกคนเห็นเอกสารทุกรายงาน (เหมือน v1.4)
+
+## Contract ที่เพิ่ม/เปลี่ยน
+
+| operation | request | response |
+| --- | --- | --- |
+| `GET /v1/documents` `listDocuments` | query `templateId?`, `q?` (1–100 ตัวอักษร), `limit` 1–200 (ค่าเริ่มต้น 50), `before?` | `200 {items: DocumentSummary[], next: string \| null}` |
+| `GET /v1/documents/{runId}` `getDocument` | — | `200 application/pdf` + `Content-Disposition` จากชื่อไฟล์ที่เก็บ (`content_disposition()` เดิม); ไม่มี → `404 NOT_FOUND` |
+
+- `DocumentSummary`: `runId`, `createdAt`, `templateId`, `version`, `caller` (`type`/`id`/`name` แบบ `Run`), `filename`, `pages`, `params`
+- `Run` เพิ่ม `hasDocument: boolean` (required) — หน้าประวัติใช้แสดงลิงก์ดาวน์โหลด
+- run ที่ถูกลบตาม retention → เอกสารหายด้วย → `getDocument` ได้ 404
+
+## Testing Strategy v1.5
+
+- contract: route ครบ 50 operation (48 + 2) และ response ผ่าน schema
+- session เห็นรายการ, ค้นหา, paging และดาวน์โหลดได้ไบต์ตรง; API key ได้ 401/403 ทั้งสอง operation
+- `q` ว่างหรือยาวเกิน 100 → 422; `runId` ที่ไม่มีหรือเป็น preview → 404
+
+## Success Criteria v1.5
+
+1. Studio ดึงรายการและดาวน์โหลดเอกสารผ่าน contract ได้ และ API key เข้าไม่ได้
+2. coverage ≥ 90%, `ruff` สะอาด, test contract ผ่าน

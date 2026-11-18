@@ -110,3 +110,14 @@ async def export(conn, blobs: BlobStore, out: BinaryIO) -> int:
 ### Open Questions
 
 - ไม่มี (ตัดสินใจแล้วว่า blob ใช้ CLI ใน api แทนการ tar volume ของ RustFS: volume เป็นรูปแบบภายในของ RustFS ใช้กับ S3 อื่นไม่ได้)
+
+---
+
+# v1.5: backup มีเอกสารที่ออก
+
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [SPEC-render-service.md](SPEC-render-service.md) หัวข้อ v1.5
+
+- สคริปต์ backup/restore ไม่เปลี่ยน: เอกสาร (PDF, params, data) อยู่ในตาราง `documents` จึงอยู่ใน `db.dump` อยู่แล้ว
+- แก้ `infra/README.md`: ตาราง backup ย้าย "PDFs" จากฝั่ง "Not in the backup" ไปอยู่ใน `db.dump` และย้ำว่าตั้งแต่ v1.5
+  ฐานข้อมูลและ backup มีข้อมูลลูกค้าจริง (เข้ารหัสก่อนส่งออกจากเครื่องตามที่แนะนำอยู่แล้ว); ขนาด `db.dump` โตตามจำนวนใบ
+- ตรวจ: backup → restore ลง stack ใหม่ → ดาวน์โหลดเอกสารเดิมได้ไบต์ตรง

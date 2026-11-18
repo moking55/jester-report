@@ -226,3 +226,72 @@ async def render(self, template_id, version, params, data, caller, request_id, f
 ## Open Questions v1.1
 
 ไม่มี — ข้อมูลของ key (วันหมดอายุ, รายการรายงาน) และการเก็บอยู่ใน spec ของ `auth`; การ map เป็น HTTP และ `ErrorCode` ใน contract อยู่ใน spec ของ `public-api`
+
+---
+
+# v1.5: เก็บเอกสารที่ออก (D1)
+
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5 (interview 19 พ.ย. 2026)
+หัวข้อ v1 และ v1.1 ด้านบนยังใช้ ยกเว้นสมมติฐาน v1 ข้อ 6 เรื่อง "ไม่เก็บ params, data หรือ PDF" ซึ่ง v1.5 กลับข้อตัดสินใจ (ผู้ใช้ยืนยัน)
+
+## สมมติฐาน v1.5
+
+1. **เป้า (ผู้ใช้ตัดสิน):** เปิดใบเดิมกลับมาดาวน์โหลดซ้ำ — ไม่ใช่หลักฐานเพื่อตรวจสอบ จึงไม่มีกติกาห้ามแก้/ห้ามลบเพิ่ม
+2. **ใบที่เก็บ (ผู้ใช้ตัดสิน):** ทุก `render()` ที่**สำเร็จ** — มาจากฟอร์มใน Studio (session) หรือระบบอื่น (API key) ก็ได้; ใช้ version ที่ publish
+   (`published` หรือเลข version เจาะจง) **ไม่เก็บ:** `preview()` ของ draft (ลายน้ำ DRAFT), run ที่ล้มเหลว
+3. **เก็บอะไร:** PDF ไบต์เดิมที่ส่งออกไป (ดาวน์โหลดซ้ำได้ไฟล์เดิมทุกไบต์ ไม่ render ใหม่), params, data และชื่อไฟล์ที่ตอบกลับ
+4. **เก็บใน PostgreSQL ไม่ใช่ rustfs:** ตาราง `documents` ผูก `runs(id)` ด้วย `ON DELETE CASCADE`
+   - insert ใน transaction เดียวกับ run: ไม่มีทางได้ run ที่ไม่มีเอกสาร หรือเอกสารที่ไม่มี run
+   - retention เดิม (`DELETE FROM runs …`) ลบเอกสารไปด้วยโดยไม่ต้องแก้โค้ด; `run_retention` ค่าเริ่มต้นยังเป็นเก็บตลอด (ผู้ใช้ตัดสิน)
+   - backup เดิม (`pg_dump`) ครอบเอกสารโดยไม่ต้องแก้สคริปต์
+   - `BlobStore` ของ asset เป็นแบบ content-addressed และไม่มี delete จึงไม่เหมาะกับของที่ต้องลบตามอายุ
+   - ข้อจำกัด: PDF ~100 KB × 1,000 ใบ/วัน ≈ 36 GB/ปี ใน DB; ใส่ comment `shortcut:` ว่าย้าย PDF ไป object storage เมื่อขนาด DB/backup เป็นปัญหา
+5. **ค้นหา:** ข้อความ `q` (ตัด space หัวท้าย, 1–100 ตัวอักษร) จับคู่แบบไม่สนตัวพิมพ์กับ `params::text || ' ' || data::text`
+   (`ILIKE` และ escape `%` `_` `\` ของผู้ใช้) — ไม่มี index ใหม่; ไล่ตามรายงานด้วย index `runs_template` เดิม
+   ใส่ comment `shortcut:` ว่าเปลี่ยนเป็น `pg_trgm` เมื่อรายงานเดียวมีเอกสารเกินหลักแสน
+6. **ไม่มีสวิตช์ปิดการเก็บ** (ไม่มีใครขอ) — ระบุใน README ว่าตั้งแต่ v1.5 ฐานข้อมูลและ backup มีข้อมูลลูกค้า
+
+## การเปลี่ยนแปลง v1.5
+
+**`0008_documents.sql`**
+
+```sql
+-- v1.5: documents a successful /v1/render produced; deleted with their run (retention)
+CREATE TABLE documents (
+    run_id      text PRIMARY KEY REFERENCES runs (id) ON DELETE CASCADE,
+    template_id text NOT NULL,
+    filename    text NOT NULL,
+    params      jsonb NOT NULL,
+    data        jsonb NOT NULL,
+    pdf         bytea NOT NULL
+);
+CREATE INDEX documents_template ON documents (template_id, run_id DESC);
+```
+
+**`runs.py`:** `NewRun` เพิ่ม `document: NewDocument | None` (filename, params, data, pdf); `record()` insert ทั้งสองแถวใน transaction เดิม
+- `list_documents(template_id | None, q | None, limit, before) -> (list[DocumentSummary], cursor)` — ใหม่สุดก่อน; `DocumentSummary` = run_id, created_at,
+  template_id, version, caller, filename, pages, params (ไม่มี data/pdf ในรายการ)
+- `document_pdf(run_id) -> (filename, pdf) | None`
+- `Run` เพิ่ม `has_document: bool` (`EXISTS` ใน query เดิม)
+
+**`service.py`:** `_run()` คำนวณ `default_name` ก่อน `_record()` แล้วส่งเอกสารเข้า run เมื่อ `kind == "render"` และสำเร็จ;
+params/data ที่เก็บคือค่าที่ผู้เรียกส่งมา (Decimal เก็บเป็นข้อความเดิมผ่าน `default=str` เหมือน `canonical_sha256` — ไม่ผ่าน float)
+`RenderService` เพิ่ม `list_documents(...)` และ `document_pdf(run_id)`
+
+## Testing Strategy v1.5
+
+- render ที่สำเร็จ (session และ API key) มีเอกสาร: PDF ไบต์เท่ากับที่ตอบ, params/data/filename ตรง; `"12345678901234567.89"` กลับมาตรงทุกหลัก
+- preview, render ที่ล้มเหลว (422, 403 `TEMPLATE_NOT_ALLOWED`, 410) ไม่มีเอกสาร
+- ค้นหา: เจอจากค่าใน params และใน data (ไทย, ไม่สนตัวพิมพ์อังกฤษ); `%` และ `_` ของผู้ใช้ไม่เป็น wildcard; กรองรายงาน; paging ด้วย cursor
+- retention: ตั้ง 90 วันแล้ว run เก่าถูกลบพร้อมเอกสาร; ค่าเริ่มต้นไม่ลบ
+- `has_document` ถูกต้องใน `get_run`/`list_runs`; test เดิมผ่าน **ยกเว้น** test "ไม่มี params/data/PDF ใน DB" ซึ่งเปลี่ยนเป็น "ไม่มีใน `runs` และ log" (ยังจริง)
+
+## Success Criteria v1.5
+
+1. ทุก render ที่สำเร็จจาก version ที่ publish ดาวน์โหลด PDF เดิมได้ทุกไบต์; draft/preview/ล้มเหลวไม่ถูกเก็บ
+2. ค้นเอกสารด้วยค่าใน params หรือ data ได้ และเอกสารถูกลบพร้อม run ตามนโยบายเดิม
+3. coverage ≥ 90%, `ruff` สะอาด
+
+## Open Questions v1.5
+
+1. **ที่เก็บ PDF:** ผมเลือก PostgreSQL (ข้อ 4) เพราะ retention และ backup ใช้ของเดิมได้ทันที — ถ้าคาดว่าจะออกเกินหลายพันใบต่อวัน ควรเลือก rustfs ตั้งแต่แรก (ต้องเพิ่ม delete และกันไฟล์กำพร้า)
