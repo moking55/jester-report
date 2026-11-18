@@ -242,4 +242,4 @@ async def test_big_decimals_and_nul_characters_are_kept(setup):
     assert [d.run_id for d in docs] == [outcome.run_id]
     async with service._db.connection() as conn:
         row = await (await conn.execute("SELECT data::text FROM documents")).fetchone()
-    assert "12345678901234567.89" in row[0] and "\u0000" in row[0]
+    assert "12345678901234567.89" in row[0] and r"\u0000" in row[0]  # json keeps the escape; jsonb refuses it
