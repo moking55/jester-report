@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
@@ -19,6 +20,9 @@ class NewUser(views.Body):
 
 class NewKey(views.Body):
     name: str
+    expiresAt: datetime | None = None
+    templates: list[str] | None = None
+    rateLimitPerMinute: int | None = None
 
 
 class NewPassword(views.Body):
@@ -61,7 +65,13 @@ async def list_keys(request: Request, caller: SessionCaller) -> list:
 
 @router.post("/v1/api-keys", status_code=201)
 async def create_key(request: Request, caller: SessionCaller, body: NewKey) -> JSONResponse:
-    key, secret = await services(request).auth.create_api_key(body.name, caller.name)
+    key, secret = await services(request).auth.create_api_key(
+        body.name,
+        caller.name,
+        expires_at=body.expiresAt,
+        templates=body.templates,
+        rate_limit_per_minute=body.rateLimitPerMinute,
+    )
     return JSONResponse(
         {**views.api_key(key), "secret": secret}, status_code=201
     )  # the only time it is shown

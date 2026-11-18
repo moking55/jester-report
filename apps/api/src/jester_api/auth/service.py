@@ -9,7 +9,7 @@ import hmac
 import re
 import secrets
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
@@ -28,6 +28,9 @@ MAX_FAILURES = 5
 SETUP_FRESH = timedelta(minutes=5)  # another process printed a token this recently: do not replace it
 KEY_TOUCH = timedelta(minutes=1)  # API key last_used_at is written at most this often
 USERNAME = re.compile(r"^[a-zA-Z0-9._-]{3,40}$")  # public-api.yaml Username
+TEMPLATE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")  # public-api.yaml TemplateId
+MAX_KEY_LIFETIME = timedelta(days=5 * 365)
+MAX_KEY_TEMPLATES = 100
 _SETUP_LOCK = 0x4A41_5554  # "JAUT"
 
 AuthErrorCode = Literal[
@@ -70,6 +73,9 @@ class ApiKey:
     created_at: datetime
     created_by: str
     last_used_at: datetime | None
+    expires_at: datetime | None = None
+    templates: tuple[str, ...] | None = None  # None = every template
+    rate_limit_per_minute: int | None = None  # None = no limit
 
 
 @dataclass(frozen=True)
@@ -78,6 +84,14 @@ class Principal:
     name: str  # for updatedBy/publishedBy
     user: User | None = None
     api_key_id: uuid.UUID | None = None
+    templates: frozenset[str] | None = None  # an API key limited to these templates; None = all
+    rate_limit_per_minute: int | None = None
+
+
+@dataclass(frozen=True)
+class Quota:
+    allowed: bool
+    retry_after_s: int  # seconds until the next window; 0 when allowed
 
 
 def _check_username(username: str) -> None:
@@ -265,14 +279,22 @@ class Auth:
         async with self._db.connection() as conn:
             row = await self._one(
                 conn,
-                "SELECT id, name, last_used_at FROM api_keys WHERE secret_sha256 = %s AND revoked_at IS NULL",
-                (sha256_hex(secret),),
+                "SELECT id, name, last_used_at, templates, rate_limit_per_minute FROM api_keys "
+                "WHERE secret_sha256 = %s AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > %s)",
+                (sha256_hex(secret), now),
             )
-            if row is None:
+            if row is None:  # unknown, revoked and expired keys look the same to the caller
                 raise _unauthorized()
             if row[2] is None or now - row[2] >= KEY_TOUCH:
                 await conn.execute("UPDATE api_keys SET last_used_at = %s WHERE id = %s", (now, row[0]))
-        return Principal("api_key", f"api-key:{row[1]}", api_key_id=row[0])
+        templates = frozenset(row[3]) if row[3] is not None else None
+        return Principal(
+            "api_key",
+            f"api-key:{row[1]}",
+            api_key_id=row[0],
+            templates=templates,
+            rate_limit_per_minute=row[4],
+        )
 
     async def change_password(self, token: str, current: str, new: str, client_ip: str) -> None:
         """Keeps the session used for the change; revokes the user's other sessions."""
@@ -364,24 +386,90 @@ class Auth:
         async with self._db.connection() as conn:
             rows = await self._all(
                 conn,
-                "SELECT id, name, prefix, created_at, created_by, last_used_at FROM api_keys "
-                "WHERE revoked_at IS NULL ORDER BY created_at",
+                "SELECT id, name, prefix, created_at, created_by, last_used_at, expires_at, templates, "
+                "rate_limit_per_minute FROM api_keys WHERE revoked_at IS NULL ORDER BY created_at",
             )
-        return [ApiKey(*r) for r in rows]
+        return [ApiKey(*r[:7], tuple(r[7]) if r[7] is not None else None, r[8]) for r in rows]
 
-    async def create_api_key(self, name: str, created_by: str) -> tuple[ApiKey, str]:
+    async def create_api_key(
+        self,
+        name: str,
+        created_by: str,
+        *,
+        expires_at: datetime | None = None,
+        templates: Sequence[str] | None = None,
+        rate_limit_per_minute: int | None = None,
+    ) -> tuple[ApiKey, str]:
+        """Expiry, allowed templates and the rate limit are set here once; a change means a new key."""
         name = name.strip()
         if not 1 <= len(name) <= 80:
             raise AuthError("INPUT_INVALID", "name must be 1-80 characters")
+        now = self._now()
+        if expires_at is not None and not now < expires_at <= now + MAX_KEY_LIFETIME:
+            raise AuthError("INPUT_INVALID", "expiresAt must be in the future and at most 5 years away")
+        allowed = tuple(dict.fromkeys(templates)) if templates is not None else None  # duplicates merged
+        if allowed is not None and (
+            not 1 <= len(allowed) <= MAX_KEY_TEMPLATES or not all(TEMPLATE_ID.match(t) for t in allowed)
+        ):
+            raise AuthError("INPUT_INVALID", "templates must be 1-100 valid template ids")
+        if rate_limit_per_minute is not None and not 1 <= rate_limit_per_minute <= 10000:
+            raise AuthError("INPUT_INVALID", "rateLimitPerMinute must be 1-10000")
         secret = new_token(API_KEY_PREFIX)
-        key = ApiKey(uuid.uuid4(), name, display_prefix(secret), self._now(), created_by, None)
+        key = ApiKey(
+            uuid.uuid4(),
+            name,
+            display_prefix(secret),
+            now,
+            created_by,
+            None,
+            expires_at,
+            allowed,
+            rate_limit_per_minute,
+        )
         async with self._db.connection() as conn, conn.transaction():
             await conn.execute(
-                "INSERT INTO api_keys (id, name, prefix, secret_sha256, created_at, created_by) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                (key.id, key.name, key.prefix, sha256_hex(secret), key.created_at, key.created_by),
+                "INSERT INTO api_keys (id, name, prefix, secret_sha256, created_at, created_by, expires_at, "
+                "templates, rate_limit_per_minute) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                (
+                    key.id,
+                    key.name,
+                    key.prefix,
+                    sha256_hex(secret),
+                    key.created_at,
+                    key.created_by,
+                    expires_at,
+                    list(allowed) if allowed is not None else None,
+                    rate_limit_per_minute,
+                ),
             )
         return key, secret
+
+    async def consume_render_quota(self, principal: Principal) -> Quota:
+        """Count one render for a key with a per-minute limit; callers without a limit touch no table."""
+        limit = principal.rate_limit_per_minute
+        if limit is None or principal.api_key_id is None:
+            return Quota(True, 0)
+        now = self._now()
+        window = now.replace(second=0, microsecond=0)
+        # shortcut: fixed one-minute windows, so a burst across a window edge can pass up to 2x the limit
+        # for a moment; fine against runaway callers. For a smooth limit, keep the previous window's count
+        # and weigh it (a sliding window) right here.
+        async with self._db.connection() as conn, conn.transaction():
+            row = await self._one(
+                conn,
+                "INSERT INTO api_key_usage (key_id, window_start, count) VALUES (%s, %s, 1) "
+                "ON CONFLICT (key_id, window_start) DO UPDATE SET count = api_key_usage.count + 1 "
+                "RETURNING count",
+                (principal.api_key_id, window),
+            )
+            if row[0] == 1:  # first request of a new window: drop this key's old windows
+                await conn.execute(
+                    "DELETE FROM api_key_usage WHERE key_id = %s AND window_start < %s",
+                    (principal.api_key_id, now - timedelta(hours=1)),
+                )
+        if row[0] > limit:  # refused requests count too: hammering on does not help
+            return Quota(False, max(1, 60 - now.second))
+        return Quota(True, 0)
 
     async def revoke_api_key(self, key_id: uuid.UUID) -> None:
         async with self._db.connection() as conn:

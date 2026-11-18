@@ -83,10 +83,24 @@ paths:
             application/pdf:
               schema: { type: string, format: binary }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: '`TEMPLATE_NOT_ALLOWED`: this API key may not render this template (same answer whether it exists or not)'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
         '410': { $ref: '#/components/responses/TemplateGone' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
         '422': { $ref: '#/components/responses/InputInvalid' }
+        '429':
+          description: '`RATE_LIMITED`: the key used up its renders for this minute; `retryable` is true'
+          headers:
+            Retry-After:
+              description: Seconds until the next minute starts
+              schema: { type: integer, minimum: 1, maximum: 60 }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '502': { $ref: '#/components/responses/RenderFailed' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
         '504': { $ref: '#/components/responses/RenderTimeout' }
@@ -335,6 +349,21 @@ paths:
               additionalProperties: false
               properties:
                 name: { type: string, minLength: 1, maxLength: 80 }
+                expiresAt:
+                  type: string
+                  format: date-time
+                  description: The key stops working at this time; in the future and at most 5 years away
+                templates:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items: { $ref: '#/components/schemas/TemplateId' }
+                  description: The only templates this key may render (403 `TEMPLATE_NOT_ALLOWED` otherwise)
+                rateLimitPerMinute:
+                  type: integer
+                  minimum: 1
+                  maximum: 10000
+                  description: Renders per minute; more get 429 with `Retry-After`
       responses:
         '201':
           description: Created. `secret` is shown only in this response; only its hash is stored.
@@ -1356,6 +1385,7 @@ components:
         - ENGINE_MISCONFIGURED
         - INTERNAL_ERROR
         - TEMPLATE_ARCHIVED
+        - TEMPLATE_NOT_ALLOWED
     Problem:
       type: object
       description: RFC 9457 problem details plus Jester fields
@@ -1450,6 +1480,12 @@ components:
         createdAt: { type: string, format: date-time }
         createdBy: { type: string }
         lastUsedAt: { type: [string, 'null'], format: date-time }
+        expiresAt: { type: [string, 'null'], format: date-time, description: null = never expires }
+        templates:
+          type: [array, 'null']
+          items: { $ref: '#/components/schemas/TemplateId' }
+          description: null = every template
+        rateLimitPerMinute: { type: [integer, 'null'], description: null = no limit }
 
     TemplateSummary:
       type: object

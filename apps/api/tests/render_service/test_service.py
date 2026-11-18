@@ -3,6 +3,7 @@ import asyncio
 import httpx
 import pytest
 
+from jester_api.auth import Principal
 from jester_api.engine_client import EngineClient
 from jester_api.render_service import RenderError, RenderService, RenderSettings
 
@@ -148,3 +149,36 @@ async def test_archived_template_is_410_with_a_failed_run_until_unarchived(setup
     await store.set_archived("quote", False, "alice")
     outcome = await service.render("quote", "published", PARAMS, SAMPLE, KEY)
     assert outcome.version == 1
+
+
+async def test_key_limited_to_templates_gets_the_same_403_for_everything_else(setup, pool):
+    store, service, _ = setup
+    await store.create("other", "O", "blank", "alice")
+    await store.create("gone", "G", "blank", "alice")
+    await store.set_archived("gone", True, "alice")
+    limited = Principal("api_key", "api-key:erp", api_key_id=KEY.api_key_id, templates=frozenset({"quote"}))
+    assert (await service.render("quote", "published", PARAMS, SAMPLE, limited)).version == 1
+    errors = [
+        await failure(service.render(t, "published", PARAMS, SAMPLE, limited))
+        for t in ("other", "gone", "zzz")
+    ]
+    assert {(e.code, e.http_status, e.message) for e in errors} == {
+        ("TEMPLATE_NOT_ALLOWED", 403, "this API key cannot render this template")
+    }
+    run = await service._runs.get(errors[0].run_id)
+    assert (run.status, run.error_code) == ("failed", "TEMPLATE_NOT_ALLOWED")
+
+
+async def test_refused_keys_do_not_take_queue_slots(setup, pool, clock):
+    store, _, _ = setup
+    async with EngineClient(BASE) as engine:
+        service = RenderService(
+            store, engine, pool, RenderSettings(max_concurrent=1, queue_wait_s=0.5), clock
+        )
+        limited = Principal("api_key", "api-key:erp", templates=frozenset({"nope"}))
+        refused = [service.render("quote", "published", PARAMS, SAMPLE, limited) for _ in range(20)]
+        results = await asyncio.gather(
+            *refused, service.render("quote", "published", PARAMS, SAMPLE, KEY), return_exceptions=True
+        )
+    assert results[-1].version == 1
+    assert {r.code for r in results[:-1]} == {"TEMPLATE_NOT_ALLOWED"}

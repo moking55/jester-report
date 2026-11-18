@@ -149,3 +149,37 @@ async def test_archive_blocks_writes_and_renders_until_restored(api, admin, publ
     assert [t["id"] for t in (await api.get("/v1/templates", headers=admin)).json()] == ["quote"]
     by_key = await api.put("/v1/templates/quote/archived", headers=published, json={"archived": True})
     assert by_key.status_code == 401
+
+
+async def test_limited_api_keys(api, admin, published):
+    body = {"template": {"id": "quote", "version": 1}, "data": {}}
+    other = await api.post("/v1/api-keys", headers=admin, json={"name": "other", "templates": ["invoice"]})
+    assert other.status_code == 201 and other.json()["templates"] == ["invoice"]
+    refused = await api.post(
+        "/v1/render", headers={"Authorization": f"Bearer {other.json()['secret']}"}, json=body
+    )
+    assert (refused.status_code, refused.json()["code"]) == (403, "TEMPLATE_NOT_ALLOWED") and refused.json()[
+        "runId"
+    ]
+
+    past = await api.post(
+        "/v1/api-keys", headers=admin, json={"name": "x", "expiresAt": "2020-01-01T00:00:00Z"}
+    )
+    assert past.status_code == 422
+    listed = (await api.get("/v1/api-keys", headers=admin)).json()
+    assert {k["name"]: k["rateLimitPerMinute"] for k in listed} == {"erp": None, "other": None}
+
+    slow = await api.post("/v1/api-keys", headers=admin, json={"name": "slow", "rateLimitPerMinute": 2})
+    slow_auth = {"Authorization": f"Bearer {slow.json()['secret']}", "Content-Type": "application/json"}
+    statuses = [
+        (await api.post("/v1/render", headers=slow_auth, content=b"{ not json")).status_code for _ in range(3)
+    ]
+    assert statuses[:2] == [422, 422]  # within the limit the body is read (and is bad)
+    limited = await api.post("/v1/render", headers=slow_auth, content=b"{ not json")
+    assert (limited.status_code, limited.json()["code"], limited.json()["retryable"]) == (
+        429,
+        "RATE_LIMITED",
+        True,
+    )
+    assert 1 <= int(limited.headers["Retry-After"]) <= 60  # refused before the body is read: 429, not 422
+    assert statuses[2] == 429

@@ -12,7 +12,7 @@ from fastapi.exceptions import RequestValidationError
 from pydantic import Field, ValidationError
 
 from .. import views
-from ..problems import ApiError
+from ..problems import ApiError, problem_response
 from ..security import RenderCaller, SessionCaller
 from ..state import services
 
@@ -73,6 +73,13 @@ def pdf_response(outcome: Any) -> Response:
 
 @router.post("/v1/render")
 async def render(request: Request, caller: RenderCaller) -> Response:
+    quota = await services(request).auth.consume_render_quota(caller)  # before the body is even read
+    if not quota.allowed:
+        refused = problem_response(
+            "RATE_LIMITED", 429, "too many renders for this API key; retry later", retryable=True
+        )
+        refused.headers["Retry-After"] = str(quota.retry_after_s)
+        return refused
     body: RenderBody = parse(RenderBody, await decimal_json(request))
     outcome = await services(request).render.render(
         body.template.id,

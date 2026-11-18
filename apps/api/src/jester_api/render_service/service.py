@@ -275,6 +275,23 @@ class RenderService:
         request_id: str | None = None,
         filename: str | None = None,
     ) -> RenderOutcome:
+        if caller.templates is not None and template_id not in caller.templates:
+            # before the store and the queue: the same answer whether the template exists or not
+            exc = RenderError("TEMPLATE_NOT_ALLOWED", 403, "this API key cannot render this template")
+            exc.run_id = await self._record(
+                "render",
+                template_id,
+                None,
+                caller,
+                request_id,
+                time.monotonic(),
+                params,
+                data,
+                None,
+                None,
+                exc,
+            )
+            raise exc
         return await self._run(
             "render",
             template_id,

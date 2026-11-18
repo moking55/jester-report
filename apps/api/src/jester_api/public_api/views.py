@@ -45,6 +45,9 @@ def api_key(k: ApiKey) -> dict[str, Any]:
         "createdAt": iso(k.created_at),
         "createdBy": k.created_by,
         "lastUsedAt": iso(k.last_used_at),
+        "expiresAt": iso(k.expires_at),
+        "templates": list(k.templates) if k.templates is not None else None,
+        "rateLimitPerMinute": k.rate_limit_per_minute,
     }
 
 
