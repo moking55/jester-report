@@ -115,8 +115,8 @@
 - [x] restore drill ผ่านและบันทึกผลแล้ว — 18 พ.ย. 2026 บน VM: backup e2e stack (ไม่หยุดระบบ) → `down -v` →
   backup ที่ถูกแก้ db.dump ถูกปฏิเสธ → restore เข้า project ใหม่ `jester-restore` → login ผู้ใช้เดิมได้, รายการรายงาน 3 รายการ
   ตรงกัน, `logo.png` sha256 เดิม, render v1 ได้ 200 PDF → restore ซ้ำเข้า stack ที่มีข้อมูลถูกปฏิเสธ → `down -v`
-- [ ] ผู้ใช้ทบทวนก่อนเริ่ม Phase C
-- [ ] ผู้ใช้อนุมัติแล้ว: เลข version → 1.2.0, tag `v1.2.0`, push `master` + tag
+- [x] ผู้ใช้ทบทวนก่อนเริ่ม Phase C (18 พ.ย. 2026: "ผ่าน ปล่อย v1.2.0")
+- [x] ผู้ใช้อนุมัติแล้ว: เลข version → 1.2.0, tag `v1.2.0`, push `master` + tag
 
 ## Phase C: เอกสารไทย
 
