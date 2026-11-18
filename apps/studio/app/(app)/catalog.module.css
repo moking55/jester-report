@@ -287,3 +287,21 @@
 .import:hover {
   background: var(--color-surfaceAlt);
 }
+
+.actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.table a.issue,
+a.issue {
+  display: inline-block;
+  margin-right: calc(var(--sp) * 1);
+  padding: 2px 12px;
+  border: 1px solid var(--line-primary);
+  border-radius: var(--radius);
+  background: var(--fill-primary);
+  color: var(--color-onPrimary);
+  font-weight: 600;
+  text-decoration: none;
+}

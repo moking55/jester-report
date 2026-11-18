@@ -4,11 +4,34 @@ import { Workspace } from "@/components/Workspace";
 import { api, ApiProblem } from "@/lib/api";
 import { draftPath, isTemplateId } from "@/lib/result";
 import type { components } from "@/lib/types.gen";
-import type { Draft } from "@/lib/workspace";
+import type { Draft, IssueSource } from "@/lib/workspace";
 
 type TemplateSummary = components["schemas"]["TemplateSummary"];
+type VersionFiles = { files: { name: string; content: string }[] };
 
-export default async function WorkspacePage({ params }: { params: Promise<{ id: string }> }) {
+/** The published version's form inputs (SPEC-studio v1.4: the form always uses the published version). */
+async function issueSource(id: string, version: number): Promise<IssueSource | null> {
+  const { files } = await api<VersionFiles>(`/v1/templates/${id}/versions/${version}`);
+  const byName = new Map(files.map((f) => [f.name, f.content]));
+  const reportJson = byName.get("report.json");
+  if (!reportJson) return null;
+  try {
+    const data = (JSON.parse(reportJson) as { data?: { schema?: string; samples?: string[] } }).data ?? {};
+    const schemaJson = data.schema ? byName.get(data.schema) : undefined;
+    if (!schemaJson) return null;
+    return { version, reportJson, schemaJson, sampleJson: data.samples?.[0] ? byName.get(data.samples[0]) : undefined };
+  } catch {
+    return null; // a published version always parses; anything else falls back to the code view
+  }
+}
+
+export default async function WorkspacePage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ mode?: string }>;
+}) {
   const { id } = await params;
   if (!isTemplateId(id)) notFound();
   let template: TemplateSummary, draft: Draft;
@@ -24,8 +47,19 @@ export default async function WorkspacePage({ params }: { params: Promise<{ id: 
   // today in Thailand, computed once here so server and browser render the same params box
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
   const archived = Boolean(template.archivedAt);
-  // a new key when the archive state flips: the editors are made read-only (or editable) from scratch
+  const canIssue = template.publishedVersion !== null && !archived;
+  const issue =
+    canIssue && (await searchParams).mode === "issue" ? await issueSource(id, template.publishedVersion!) : null;
+  // a new key when the archive state or the mode flips: the editors are made read-only (or editable) from scratch
   return (
-    <Workspace key={String(archived)} draft={draft} name={template.name} today={today} archived={archived} />
+    <Workspace
+      key={`${archived}-${Boolean(issue)}`}
+      draft={draft}
+      name={template.name}
+      today={today}
+      archived={archived}
+      canIssue={canIssue}
+      issue={issue}
+    />
   );
 }

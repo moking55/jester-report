@@ -34,6 +34,16 @@ function LastRun({ run }: { run: TemplateSummary["lastRun"] }) {
   );
 }
 
+/** Only a published, active template can issue documents (SPEC-studio v1.4: the published version). */
+function IssueLink({ t, className }: { t: TemplateSummary; className?: string }) {
+  if (t.publishedVersion === null || t.archivedAt) return null;
+  return (
+    <Link href={`/templates/${t.id}?mode=issue`} className={className}>
+      ออกเอกสาร
+    </Link>
+  );
+}
+
 function Archived({ t }: { t: TemplateSummary }) {
   return t.archivedAt ? (
     <span className={`${styles.pill} ${styles.none}`}>archive แล้ว</span>
@@ -114,7 +124,8 @@ function Table({ templates, back }: { templates: TemplateSummary[]; back: string
                   <LastRun run={t.lastRun} />
                 </td>
                 <td>{when(t.updatedAt)}</td>
-                <td>
+                <td className={styles.actions}>
+                  <IssueLink t={t} className={styles.issue} />
                   <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
                 </td>
               </tr>
@@ -162,6 +173,7 @@ function Cards({ templates, back }: { templates: TemplateSummary[]; back: string
             <Link href={`/templates/${t.id}`} className={styles.open}>
               เปิด
             </Link>
+            <IssueLink t={t} className={styles.issue} />
             <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
           </div>
         </article>

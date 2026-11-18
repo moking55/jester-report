@@ -33,6 +33,7 @@ import {
   validated,
   type Asset,
   type Draft,
+  type IssueSource,
   type Result,
 } from "@/lib/workspace";
 
@@ -40,6 +41,7 @@ import { AssetPreview } from "./AssetPreview";
 import { DiffDialog } from "./DiffDialog";
 import { Editor, type EditorHandle } from "./Editor";
 import { FilePanel } from "./FilePanel";
+import { IssueForm, type IssuedPdf } from "./IssueForm";
 import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
 import { Resizer } from "./Resizer";
@@ -63,11 +65,15 @@ export function Workspace({
   name,
   today,
   archived = false,
+  canIssue = false,
+  issue = null,
 }: {
   draft: Draft;
   name: string;
   today: string;
   archived?: boolean;
+  canIssue?: boolean; // a published, active template: the "ออกเอกสาร" button shows
+  issue?: IssueSource | null; // set: the issue mode (form + PDF), no code view
 }) {
   const [state, update] = useImmer(() =>
     initialState(draft, defaultParams(draft.files.find((f) => f.name === "report.json")?.content, today)),
@@ -83,6 +89,12 @@ export function Workspace({
   const [publishedVersion, setPublishedVersion] = useState<number | null>(null); // for the dialog's label
   const [previewed, setPreviewed] = useState(false); // the empty preview pane shows a hint until the first Preview
   const [sizes, setSizes] = useState<PaneSizes>(DEFAULT_SIZES);
+  const [issued, setIssued] = useState<IssuedPdf | null>(null); // the last PDF of the issue form
+
+  // an issued PDF lives in a blob URL: free the old one when a new PDF replaces it or the page goes
+  useEffect(() => () => {
+    if (issued) URL.revokeObjectURL(issued.url);
+  }, [issued]);
 
   // pane sizes are a per-browser convenience; storage can be missing or blocked, then the defaults stay
   useEffect(() => {
@@ -205,7 +217,7 @@ export function Workspace({
   // the Problems tab follows the saved draft: opening it and every new revision (save, add, delete, reset)
   // check again; an answer for a revision already replaced is dropped
   useEffect(() => {
-    if (state.conflict || archived) return; // an archived draft is not checked (the api answers 410)
+    if (state.conflict || archived || issue) return; // archived: the api answers 410; issue mode: no draft view
     let current = true;
     validateDraft(state.templateId).then((result) => {
       if (current) update(result.ok ? validated(result.data) : failed(result.problem, problemMessage(result.problem)));
@@ -213,7 +225,7 @@ export function Workspace({
     return () => {
       current = false;
     };
-  }, [state.templateId, state.revision, state.conflict, archived, update]);
+  }, [state.templateId, state.revision, state.conflict, archived, issue, update]);
 
   /** Params from the box, or the box's error shown in the bar. */
   function params(): Record<string, unknown> | null {
@@ -308,6 +320,66 @@ export function Workspace({
 
   const unsaved = state.dirty.length > 0;
   const locked = state.saving || state.conflict || archived; // no writes, previews or renders
+
+  /** To the issue mode; unsaved edits would be lost with the code view, so ask first. */
+  function toIssue() {
+    if (unsaved && !window.confirm(`มี ${state.dirty.length} ไฟล์ที่ยังไม่บันทึก ออกจากหน้าแก้ code โดยไม่บันทึก?`)) return;
+    router.push(`/templates/${state.templateId}?mode=issue`);
+  }
+
+  if (issue) {
+    return (
+      <div className={styles.workspace}>
+        <div className={styles.toolbar}>
+          <b>{name}</b>
+          <code>{state.templateId}</code>
+          <span className={styles.revision}>ออกเอกสาร</span>
+          <span className={styles.spacer} />
+          <button type="button" className={styles.secondary} onClick={() => router.push(`/templates/${state.templateId}`)}>
+            กลับไปแก้ code
+          </button>
+        </div>
+        <div
+          ref={main}
+          className={styles.issueMain}
+          style={{ "--preview-w": `${sizes.preview}px` } as CSSProperties}
+        >
+          <section className={styles.formPane} aria-label="ฟอร์ม">
+            <IssueForm templateId={state.templateId} source={issue} onPdf={setIssued} />
+          </section>
+          <Resizer
+            orientation="vertical"
+            label="ปรับความกว้างช่อง PDF"
+            className={styles.issueHandle}
+            onMove={(x) => resize((rect, _, pad) => ({ preview: rect.right - x - pad }))}
+            onStep={(d) => resize((_, s) => ({ preview: s.preview - d }))}
+            onReset={() => resize(() => ({ preview: DEFAULT_SIZES.preview }))}
+          />
+          <section className={styles.issuePreview} aria-label="PDF">
+            <div className={styles.paneTitle}>
+              PDF
+              <span className={styles.spacer} />
+              {issued && (
+                <a href={issued.url} download={issued.filename}>
+                  ดาวน์โหลด
+                </a>
+              )}
+            </div>
+            {issued ? (
+              <iframe title="PDF ที่ออก" className={styles.pdf} src={issued.url} />
+            ) : (
+              <div className={styles.previewEmpty}>
+                {/* eslint-disable-next-line @next/next/no-img-element -- a static decoration from public/ */}
+                <img src="/jester-mascot.webp" alt="" width={86} height={160} />
+                <p>กรอกฟอร์มแล้วกด &quot;ออก PDF&quot;</p>
+              </div>
+            )}
+          </section>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.workspace}>
       {renderData !== null && (
@@ -341,6 +413,11 @@ export function Workspace({
         <span className={styles.revision}>draft r{state.revision}</span>
         <span className={styles.spacer} />
         <TemplateMenu templateId={state.templateId} archived={archived} back={`/templates/${state.templateId}`} />
+        {canIssue && (
+          <button type="button" className={styles.secondary} onClick={toIssue}>
+            ออกเอกสาร
+          </button>
+        )}
         <span role="status" className={styles.saveState}>
           {state.saving ? "กำลังบันทึก…" : unsaved ? `ยังไม่บันทึก ${state.dirty.length} ไฟล์` : "บันทึกแล้ว"}
         </span>

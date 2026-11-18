@@ -1,0 +1,156 @@
+.form {
+  display: grid;
+  gap: calc(var(--sp) * 1.5);
+  align-content: start;
+  height: 100%;
+  overflow: auto;
+  padding: 0 calc(var(--sp) * 2) calc(var(--sp) * 3);
+}
+
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 1);
+  margin: 0 calc(var(--sp) * -2);
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 2);
+  background: var(--fill-bar);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-textMuted);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.form button {
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.form button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.form .primary {
+  border-color: var(--line-primary);
+  background: var(--fill-primary);
+  box-shadow: var(--glow-primary);
+  color: var(--color-onPrimary);
+  font-weight: 600;
+}
+
+.group {
+  display: grid;
+  gap: calc(var(--sp) * 1.2);
+  margin: 0;
+  padding: calc(var(--sp) * 1.5) calc(var(--sp) * 2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pane);
+  background: var(--color-surface);
+}
+
+.group legend {
+  padding: 0 4px;
+  font-weight: 600;
+  color: var(--heading);
+}
+
+.group .group {
+  background: transparent;
+}
+
+.field {
+  display: grid;
+  gap: 3px;
+}
+
+.field label {
+  color: var(--color-textMuted);
+  font-size: 0.92em;
+}
+
+.form input:not([type="checkbox"]),
+.form select,
+.form textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  padding: 4px 8px;
+  font: inherit;
+}
+
+.form [aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.required {
+  color: var(--color-danger);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.85em;
+}
+
+.general {
+  margin: 0;
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 2) calc(var(--sp) * 1) calc(var(--sp) * 4);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius);
+  color: var(--color-danger);
+}
+
+.rows {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rows th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.85em;
+  color: var(--color-textMuted);
+  padding: 2px 4px;
+}
+
+.rows td {
+  padding: 2px 4px;
+  vertical-align: top;
+}
+
+.rows .error {
+  display: block;
+}
+
+.index {
+  width: 2em;
+  color: var(--color-textMuted);
+  text-align: center;
+}
+
+.card {
+  display: grid;
+  gap: calc(var(--sp) * 1);
+  justify-items: start;
+}
+
+.add {
+  justify-self: start;
+}

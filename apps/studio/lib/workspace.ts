@@ -11,6 +11,8 @@ export type PreparedData = components["schemas"]["PreparedData"];
 export type Run = components["schemas"]["Run"];
 export type Asset = components["schemas"]["Asset"];
 export type Version = components["schemas"]["Version"];
+/** What the issue form needs from the published version (SPEC-studio.md "v1.4"). */
+export type IssueSource = { version: number; reportJson: string; schemaJson: string; sampleJson?: string };
 
 export type Result<T> = { ok: true; data: T } | { ok: false; problem: Problem };
 

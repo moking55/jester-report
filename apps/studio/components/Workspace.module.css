@@ -317,3 +317,56 @@
   min-height: 0;
   padding: calc(var(--sp) * 0.5) 0;
 }
+
+/* issue mode (SPEC-studio v1.4): the form where the editor was, the PDF on the right, no files or tabs */
+.issueMain {
+  --ws-pad: 0px;
+  --ws-track: 5px;
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--ws-track) var(--preview-w, 420px);
+  grid-template-rows: minmax(0, 1fr);
+  padding: var(--ws-pad);
+  min-height: 0;
+  background: var(--color-surface);
+}
+
+.issueMain > :not([role="separator"]) {
+  min-width: 0;
+  min-height: 0;
+  background: var(--fill-pane);
+}
+
+:global(:root[data-look="aero"]) .issueMain {
+  --ws-pad: 8px;
+  --ws-track: 8px;
+  background: none;
+}
+
+:global(:root[data-look="aero"]) .issueMain > :not([role="separator"]) {
+  backdrop-filter: var(--blur-pane);
+  border: 1px solid var(--line-pane);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
+}
+
+.formPane {
+  grid-column: 1;
+  overflow: hidden;
+}
+
+.issueHandle {
+  grid-column: 2;
+}
+
+.issuePreview {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+}
+
+.issuePreview .pdf,
+.issuePreview .previewEmpty {
+  flex: 1;
+  min-height: 0;
+}
