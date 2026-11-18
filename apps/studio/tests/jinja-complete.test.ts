@@ -12,7 +12,16 @@ const labels = (result: ReturnType<typeof suggest>) => result?.options.map((o) =
 describe("suggest", () => {
   it("offers the fmt helpers after fmt.", () => {
     const result = suggest("<p>{{ fmt.", REPORT);
-    expect(labels(result)).toEqual(["money", "number", "thai_date", "thai_date_short", "baht_text"]);
+    expect(labels(result)).toEqual([
+      "money",
+      "number",
+      "thai_date",
+      "thai_date_short",
+      "baht_text",
+      "qr",
+      "barcode",
+      "promptpay",
+    ]);
     expect(result?.back).toBe(0);
     expect(suggest("<p>{{ fmt.mo", REPORT)?.back).toBe(2);
   });

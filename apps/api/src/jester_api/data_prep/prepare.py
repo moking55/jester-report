@@ -14,12 +14,15 @@ from ..report_definition.data_schema import FORMATS, safe_message
 from ..report_definition.loader import ReportDefinition
 from ..report_definition.problems import Problem, error, has_errors, pointer
 from ..report_definition.refs import field_types
+from .codes import barcode, promptpay, qr
 from .evaluate import CalcError, Env, evaluate
 from .formatters import FORMATTERS
 from .lists import Group, ListView, build_lists, convert_numbers, fill_missing
 from .params import check_params
 
 MAX_PROBLEMS = 50
+# the `fmt` a template sees: text formatters plus the inline-SVG codes (SPEC-data-prep.md "v1.1")
+FMT = SimpleNamespace(**vars(FORMATTERS), qr=qr, barcode=barcode, promptpay=promptpay)
 
 
 @dataclass(frozen=True)
@@ -137,4 +140,4 @@ def prepare(
     if has_errors(problems):
         return PrepareResult(None, _capped(problems))
     view_data = fill_missing(data, definition.data.schema)
-    return PrepareResult(Prepared(checked_params, view_data, lists, totals, dict(meta), FORMATTERS), problems)
+    return PrepareResult(Prepared(checked_params, view_data, lists, totals, dict(meta), FMT), problems)

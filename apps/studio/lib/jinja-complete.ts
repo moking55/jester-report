@@ -3,13 +3,28 @@
 
 export type Suggestion = { label: string; type: string; detail?: string; info?: string; apply?: string };
 
-// keep in step with apps/api/src/jester_api/data_prep/formatters.py FORMATTERS
+// keep in step with apps/api/src/jester_api/data_prep/prepare.py FMT (formatters.py + codes.py)
 export const FMT: Suggestion[] = [
   { label: "money", type: "function", detail: "(value, places=2)", info: "1,234.50", apply: "money(" },
   { label: "number", type: "function", detail: "(value, places=0)", info: "1,235", apply: "number(" },
   { label: "thai_date", type: "function", detail: "(value)", info: "18 พฤศจิกายน 2569", apply: "thai_date(" },
   { label: "thai_date_short", type: "function", detail: "(value)", info: "18 พ.ย. 69", apply: "thai_date_short(" },
   { label: "baht_text", type: "function", detail: "(value)", info: "หนึ่งพันบาทถ้วน", apply: "baht_text(" },
+  { label: "qr", type: "function", detail: "(text, size_mm=30, error='M')", info: "QR code (SVG)", apply: "qr(" },
+  {
+    label: "barcode",
+    type: "function",
+    detail: "(text, kind='code128', height_mm=12, module_mm=0.3)",
+    info: "Code 128 or EAN-13 bars (SVG), no text",
+    apply: "barcode(",
+  },
+  {
+    label: "promptpay",
+    type: "function",
+    detail: "(target, amount=None)",
+    info: "PromptPay payload for fmt.qr: phone, tax ID or e-wallet",
+    apply: "promptpay(",
+  },
 ];
 
 const ROOTS: Suggestion[] = [
@@ -18,7 +33,7 @@ const ROOTS: Suggestion[] = [
   { label: "lists", type: "variable", info: "lists from report.json, with computed fields" },
   { label: "totals", type: "variable", info: "totals from report.json" },
   { label: "meta", type: "variable", info: "templateId, version, renderedAt" },
-  { label: "fmt", type: "namespace", info: "money, number, thai_date, thai_date_short, baht_text" },
+  { label: "fmt", type: "namespace", info: "money, number, thai_date, thai_date_short, baht_text, qr, barcode, promptpay" },
 ];
 
 const TAGS = ["for", "endfor", "if", "elif", "else", "endif", "set"].map((label) => ({ label, type: "keyword" }));

@@ -13,7 +13,9 @@ dependencies = [
   "psycopg[binary,pool]>=3.2",
   "pydantic>=2.7",
   "pypdf>=7.0.1",
+  "python-barcode==0.16.1",
   "python-multipart>=0.0.9",
+  "segno==1.6.6",
   "uvicorn[standard]>=0.30",
 ]
 
