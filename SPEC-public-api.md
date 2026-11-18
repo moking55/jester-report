@@ -235,7 +235,7 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 # v1.5: เก็บเอกสารที่ออก (D2)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5, [SPEC-render-service.md](SPEC-render-service.md) หัวข้อ v1.5
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5, [SPEC-render-service.md](SPEC-render-service.md) หัวข้อ v1.5
 
 ## สมมติฐาน v1.5
 

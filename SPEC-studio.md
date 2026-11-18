@@ -369,7 +369,7 @@ apps/studio/
 
 # v1.5: หน้าเอกสารที่ออก (D3)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5, [SPEC-public-api.md](SPEC-public-api.md) หัวข้อ v1.5
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5, [SPEC-public-api.md](SPEC-public-api.md) หัวข้อ v1.5
 
 ## Objective
 

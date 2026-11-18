@@ -231,7 +231,7 @@ async def render(self, template_id, version, params, data, caller, request_id, f
 
 # v1.5: เก็บเอกสารที่ออก (D1)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5 (interview 19 พ.ย. 2026)
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.5 (interview 19 พ.ย. 2026)
 หัวข้อ v1 และ v1.1 ด้านบนยังใช้ ยกเว้นข้อที่ v1.5 กลับข้อตัดสินใจ (ผู้ใช้ยืนยัน) และ**ถูกแทนที่ด้วยหัวข้อนี้**:
 สมมติฐาน v1 ข้อ 6 ("ไม่เก็บ params, data หรือ PDF"), Boundaries **Always** "ไม่เก็บ params/data/PDF" และ **Ask first** "เก็บ PDF",
 Success Criteria v1 ข้อ 4 ส่วน "ไม่มี params, data หรือ PDF ใน DB" (ยังจริงสำหรับตาราง `runs` และ log) และ Out of scope "เก็บ PDF"

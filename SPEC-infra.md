@@ -115,7 +115,7 @@ async def export(conn, blobs: BlobStore, out: BinaryIO) -> int:
 
 # v1.5: backup มีเอกสารที่ออก
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [SPEC-render-service.md](SPEC-render-service.md) หัวข้อ v1.5
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · ที่มา: [SPEC-render-service.md](SPEC-render-service.md) หัวข้อ v1.5
 
 เอกสาร: แถว (params, data, ชื่อไฟล์, sha256) อยู่ใน `db.dump` อยู่แล้ว; PDF อยู่ใน object storage ที่ `documents/<run_id>` จึงต้องเข้า `blobs.tar`
 

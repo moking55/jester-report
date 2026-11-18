@@ -1,6 +1,6 @@
 # แผน v1.5: เก็บเอกสารที่ออก
 
-สถานะ: **รออนุมัติ 19 พ.ย. 2026** · task list: [todo.md](todo.md)
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · task list: [todo.md](todo.md)
 ที่มา: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) หัวข้อ v1.5 และหัวข้อ v1.5 ของ `SPEC-render-service.md`, `SPEC-public-api.md`,
 `SPEC-studio.md`, `SPEC-infra.md` (อนุมัติ 19 พ.ย. 2026) · ฐาน: tag `v1.4.0`
 
