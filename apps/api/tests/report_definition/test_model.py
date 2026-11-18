@@ -180,3 +180,22 @@ def test_collects_all_problems_at_once():
 def test_date_default_must_be_yyyy_mm_dd(value):
     model, _ = parse(with_(parameters={"p": {"type": "date", "default": value}}))
     assert model is None
+
+
+def test_parameter_title_and_description():
+    titled = {"type": "string", "title": "เลขที่ใบเสนอราคา", "description": "เช่น Q-2026-001"}
+    model, problems = parse(with_(parameters={"quoteId": titled}))
+    assert problems == [] and model.parameters["quoteId"].title == "เลขที่ใบเสนอราคา"
+    assert model.parameters["quoteId"].description == "เช่น Q-2026-001"
+
+
+@pytest.mark.parametrize(
+    "change",
+    [{"title": ""}, {"title": "x" * 81}, {"title": 5}, {"description": ""}, {"description": "x" * 301}],
+)
+def test_parameter_title_and_description_rules(change):
+    model, problems = parse(with_(parameters={"p": {"type": "string", **change}}))
+    assert model is None
+    assert [(p.code, p.pointer) for p in problems] == [
+        ("DEFINITION_INVALID", f"/parameters/p/{next(iter(change))}")
+    ]

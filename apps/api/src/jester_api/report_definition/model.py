@@ -71,6 +71,9 @@ class Parameter(_Strict):
     default: Any = None
     values: list[str] | None = Field(default=None, min_length=1)
     maxLength: int | None = Field(default=None, ge=1)
+    # labels for forms (v1.4): never used to check or render values
+    title: str | None = Field(default=None, min_length=1, max_length=80)
+    description: str | None = Field(default=None, min_length=1, max_length=300)
 
     @model_validator(mode="after")
     def _rules(self) -> Parameter:

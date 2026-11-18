@@ -1,6 +1,6 @@
 # แผน v1.4: ฟอร์มออกเอกสาร
 
-สถานะ: **ร่าง รอผู้ใช้อนุมัติ** (18 พ.ย. 2026) · task list: [todo.md](todo.md)
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · task list: [todo.md](todo.md)
 ที่มา: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) หัวข้อ v1.4 และหัวข้อ v1.4 ของ `SPEC-report-definition.md`, `SPEC-template-store.md`,
 `SPEC-studio.md` (อนุมัติ 18 พ.ย. 2026) · ฐาน: tag `v1.3.0`
 
