@@ -199,6 +199,8 @@ export function Workspace({
         s.lastPublished = result.data.version; // a new key remounts the panel, which loads the list again
       } else failed(result.problem, problemMessage(result.problem))(s);
     });
+    // the page's props (canIssue: "ออกเอกสาร" needs a published version) come from the server: read them again
+    if (result.ok) router.refresh();
   }
 
   // the draft as the editor holds it now, saved or not
