@@ -1,5 +1,6 @@
 "use client";
 
+import type { CompletionContext, CompletionResult } from "@codemirror/autocomplete";
 import { css } from "@codemirror/lang-css";
 import { html } from "@codemirror/lang-html";
 import { json } from "@codemirror/lang-json";
@@ -10,6 +11,7 @@ import { basicSetup } from "codemirror";
 import { useEffect, useImperativeHandle, useRef, type Ref } from "react";
 
 import { diagnosticsFor, offsetOf } from "@/lib/diagnostics";
+import { suggest } from "@/lib/jinja-complete";
 import type { ValidationProblem } from "@/lib/workspace";
 
 import styles from "./Editor.module.css";
@@ -56,6 +58,16 @@ export function Editor({ files, active, generation, problems, onDirty, onSave, r
     callbacks.current = { onDirty, onSave }; // CodeMirror's listeners are made once; they read the latest
   });
 
+  // {{ … }} / {% … %} completion: the binder's context, fmt helpers, names from the draft's report.json
+  const jinja = (context: CompletionContext): CompletionResult | null => {
+    const reportJson =
+      states.current.get("report.json")?.doc.toString() ?? files.find((f) => f.name === "report.json")?.content;
+    const found = suggest(context.state.sliceDoc(0, context.pos), reportJson);
+    if (!found || (found.back === 0 && !context.explicit && !/[.{%\s]$/.test(context.state.sliceDoc(0, context.pos))))
+      return null;
+    return { from: context.pos - found.back, options: found.options, validFor: /^\w*$/ };
+  };
+
   const stateFor = (name: string, content: string) =>
     EditorState.create({
       doc: content,
@@ -63,6 +75,7 @@ export function Editor({ files, active, generation, problems, onDirty, onSave, r
         basicSetup,
         lintGutter(),
         language(name),
+        name.endsWith(".html") ? EditorState.languageData.of(() => [{ autocomplete: jinja }]) : [],
         EditorState.readOnly.of(readOnly),
         keymap.of([{ key: "Mod-s", preventDefault: true, run: () => (callbacks.current.onSave(), true) }]),
         EditorView.updateListener.of((u) => {

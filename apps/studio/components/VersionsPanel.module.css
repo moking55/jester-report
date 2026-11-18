@@ -29,14 +29,24 @@
   text-align: right;
 }
 
-.actions button {
+.actions button,
+.actions a {
+  display: inline-block;
   margin-left: 4px;
+  color: var(--color-text);
+  text-decoration: none;
+  line-height: normal;
   border: 1px solid var(--line-button);
   border-radius: var(--radius);
   background: var(--fill-button);
   padding: 2px 8px;
   font-size: 0.85em;
   cursor: pointer;
+}
+
+.actions button:hover:not(:disabled),
+.actions a:hover {
+  background: var(--fill-button-hover);
 }
 
 .actions button:disabled {
