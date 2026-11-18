@@ -212,8 +212,9 @@ designer แบบลากวาง, หลายภาษา (UI ไทยอ�
 
 ```
 apps/studio/
-  app/templates/[id]/export/route.ts   → ส่งต่อ zip จาก api — ใหม่
-  app/templates/import/route.ts        → รับ zip แล้วส่งต่อ — ใหม่
+  app/export/[id]/route.ts             → ส่งต่อ zip จาก api — ใหม่ (ไม่อยู่ใต้ /templates เพราะ /templates/import จะชนกับรายงาน id "import")
+  app/import/route.ts                  → รับ zip แล้วส่งต่อ — ใหม่
+  lib/zip.ts                           → อ่าน jester.json ใน browser ให้ dialog นำเข้ารู้ id ก่อนอัปโหลด — ใหม่
   components/TemplateMenu.tsx          → เมนู ⋯ (export, ทำสำเนา, archive) ใช้ทั้ง catalog และ workspace — ใหม่
   components/ImportDialog.tsx, DuplicateDialog.tsx, SetPasswordDialog.tsx — ใหม่
   components/ApiKeysPanel.tsx, UsersPanel.tsx, Workspace.tsx, VersionsPanel.tsx, CreateTemplate.tsx

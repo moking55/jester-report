@@ -211,7 +211,7 @@ SQL ตรง ๆ ใน `store.py`, ทุกการเขียนอยู�
 ```python
 class TemplateStore:
     # A1
-    async def export_zip(self, template_id: str, ref: Literal["draft"] | int) -> bytes
+    async def export_zip(self, template_id: str, ref: Literal["draft"] | int) -> ZipExport  # (data, filename)
     async def import_zip(self, data: bytes, expected_revision: int | None, by: str,
                          template_id: str | None = None) -> ImportResult
     # A2

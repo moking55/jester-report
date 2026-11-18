@@ -20,46 +20,57 @@
 
 ## Phase A: Lifecycle
 
-- [ ] **T2 A3 store: archive**
+- [x] **T2 A3 store: archive**
   - Acceptance: migration 0006; `set_archived`, `list(include_archived)`; ทุกเมธอดเขียน → `ARCHIVED`; อ่าน/export/duplicate ได้; archive แข่งกับ `put_file` ไม่มีการเขียนหลัง archive
   - Verify: `pytest tests/template_store -m db`, migration บน DB ที่มีข้อมูล v1 รายงานเดิมไม่ถูก archive
   - Files: `db/migrations/0006_template_archive.sql`, `template_store/store.py`, `errors.py`, `tests/template_store/test_store_lifecycle.py`
-- [ ] **T3 A3 render-service + api: 410 และ endpoint archive**
+- [x] **T3 A3 render-service + api: 410 และ endpoint archive**
   - Acceptance: render/preview/validate ของรายงานที่ archive → 410 `TEMPLATE_ARCHIVED` + run failed; `setTemplateArchived`; `?includeArchived`; เขียน → 409
   - Verify: pytest render_service + public_api, contract test
   - Files: `render_service/service.py`, `openapi/public-api.yaml`, `public_api/routes/templates.py`, tests ที่เกี่ยวข้อง
-- [ ] **T4 A3 studio: archive**
+- [x] **T4 A3 studio: archive**
   - Acceptance: `TemplateMenu` (เริ่มจาก archive/unarchive) ใน catalog และ workspace; ตัวสลับ "แสดงที่ archive" + badge; workspace ที่ archive มีแถบแจ้ง editor อ่านอย่างเดียว ปุ่มแก้/Preview/Render ปิด
   - Verify: studio 4 คำสั่ง + เบราว์เซอร์บน VM
   - Files: `components/TemplateMenu.tsx`, `app/(app)/page.tsx`, `components/Workspace.tsx`, `lib/actions/templates.ts`, `lib/messages.ts`
-- [ ] **T5 A2 store + api: ทำสำเนา**
+- [x] **T5 A2 store + api: ทำสำเนา**
   - Acceptance: `duplicate` จาก draft หรือ version; id ซ้ำ → `CONFLICT`/409; ไม่มี blob ใหม่; `duplicateTemplate` 201 draft revision 1
   - Verify: pytest template_store + public_api
   - Files: `store.py`, `public-api.yaml`, `routes/templates.py`, tests
-- [ ] **T6 A2 studio: ทำสำเนา**
+- [x] **T6 A2 studio: ทำสำเนา**
   - Acceptance: เมนู ⋯ → `DuplicateDialog` (id ใหม่ + ชื่อ) → ไป workspace ของสำเนา; จาก version ใน Versions panel ได้
   - Verify: studio 4 คำสั่ง + เบราว์เซอร์
   - Files: `components/DuplicateDialog.tsx`, `TemplateMenu.tsx`, `VersionsPanel.tsx`, `lib/actions/templates.ts`
-- [ ] **T7 A1 bundle: zip แบบ pure**
+- [x] **T7 A1 bundle: zip แบบ pure**
   - Acceptance: เขียน/อ่าน zip + `jester.json` (`formatVersion` 1, entry deterministic); ทุกแถวในตารางความปลอดภัยถูกปฏิเสธ (25 MB, 101 entry, `/` `\`, symlink, ขนาดนับจากที่อ่านจริง, UTF-8, sha256 ตรง manifest)
   - Verify: `pytest tests/template_store/test_bundle.py` หนึ่ง test ต่อแถว
   - Files: `template_store/bundle.py`, `tests/template_store/test_bundle.py`
-- [ ] **T8 A1 store + api: export/import**
+- [x] **T8 A1 store + api: export/import**
   - Acceptance: `export_zip` (draft หรือ version), `import_zip` (`created`); import ทับต้องมี `If-Match` (ไม่มี → 409, ผิด → 412); 26 MB `BodyLimit` เฉพาะ route นี้; zip อันตรายไม่เขียนอะไรลง DB
   - Verify: round-trip ไฟล์และ asset ตรงทุก byte; pytest public_api
   - Files: `store.py`, `public-api.yaml`, `routes/templates.py`, `public_api/app.py` (BodyLimit), tests
-- [ ] **T9 A1 studio: export/import**
+- [x] **T9 A1 studio: export/import**
   - Acceptance: Route Handler `templates/[id]/export` และ `templates/import`; ปุ่ม "นำเข้า (.zip)" + `ImportDialog` (id ซ้ำ → ถามทับหรือ id ใหม่, Studio อ่าน revision เอง); export ในเมนู ⋯ และต่อ version; browser ไม่เรียก api ตรง
   - Verify: studio 4 คำสั่ง + เบราว์เซอร์ (ดู network)
   - Files: `app/templates/[id]/export/route.ts`, `app/templates/import/route.ts`, `components/ImportDialog.tsx`, `TemplateMenu.tsx`, `app/(app)/page.tsx`
-- [ ] **T10 A4: ตั้งรหัสผ่านให้ผู้อื่น (auth → api → studio)**
+- [x] **T10 A4: ตั้งรหัสผ่านให้ผู้อื่น (auth → api → studio)**
   - Acceptance: `set_password(user_id, new, by)`; ตั้งให้ตัวเอง → 422; session ของเจ้าของถูกเพิกถอน; `setUserPassword` 204; API key → 401; `SetPasswordDialog` ต่อแถวใน ตั้งค่า › ผู้ใช้
   - Verify: pytest auth -m db + public_api; studio 4 คำสั่ง + เบราว์เซอร์
   - Files: `auth/service.py`, `public-api.yaml`, `routes/users_keys.py`, `components/SetPasswordDialog.tsx`, `UsersPanel.tsx`
 
+บันทึก 18 พ.ย. 2026 (T2–T10): commit รวมเป็น `be54d56` (api), `b128378` (studio), `41ff8b9`, `f84aac4` (แก้หลัง E2E)
+เพราะไฟล์ store/route ใช้ร่วมกันหลาย task — ไม่ได้แยก commit ต่อ task ตามแผน
+- api: 576 passed, 3 skipped (รันบน VM), coverage รวม 96% (store 97%, bundle 96%, auth/service 99%), ruff สะอาด
+- studio: lint, typecheck, 52 test, build ผ่าน
+- ต่างจาก spec (อัปเดต spec แล้ว): route ของ zip เป็น `/export/[id]` และ `/import` (ไม่ใช่ใต้ `/templates/`
+  เพราะ `/templates/import` จะชนกับรายงาน id `import`); `export_zip` คืน `ZipExport(data, filename)`;
+  ค่าจำกัดย้ายไป `template_store/limits.py` ให้ store และ bundle ใช้ร่วมกัน; dialog นำเข้าอ่าน `jester.json`
+  ใน browser (`lib/zip.ts`) เพื่อรู้ id ก่อนถามว่าจะทับ draft
+- E2E: ต้องรอ api healthy และ load ของ VM < 4 ก่อนรัน; ตอน VM IO wait สูง api start ไม่ขึ้นและ test ล้มแบบไม่เกี่ยวกับโค้ด
+
 ### Checkpoint A
-- [ ] api: ruff + pytest ทั้งหมด (รวม db/storage) ผ่าน, coverage template_store/auth ≥ 90%
-- [ ] studio: 4 คำสั่งผ่าน; E2E ขั้นใหม่ 1–4 และ 6 ใน `full-flow.spec.ts` ผ่านบน stack ใหม่ แล้ว `down -v`
+- [x] api: ruff + pytest ทั้งหมด (รวม db/storage) ผ่าน, coverage template_store/auth ≥ 90% (576 passed, 96%)
+- [x] studio: 4 คำสั่งผ่าน; E2E ขั้นใหม่ 1–4 และ 6 ผ่านบน stack ใหม่ แล้ว `down -v` (18 พ.ย. 2026: แยกเป็น
+  `e2e/lifecycle.spec.ts` แทนการต่อท้าย `full-flow.spec.ts`; 3 spec ผ่าน 30.9 วินาที)
 - [ ] ผู้ใช้ทบทวนก่อนเริ่ม Phase B
 - [ ] ผู้ใช้อนุมัติแล้ว: เลข version api/studio/compose → 1.1.0, tag `v1.1.0`, push `master` + tag
 
