@@ -68,6 +68,6 @@ E2E 4 spec ผ่าน 46.5 วินาทีบน stack ใหม่ · depl
 
 ### Checkpoint (ปล่อย v1.4.0)
 - [x] api + studio ครบทุกคำสั่ง; E2E 4 spec ผ่านบน stack ใหม่ แล้ว `down -v`
-- [ ] deploy ขึ้น main stack บน VM; ผู้ใช้ลองออกใบกำกับภาษีจากปุ่มใน catalog เอง
+- [x] deploy ขึ้น main stack บน VM; ผู้ใช้ลองออกใบกำกับภาษีจากปุ่มใน catalog เอง
 - [x] อัปเดต spec ตามที่เปลี่ยนระหว่างทำ (ตำแหน่งปุ่มของฟอร์มใน SPEC-studio.md)
-- [ ] ผู้ใช้อนุมัติแล้ว: เลข version → 1.4.0, tag `v1.4.0`, push `master` + tag
+- [x] ผู้ใช้อนุมัติแล้ว: เลข version → 1.4.0, tag `v1.4.0`, push `master` + tag (18 พ.ย. 2026: "ผ่าน ปล่อย v1.4.0")
