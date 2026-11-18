@@ -5,6 +5,7 @@
 | [gotenberg/](gotenberg/README.md) | `jester/gotenberg` image (Gotenberg 9.4.1 + TH Sarabun New) and its hardened run flags |
 | [compose.dev.yaml](compose.dev.yaml) | PostgreSQL + RustFS for development and the `db` / `storage` tests |
 | [compose.yaml](compose.yaml) | The server: studio + api + PostgreSQL + RustFS + Gotenberg |
+| [backup.sh](backup.sh), [restore.sh](restore.sh) | Back up a running server; restore into a new one (see below) |
 
 ## Run the server
 
@@ -25,6 +26,36 @@ Without it every Studio login reaches the api from Studio's own address, so fail
 team: anyone can lock a username out for 15 minutes from any machine. Leave it `0` when Studio is reachable
 without the proxy, or anyone could fake the header. `infra/.env` holds real secrets and is
 git-ignored. The contract is served at `/v1/openapi.yaml`.
+
+## Backup and restore
+
+```bash
+infra/backup.sh                                        # -> ./backups/jester-backup-YYYYMMDD-HHMMSS/
+infra/restore.sh backups/jester-backup-20261118-020000 # into a NEW stack only
+```
+
+| In the backup | Not in the backup |
+| --- | --- |
+| `db.dump`: PostgreSQL (`pg_dump -Fc`): reports, drafts, versions, users, sessions, API keys (hashed), runs, themes | `infra/.env`: the secrets. Keep a copy yourself; a restore works with new secrets too |
+| `blobs.tar`: every asset's bytes (logos, fonts), named by sha256 | PDFs: Jester does not store them |
+| `manifest.json`: date, last migration, sha256 of both files | |
+
+- **No downtime.** `pg_dump` takes one consistent snapshot, then the script copies the assets it can name.
+  If an asset is missing from storage the backup fails instead of finishing incomplete.
+- **Restore never writes over data.** It checks both sha256s first, then stops unless the database is
+  empty. It also stops when the backup is newer than the api image (update the image first). An older
+  backup into a newer image is fine: the api applies the newer migrations when it starts.
+- **Restore into a new stack.** On a new machine: copy `infra/` and your `infra/.env`, then run
+  `infra/restore.sh <dir>`. It starts postgres and rustfs, restores, then starts everything.
+- **The files are sensitive** (password hashes, report data); the script writes them readable by you
+  only. Encrypt before they leave the machine, e.g. `tar -c jester-backup-… | age -r <key> > backup.tar.age`.
+- **Other stacks:** both scripts honour `COMPOSE_PROJECT_NAME`.
+
+Daily at 02:00, keeping 14 days (crontab of the user that runs docker):
+
+```bash
+0 2 * * * cd /opt/jester && infra/backup.sh /var/backups/jester && find /var/backups/jester -maxdepth 1 -name 'jester-backup-*' -mtime +14 -exec rm -rf {} +
+```
 
 ## Dev stack
 
