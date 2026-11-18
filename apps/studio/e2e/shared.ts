@@ -17,5 +17,6 @@ export async function login(page: Page) {
   await page.getByLabel("ชื่อผู้ใช้").fill(USER);
   await page.getByLabel("รหัสผ่าน").fill(PASSWORD);
   await page.getByRole("button", { name: "เข้าสู่ระบบ" }).click();
-  await expect(page.getByRole("heading", { name: "รายงาน" })).toBeVisible();
+  // scrypt on a busy test VM can take several seconds
+  await expect(page.getByRole("heading", { name: "รายงาน" })).toBeVisible({ timeout: 30_000 });
 }

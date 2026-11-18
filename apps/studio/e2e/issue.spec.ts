@@ -15,15 +15,17 @@ test("issue a tax invoice from the form", async ({ page }) => {
   await login(page);
 
   // a dev creates it from the starter and publishes v1
-  await page.getByLabel("id", { exact: true }).fill(ID);
-  await page.getByLabel("ชื่อรายงาน").fill("ใบกำกับภาษี E2E");
-  await page.getByLabel("เริ่มจาก").selectOption({ label: "ใบกำกับภาษีเต็มรูป" });
-  await page.getByRole("button", { name: "สร้างรายงาน" }).click();
+  const create = page.getByRole("form", { name: "สร้างรายงาน" }); // the catalog also has duplicate dialogs
+  await create.getByLabel("id", { exact: true }).fill(ID);
+  await create.getByLabel("ชื่อรายงาน").fill("ใบกำกับภาษี E2E");
+  await create.getByLabel("เริ่มจาก").selectOption({ label: "ใบกำกับภาษีเต็มรูป" });
+  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
   await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
   await page.getByRole("button", { name: "Publish" }).click();
   const publish = page.getByRole("dialog", { name: "Publish" });
   await publish.getByRole("button", { name: "Publish" }).click();
   await expect(publish).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Versions" })).toHaveAttribute("aria-selected", "true"); // published
 
   // the lead opens it from the catalog: straight into the form, no files, no tabs, an empty form
   await page.goto("/");
