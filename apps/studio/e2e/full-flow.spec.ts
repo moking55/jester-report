@@ -85,13 +85,21 @@ test("report from starter to API render, history, two tabs and themes", async ({
   await expect(page.getByRole("tab", { name: "Versions" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("tabpanel")).toContainText("e2e v1");
 
-  // the Render dialog gives the request body another system would send
-  await page.getByRole("button", { name: "Render…" }).click();
-  const dialog = page.getByRole("dialog", { name: "Render" });
-  const params = await dialog.locator('textarea[name="params"]').inputValue();
-  const data = await dialog.locator('textarea[name="data"]').inputValue();
+  // "ออกเอกสาร" replaces the old Render button; its developer dialog gives the body another system would send
+  await page.getByRole("button", { name: "ออกเอกสาร" }).click();
+  await expect(page.getByRole("form", { name: "ฟอร์มออกเอกสาร" })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "ใช้ข้อมูลตัวอย่าง" }).click();
+  await page.locator("#f-params-quoteId").fill("Q-E2E-1");
+  await page.locator("#f-params-docDate").fill("2026-11-12");
+  await page.getByRole("button", { name: "สำหรับนักพัฒนา" }).click();
+  const dialog = page.getByRole("dialog", { name: "สำหรับนักพัฒนา" });
+  const curl = (await dialog.getByLabel("ตัวอย่าง curl").textContent()) ?? "";
+  const body = curl.slice(curl.indexOf("-d '") + 4, curl.lastIndexOf("' \\"));
+  expect(body).toContain('"quoteId":"Q-E2E-1"');
   await dialog.getByLabel("ปิด").click(); // the × in the header
   await expect(dialog).toHaveCount(0);
+  await page.getByRole("button", { name: "กลับไปแก้ code" }).click();
+  await expect(page.getByRole("navigation", { name: "ไฟล์" })).toBeVisible({ timeout: 30_000 });
 
   // 6. an API key: the secret is shown once
   await page.goto("/settings?tab=keys");
@@ -106,7 +114,7 @@ test("report from starter to API render, history, two tabs and themes", async ({
   // 7. another system renders the published version with that key (from the test, not the browser)
   const rendered = await request.post(`${apiOrigin}/v1/render`, {
     headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-    data: `{"template":{"id":"${ID}","version":"published"},"params":${params},"data":${data}}`,
+    data: body,
   });
   expect(rendered.status(), await rendered.text()).toBe(200);
   expect(rendered.headers()["content-type"]).toContain("application/pdf");

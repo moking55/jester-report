@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { Problem } from "@/lib/api-core";
 import {
@@ -26,7 +26,12 @@ import styles from "./IssueForm.module.css";
 
 export type IssuedPdf = { url: string; filename: string };
 
-type Props = { templateId: string; source: IssueSource; onPdf: (pdf: IssuedPdf) => void };
+type Props = {
+  templateId: string;
+  source: IssueSource;
+  onPdf: (pdf: IssuedPdf) => void;
+  onBody?: (body: string) => void; // the request the form would send now (the developer dialog's curl)
+};
 
 /** Set the value at `path` (keys and row numbers) inside an immutable value tree. */
 function setAt(value: Value, path: (string | number)[], next: Value): Value {
@@ -48,13 +53,17 @@ function filenameOf(disposition: string | null, fallback: string): string {
   return disposition?.match(/filename="([^"]+)"/i)?.[1] ?? fallback;
 }
 
-export function IssueForm({ templateId, source, onPdf }: Props) {
+export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
   const spec = useMemo(() => formSpec(source.reportJson, source.schemaJson), [source]);
   const [values, setValues] = useState<FormValues>(() => emptyValues(spec));
   const [filename, setFilename] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [general, setGeneral] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    onBody?.(renderBody(templateId, spec, values, filename));
+  }, [onBody, templateId, spec, values, filename]);
 
   const setParam = (key: string, v: Value) => setValues((s) => ({ ...s, params: { ...s.params, [key]: v } }));
   const setData = (path: (string | number)[], v: Value) => setValues((s) => ({ ...s, data: setAt(s.data, path, v) }));

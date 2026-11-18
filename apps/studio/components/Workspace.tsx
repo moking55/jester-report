@@ -45,7 +45,7 @@ import { IssueForm, type IssuedPdf } from "./IssueForm";
 import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
 import { Resizer } from "./Resizer";
-import { RenderDialog } from "./RenderDialog";
+import { DeveloperDialog } from "./DeveloperDialog";
 import { RunDetails } from "./RunDetails";
 import { TemplateMenu } from "./TemplateMenu";
 import { VersionsPanel } from "./VersionsPanel";
@@ -82,7 +82,8 @@ export function Workspace({
   const previewForm = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const writing = useRef(false);
-  const [renderData, setRenderData] = useState<string | null>(null); // the dialog is open while set
+  const [devBody, setDevBody] = useState(""); // the issue form's request, for the developer dialog
+  const [showDev, setShowDev] = useState(false);
   const main = useRef<HTMLDivElement>(null);
   const [assetPreview, setAssetPreview] = useState<string | null>(null); // an image asset shown in the editor pane
   const [publishing, setPublishing] = useState(false); // the publish dialog is open
@@ -330,11 +331,15 @@ export function Workspace({
   if (issue) {
     return (
       <div className={styles.workspace}>
+        {showDev && <DeveloperDialog body={devBody} onClose={() => setShowDev(false)} />}
         <div className={styles.toolbar}>
           <b>{name}</b>
           <code>{state.templateId}</code>
           <span className={styles.revision}>ออกเอกสาร</span>
           <span className={styles.spacer} />
+          <button type="button" className={styles.secondary} onClick={() => setShowDev(true)}>
+            สำหรับนักพัฒนา
+          </button>
           <button type="button" className={styles.secondary} onClick={() => router.push(`/templates/${state.templateId}`)}>
             กลับไปแก้ code
           </button>
@@ -345,7 +350,7 @@ export function Workspace({
           style={{ "--preview-w": `${sizes.preview}px` } as CSSProperties}
         >
           <section className={styles.formPane} aria-label="ฟอร์ม">
-            <IssueForm templateId={state.templateId} source={issue} onPdf={setIssued} />
+            <IssueForm templateId={state.templateId} source={issue} onPdf={setIssued} onBody={setDevBody} />
           </section>
           <Resizer
             orientation="vertical"
@@ -382,14 +387,6 @@ export function Workspace({
 
   return (
     <div className={styles.workspace}>
-      {renderData !== null && (
-        <RenderDialog
-          templateId={state.templateId}
-          params={state.paramsText}
-          data={renderData}
-          onClose={() => setRenderData(null)}
-        />
-      )}
       {publishing && (
         <DiffDialog
           title="Publish"
@@ -413,11 +410,6 @@ export function Workspace({
         <span className={styles.revision}>draft r{state.revision}</span>
         <span className={styles.spacer} />
         <TemplateMenu templateId={state.templateId} archived={archived} back={`/templates/${state.templateId}`} />
-        {canIssue && (
-          <button type="button" className={styles.secondary} onClick={toIssue}>
-            ออกเอกสาร
-          </button>
-        )}
         <span role="status" className={styles.saveState}>
           {state.saving ? "กำลังบันทึก…" : unsaved ? `ยังไม่บันทึก ${state.dirty.length} ไฟล์` : "บันทึกแล้ว"}
         </span>
@@ -432,10 +424,11 @@ export function Workspace({
         </button>
         <button
           type="button"
-          onClick={() => setRenderData(editor.current?.content("sample.json") ?? "{}")}
-          disabled={archived}
+          onClick={toIssue}
+          disabled={!canIssue}
+          title={canIssue ? undefined : archived ? "เลิก archive ก่อนจึงจะออกเอกสารได้" : "publish ก่อนจึงจะออกเอกสารได้"}
         >
-          Render…
+          ออกเอกสาร
         </button>
       </div>
       {archived && (
