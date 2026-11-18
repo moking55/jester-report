@@ -4,13 +4,16 @@ import { useRef, useState, useTransition } from "react";
 
 import { createApiKey, revokeApiKey } from "@/lib/actions/settings";
 import { when } from "@/lib/format";
+import { keyOptions } from "@/lib/keys";
 import type { components } from "@/lib/types.gen";
 
 import styles from "./Settings.module.css";
 
 type ApiKey = components["schemas"]["ApiKey"];
 
-export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
+type TemplateChoice = { id: string; name: string };
+
+export function ApiKeysPanel({ keys, templates, today }: { keys: ApiKey[]; templates: TemplateChoice[]; today: string }) {
   // the only copy of a new secret: gone when the box is closed or the page is left
   const [created, setCreated] = useState<{ id: string; name: string; secret: string } | null>(null);
   const [copied, setCopied] = useState(false);
@@ -20,7 +23,16 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
 
   const create = (form: FormData) =>
     startTransition(async () => {
-      const result = await createApiKey(String(form.get("name") ?? ""));
+      const checked = keyOptions(
+        {
+          expires: String(form.get("expires") ?? ""),
+          templates: form.getAll("templates").map(String),
+          limit: String(form.get("limit") ?? "").trim(),
+        },
+        today,
+      );
+      if (!checked.ok) return setError(checked.error);
+      const result = await createApiKey(String(form.get("name") ?? ""), checked.options);
       if (result.ok) {
         setCreated({ id: result.id, name: result.name, secret: result.secret });
         setCopied(false);
@@ -86,6 +98,9 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
               <th>สร้างโดย</th>
               <th>สร้างเมื่อ</th>
               <th>ใช้ล่าสุด</th>
+              <th>หมดอายุ</th>
+              <th>รายงาน</th>
+              <th>จำกัด/นาที</th>
               <th />
             </tr>
           </thead>
@@ -99,6 +114,9 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
                 <td>{key.createdBy ?? "–"}</td>
                 <td>{when(key.createdAt)}</td>
                 <td>{when(key.lastUsedAt)}</td>
+                <td>{key.expiresAt ? when(key.expiresAt) : "ไม่หมดอายุ"}</td>
+                <td>{key.templates ? key.templates.join(", ") : "ทุกรายงาน"}</td>
+                <td>{key.rateLimitPerMinute ?? "ไม่จำกัด"}</td>
                 <td>
                   <button type="button" className={styles.danger} disabled={pending} onClick={() => revoke(key)}>
                     เพิกถอน
@@ -121,6 +139,23 @@ export function ApiKeysPanel({ keys }: { keys: ApiKey[] }) {
           ชื่อ (เช่น ระบบที่จะใช้)
           <input name="name" required maxLength={80} placeholder="ERP" autoComplete="off" />
         </label>
+        <label>
+          หมดอายุสิ้นวันที่ (เว้นว่าง = ไม่หมดอายุ)
+          <input name="expires" type="date" min={today} />
+        </label>
+        <label>
+          render ได้ไม่เกินต่อนาที (เว้นว่าง = ไม่จำกัด)
+          <input name="limit" type="number" min={1} max={10000} step={1} inputMode="numeric" />
+        </label>
+        <fieldset className={styles.choices}>
+          <legend>ใช้กับรายงาน (ไม่เลือก = ทุกรายงาน)</legend>
+          {templates.length === 0 && <p className={styles.muted}>ยังไม่มีรายงาน</p>}
+          {templates.map((t) => (
+            <label key={t.id}>
+              <input type="checkbox" name="templates" value={t.id} /> {t.name} <code>{t.id}</code>
+            </label>
+          ))}
+        </fieldset>
         <button type="submit" className={styles.primary} disabled={pending}>
           {pending ? "กำลังสร้าง…" : "สร้าง key"}
         </button>

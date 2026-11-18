@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { api, ApiProblem } from "@/lib/api";
 import { requireUser } from "@/lib/current";
 import { problemMessage } from "@/lib/messages";
+import type { KeyOptions } from "@/lib/keys";
 import { attempt } from "@/lib/result";
 import { clearSession } from "@/lib/session";
 import type { FormState } from "./auth";
@@ -51,9 +52,10 @@ export async function setUserPassword(_: FormState, form: FormData): Promise<For
 export type NewKey = { ok: true; id: string; name: string; secret: string } | { ok: false; error: string };
 
 /** The secret goes back to the one component that shows it; it is never stored, logged or put in a URL. */
-export async function createApiKey(name: string): Promise<NewKey> {
+export async function createApiKey(name: string, options: KeyOptions = {}): Promise<NewKey> {
+  const body = { name: name.trim(), ...options };
   const result = await attempt(() =>
-    api<{ id: string; name: string; secret: string }>("/v1/api-keys", { method: "POST", body: { name: name.trim() } }),
+    api<{ id: string; name: string; secret: string }>("/v1/api-keys", { method: "POST", body }),
   );
   if (!result.ok) return { ok: false, error: problemMessage(result.problem, KEY_NAME) };
   refresh();

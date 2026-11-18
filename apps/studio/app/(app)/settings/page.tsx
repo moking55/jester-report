@@ -13,6 +13,7 @@ import type { components } from "@/lib/types.gen";
 
 type User = components["schemas"]["User"];
 type ApiKey = components["schemas"]["ApiKey"];
+type TemplateSummary = components["schemas"]["TemplateSummary"];
 type Retention = components["schemas"]["RunRetention"];
 type Search = { tab?: string; previewDays?: string; retention?: string };
 
@@ -40,7 +41,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         ))}
       </nav>
       {tab === "users" && <UsersPanel users={await api<User[]>("/v1/users")} me={me.id} />}
-      {tab === "keys" && <ApiKeysPanel keys={await api<ApiKey[]>("/v1/api-keys")} />}
+      {tab === "keys" && (
+        <ApiKeysPanel
+          keys={await api<ApiKey[]>("/v1/api-keys")}
+          templates={(await api<TemplateSummary[]>("/v1/templates")).map((t) => ({ id: t.id, name: t.name }))}
+          today={new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" })}
+        />
+      )}
       {tab === "password" && <PasswordForm />}
       {tab === "themes" && <Themes />}
       {tab === "retention" && <Retention previewDays={search.previewDays} notice={search.retention} />}

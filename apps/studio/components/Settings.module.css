@@ -172,3 +172,23 @@
 .muted {
   color: var(--color-textMuted);
 }
+
+/* the API key form's template checkboxes: a full row, one label per line */
+.form .choices {
+  flex-basis: 100%;
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 1.5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.form .choices label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+}

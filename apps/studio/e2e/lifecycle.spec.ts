@@ -98,6 +98,24 @@ test("export, import, duplicate, archive and set a password", async ({ page, req
   await expect(page.getByRole("button", { name: "Preview", exact: true })).toBeEnabled();
   expect((await render()).status()).toBe(422); // past the archive check: now it is the missing data
 
+  // 5. (v1.2 B1) a key limited to another report: 403 for this one, and the table shows the limits
+  await page.goto("/settings?tab=keys");
+  await page.getByLabel("ชื่อ (เช่น ระบบที่จะใช้)").fill("e2e-copy-only");
+  await page.getByRole("checkbox", { name: /e2e-copy/ }).check();
+  await page.getByLabel(/render ได้ไม่เกินต่อนาที/).fill("30");
+  await page.getByRole("button", { name: "สร้าง key" }).click();
+  const limitedSecret = await page.getByLabel("secret", { exact: true }).inputValue();
+  await page.getByRole("button", { name: "ปิด (เก็บแล้ว)" }).click();
+  const limitedRow = page.getByRole("row", { name: /e2e-copy-only/ });
+  await expect(limitedRow).toContainText("e2e-copy");
+  await expect(limitedRow).toContainText("30");
+  const notAllowed = await request.post(`${apiOrigin}/v1/render`, {
+    headers: { Authorization: `Bearer ${limitedSecret}` },
+    data: { template: { id: ID, version: "published" }, data: {} },
+  });
+  expect(notAllowed.status()).toBe(403);
+  expect((await notAllowed.json()).code).toBe("TEMPLATE_NOT_ALLOWED");
+
   // 6. set a password for a second user; they sign in with it
   await page.goto("/settings?tab=users");
   await page.getByRole("button", { name: "+ เพิ่มผู้ใช้" }).click();

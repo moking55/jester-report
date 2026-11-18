@@ -155,6 +155,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/users/{userId}/password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set another user's password (they forgot it)
+         * @description Every session of that user is revoked. Your own password is changed with `changePassword`
+         *     (it needs the current one); sending your own id here is a 422.
+         */
+        put: operations["setUserPassword"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/api-keys": {
         parameters: {
             query?: never;
@@ -223,6 +246,72 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["renameTemplate"];
+        trace?: never;
+    };
+    "/v1/templates/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a template from a zip, or replace an existing draft with it
+         * @description The zip is what `exportTemplate` returns: a flat zip with a `jester.json` manifest. The id is
+         *     `templateId` when sent, else the manifest's. A new id creates the template (201). An existing id
+         *     needs `If-Match` with its current draft revision and replaces the whole draft (200); the name,
+         *     versions and published alias stay. The result is always a draft: validate and publish it as usual.
+         *     The body may be up to 26 MB (zip at most 25 MB).
+         */
+        post: operations["importTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/templates/{templateId}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        /** Download the draft or one version as a zip */
+        get: operations["exportTemplate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/templates/{templateId}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy a template's draft or one version into a new template
+         * @description The copy gets a draft at revision 1 and no versions; assets share the stored bytes.
+         *     Archived templates can be copied.
+         */
+        post: operations["duplicateTemplate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/templates/{templateId}/archived": {
@@ -657,7 +746,7 @@ export interface components {
         /** @description Basename only; must not collide with text files or index/header/footer.html */
         AssetName: string;
         /** @enum {string} */
-        ErrorCode: "INPUT_INVALID" | "UNAUTHORIZED" | "NOT_FOUND" | "CONFLICT" | "REVISION_CONFLICT" | "REVISION_REQUIRED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "SETUP_COMPLETED" | "SETUP_TOKEN_INVALID" | "DRAFT_INVALID" | "FONT_MISSING" | "RENDER_INPUT_INVALID" | "RENDER_RESOURCE_FAILED" | "RENDER_FAILED" | "RENDER_TIMEOUT" | "SERVICE_UNAVAILABLE" | "ENGINE_MISCONFIGURED" | "INTERNAL_ERROR" | "TEMPLATE_ARCHIVED";
+        ErrorCode: "INPUT_INVALID" | "UNAUTHORIZED" | "NOT_FOUND" | "CONFLICT" | "REVISION_CONFLICT" | "REVISION_REQUIRED" | "PAYLOAD_TOO_LARGE" | "UNSUPPORTED_MEDIA_TYPE" | "RATE_LIMITED" | "SETUP_COMPLETED" | "SETUP_TOKEN_INVALID" | "DRAFT_INVALID" | "FONT_MISSING" | "RENDER_INPUT_INVALID" | "RENDER_RESOURCE_FAILED" | "RENDER_FAILED" | "RENDER_TIMEOUT" | "SERVICE_UNAVAILABLE" | "ENGINE_MISCONFIGURED" | "INTERNAL_ERROR" | "TEMPLATE_ARCHIVED" | "TEMPLATE_NOT_ALLOWED";
         /** @description RFC 9457 problem details plus Jester fields */
         Problem: {
             /**
@@ -740,6 +829,15 @@ export interface components {
             createdBy?: string;
             /** Format: date-time */
             lastUsedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description null = never expires
+             */
+            expiresAt?: string | null;
+            /** @description null = every template */
+            templates?: components["schemas"]["TemplateId"][] | null;
+            /** @description null = no limit */
+            rateLimitPerMinute?: number | null;
         };
         TemplateSummary: {
             id: components["schemas"]["TemplateId"];
@@ -764,6 +862,13 @@ export interface components {
              */
             archivedAt?: string | null;
             archivedBy?: string | null;
+        };
+        ImportResult: {
+            template: components["schemas"]["TemplateSummary"];
+            /** @description Draft revision after the import */
+            revision: number;
+            /** @description true: a new template; false: an existing draft was replaced */
+            created: boolean;
         };
         TextFile: {
             name: components["schemas"]["TextFileName"];
@@ -1121,10 +1226,30 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            /** @description `TEMPLATE_NOT_ALLOWED`: this API key may not render this template (same answer whether it exists or not) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             404: components["responses"]["NotFound"];
             410: components["responses"]["TemplateGone"];
             413: components["responses"]["PayloadTooLarge"];
             422: components["responses"]["InputInvalid"];
+            /** @description `RATE_LIMITED`: the key used up its renders for this minute; `retryable` is true */
+            429: {
+                headers: {
+                    /** @description Seconds until the next minute starts */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             502: components["responses"]["RenderFailed"];
             503: components["responses"]["ServiceUnavailable"];
             504: components["responses"]["RenderTimeout"];
@@ -1402,6 +1527,35 @@ export interface operations {
             };
         };
     };
+    setUserPassword: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    newPassword: components["schemas"]["Password"];
+                };
+            };
+        };
+        responses: {
+            /** @description Password set; that user's sessions are revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["InputInvalid"];
+        };
+    };
     listApiKeys: {
         parameters: {
             query?: never;
@@ -1434,6 +1588,15 @@ export interface operations {
             content: {
                 "application/json": {
                     name: string;
+                    /**
+                     * Format: date-time
+                     * @description The key stops working at this time; in the future and at most 5 years away
+                     */
+                    expiresAt?: string;
+                    /** @description The only templates this key may render (403 `TEMPLATE_NOT_ALLOWED` otherwise) */
+                    templates?: components["schemas"]["TemplateId"][];
+                    /** @description Renders per minute; more get 429 with `Retry-After` */
+                    rateLimitPerMinute?: number;
                 };
             };
         };
@@ -1596,6 +1759,144 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["TemplateArchived"];
+        };
+    };
+    importTemplate: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Draft revision to replace, e.g. `"12"`; required when the template exists */
+                "If-Match"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                    templateId?: components["schemas"]["TemplateId"];
+                };
+            };
+        };
+        responses: {
+            /** @description The existing draft was replaced */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            /** @description A new template was created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description `CONFLICT` (exists and no If-Match, or report.json/template.html missing) or `TEMPLATE_ARCHIVED` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            412: components["responses"]["RevisionConflict"];
+            413: components["responses"]["PayloadTooLarge"];
+            /** @description An asset's bytes do not match its extension */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["InputInvalid"];
+        };
+    };
+    exportTemplate: {
+        parameters: {
+            query?: {
+                /** @description `draft` (default) or a version number */
+                version?: string;
+            };
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zip; `Content-Disposition` names it `<id>-v<N>.zip` or `<id>-draft-r<revision>.zip` */
+            200: {
+                headers: {
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["InputInvalid"];
+        };
+    };
+    duplicateTemplate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    id: components["schemas"]["TemplateId"];
+                    name: string;
+                    /**
+                     * @description `"draft"` (default) or a version number of the source
+                     * @default draft
+                     */
+                    version?: "draft" | number;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description Template id taken */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["InputInvalid"];
         };
     };
     setTemplateArchived: {
