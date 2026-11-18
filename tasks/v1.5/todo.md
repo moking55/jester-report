@@ -77,13 +77,15 @@
 - api: ruff สะอาด · pytest ทั้งชุดบน VM 658 passed + 8 ตัวที่พังรันซ้ำผ่าน 29/29 (7 ตัวเป็น live test ที่ Chromium ของ Gotenberg ล่มตอน VM
   swap เต็ม — restart แล้วผ่าน; 1 ตัวเป็น test ใหม่ที่เช็ก `\u0000` ผิด) · coverage รวม 97% (`runs.py` 99%, `document_files.py` 97%,
   `routes/documents.py` 100%, `ops/blobs.py` 82%) · `DeleteObjects`/`ListObjectsV2` ใช้ได้กับ RustFS 1.0.4 จริง
-- studio: lint, typecheck, test (80 + `documents.test.ts`), build ผ่าน · E2E 5/5 ผ่านบน stack ใหม่ `jester-e2e` (ไม่ใช้ retry)
+- studio: lint, typecheck, test 83 (รวม `documents.test.ts`, `retention.test.tsx` ของข้อความยืนยันสองจำนวน), build ผ่าน ·
+  E2E 5/5 ผ่านบน stack ใหม่ `jester-e2e` (ไม่ใช้ retry; spec ใหม่กด Preview จริงก่อนเช็กว่า preview ไม่ขึ้นในรายการ)
 - T7 บน VM: backup stack E2E (asset 1, เอกสาร 4, `formatVersion: 2`) → restore ลง `jester-restore` → PDF ทั้ง 4 ใบ sha256 ตรงกับก่อน backup;
   manifest แบบ v1 ผ่านการตรวจรูปแบบ (หยุดที่ "database not empty" ตามที่ควร) · `sweep-documents` บน stack จริง: 0 ไฟล์กำพร้า · `shellcheck` สะอาด
 - ต่างจากแผน/spec:
   - E2E ชื่อ `issued-documents.spec.ts` (ไม่ใช่ `documents.spec.ts`) ให้เรียงหลัง full-flow ซึ่งต้องการ catalog ว่าง
   - E2E เทียบไบต์กับ blob ที่หน้าเว็บแสดง เพราะ Playwright คืน `response.body()` ว่างสำหรับ stream ที่หน้าอ่านไปแล้ว
-  - ตารางเอกสารแสดง `key: ค่า` ของ params (ไม่ใช่ `title`) เพราะรายการไม่มี title ของ version — ถ้าต้องการ title ต้องอ่าน `report.json` ของแต่ละ version เพิ่ม
+  - E2E ใช้ใบเสนอราคา (ไม่ใช่ใบกำกับภาษีตาม Testing Strategy) เพราะกรอกฟอร์มสั้นกว่า; ใบกำกับภาษีครอบโดย `issue.spec.ts` อยู่แล้ว
+  - ตารางเอกสารอ่าน `report.json` ของแต่ละ (รายงาน, version) ในหน้านั้นเพื่อแสดง `title: ค่า`; อ่านไม่ได้ → แสดง key
   - ไม่ได้วัดเวลา render ก่อน/หลัง (T4): VM มี IO pressure สูง (avg60 ~57%) ตัวเลขที่วัดได้จะไม่มีความหมาย
 - สภาพ VM: RAM 4 GB ไม่พอรัน stack หลัก + stack E2E + pytest พร้อมกัน (swap เต็ม, load ถึง 71) — หยุด stack หลักชั่วคราวระหว่างตรวจ แล้วเปิดคืนแล้ว
   (ยังเป็น 1.4.0) · image ทดสอบใช้ tag `1.5.0-rc` เฉพาะในสำเนา `/opt/jester-e2e`

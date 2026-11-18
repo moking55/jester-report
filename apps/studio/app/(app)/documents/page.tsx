@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { api } from "@/lib/api";
-import { isRunId, issuer, paramsLine } from "@/lib/documents";
+import { isRunId, issuer, paramTitles, paramsLine } from "@/lib/documents";
 import { isTemplateId } from "@/lib/result";
 import type { components } from "@/lib/types.gen";
 
@@ -12,6 +12,23 @@ type TemplateSummary = components["schemas"]["TemplateSummary"];
 type DocumentSummary = components["schemas"]["DocumentSummary"];
 type RunRetention = components["schemas"]["RunRetention"];
 type Search = { template?: string; q?: string; before?: string };
+type VersionFiles = { files: { name: string; content: string }[] };
+
+/** Parameter titles of every (template, version) on this page; a version that cannot be read shows keys. */
+async function titlesFor(items: DocumentSummary[]): Promise<Map<string, Record<string, string>>> {
+  const keys = [...new Set(items.map((d) => `${d.templateId}/${d.version}`))];
+  const pairs = await Promise.all(
+    keys.map(async (key) => {
+      try {
+        const { files } = await api<VersionFiles>(`/v1/templates/${key.replace("/", "/versions/")}`);
+        return [key, paramTitles(files.find((f) => f.name === "report.json")?.content)] as const;
+      } catch {
+        return [key, {}] as const;
+      }
+    }),
+  );
+  return new Map(pairs);
+}
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Bangkok" });
@@ -32,6 +49,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
     api<RunRetention>("/v1/runs/retention"),
   ]);
   const filters = new URLSearchParams({ ...(template && { template }), ...(q && { q }) });
+  const titles = await titlesFor(page.items);
 
   return (
     <section className={styles.page}>
@@ -90,7 +108,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
                 {doc.templateId} <small>v{doc.version ?? "?"}</small>
               </span>
               <span>{issuer(doc.caller)}</span>
-              <span className={own.params}>{paramsLine(doc.params as Record<string, unknown>)}</span>
+              <span className={own.params}>{paramsLine(doc.params as Record<string, unknown>, titles.get(`${doc.templateId}/${doc.version}`))}</span>
               <span className={own.params}>{doc.filename}</span>
               <span>
                 <a href={`/documents/${doc.runId}`} download>

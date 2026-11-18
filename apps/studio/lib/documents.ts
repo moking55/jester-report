@@ -12,9 +12,22 @@ export function issuer(caller: DocumentSummary["caller"]): string {
   return caller.name ?? caller.id;
 }
 
-/** One line of the params the caller sent: `quoteId: Q-1 · docDate: 2026-11-14`. */
-export function paramsLine(params: Record<string, unknown>): string {
+/** Parameter titles of one version's report.json (`{quoteId: "เลขที่ใบเสนอราคา"}`); none when it does not parse. */
+export function paramTitles(reportJson: string | undefined): Record<string, string> {
+  try {
+    const parameters = (JSON.parse(reportJson ?? "") as { parameters?: Record<string, { title?: unknown }> }).parameters;
+    return Object.fromEntries(
+      Object.entries(parameters ?? {}).flatMap(([k, p]) => (typeof p?.title === "string" ? [[k, p.title]] : [])),
+    );
+  } catch {
+    return {};
+  }
+}
+
+/** One line of the params the caller sent, labelled by title where the version has one:
+ *  `เลขที่ใบเสนอราคา: Q-1 · วันที่: 2026-11-14`. */
+export function paramsLine(params: Record<string, unknown>, titles: Record<string, string> = {}): string {
   return Object.entries(params)
-    .map(([k, v]) => `${k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
+    .map(([k, v]) => `${titles[k] ?? k}: ${typeof v === "string" ? v : JSON.stringify(v)}`)
     .join(" · ");
 }

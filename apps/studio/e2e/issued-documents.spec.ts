@@ -69,6 +69,9 @@ test("find an issued document and download it again", async ({ page, request }) 
   // a draft preview is not a document
   await page.getByRole("button", { name: "กลับไปแก้ code" }).click();
   await expect(page.getByRole("navigation", { name: "ไฟล์" })).toBeVisible({ timeout: 30_000 });
+  const previewed = page.waitForResponse((r) => r.url().includes(`/preview/${ID}`) && r.request().method() === "POST");
+  await page.getByRole("button", { name: "Preview", exact: true }).click();
+  expect((await previewed).status()).toBe(200);
 
   // another system issues one with an API key
   await page.goto("/settings?tab=keys");
@@ -104,6 +107,7 @@ test("find an issued document and download it again", async ({ page, request }) 
   await page.getByRole("button", { name: "ค้นหา" }).click();
   const rows = page.getByRole("link", { name: "ดาวน์โหลด" });
   await expect(rows).toHaveCount(2); // the form's and the API's (its number starts with the same text)
+  await expect(page.getByText(`เลขที่ใบเสนอราคา: ${number} ·`)).toBeVisible(); // params by their Thai title
   await page.getByRole("searchbox", { name: "ค้นหา" }).fill("ลูกค้าจากระบบบิล"); // a value in data
   await page.getByRole("button", { name: "ค้นหา" }).click();
   await expect(rows).toHaveCount(1);

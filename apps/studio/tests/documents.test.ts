@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isRunId, issuer, paramsLine } from "@/lib/documents";
+import { isRunId, issuer, paramTitles, paramsLine } from "@/lib/documents";
 
 describe("documents helpers", () => {
   it("accepts run ids only", () => {
@@ -19,5 +19,15 @@ describe("documents helpers", () => {
   it("puts params on one line, decimals as their text", () => {
     expect(paramsLine({ quoteId: "Q-1", copies: 2, rate: "7.00" })).toBe("quoteId: Q-1 · copies: 2 · rate: 7.00");
     expect(paramsLine({})).toBe("");
+  });
+
+  it("labels params with the version's Thai titles, keys where there is none", () => {
+    const titles = paramTitles(
+      JSON.stringify({ parameters: { quoteId: { title: "เลขที่ใบเสนอราคา", type: "string" }, locale: { type: "enum" } } }),
+    );
+    expect(titles).toEqual({ quoteId: "เลขที่ใบเสนอราคา" });
+    expect(paramsLine({ quoteId: "Q-1", locale: "th-TH" }, titles)).toBe("เลขที่ใบเสนอราคา: Q-1 · locale: th-TH");
+    expect(paramTitles("{not json")).toEqual({});
+    expect(paramTitles(undefined)).toEqual({});
   });
 });
