@@ -9,6 +9,7 @@
   "additionalProperties": false,
   "properties": {
     "seller": {
+      "title": "ผู้ขาย (ผู้ออกใบกำกับภาษี)",
       "type": "object",
       "required": [
         "name",
@@ -19,28 +20,35 @@
       "additionalProperties": false,
       "properties": {
         "name": {
+          "title": "ชื่อผู้ขาย",
           "type": "string",
           "minLength": 1
         },
         "address": {
+          "title": "ที่อยู่",
           "type": "string",
           "minLength": 1
         },
         "taxId": {
+          "title": "เลขประจำตัวผู้เสียภาษีอากร",
+          "description": "13 หลัก",
           "type": "string",
           "pattern": "^[0-9]{13}$"
         },
         "branch": {
+          "title": "สาขา",
+          "description": "00000 = สำนักงานใหญ่ หรือเลขสาขา 5 หลัก",
           "type": "string",
-          "pattern": "^[0-9]{5}$",
-          "description": "00000 = head office (สำนักงานใหญ่), otherwise the 5-digit branch number"
+          "pattern": "^[0-9]{5}$"
         },
         "phone": {
+          "title": "โทรศัพท์",
           "type": "string"
         }
       }
     },
     "buyer": {
+      "title": "ผู้ซื้อ",
       "type": "object",
       "required": [
         "name",
@@ -49,34 +57,31 @@
       "additionalProperties": false,
       "properties": {
         "name": {
+          "title": "ชื่อผู้ซื้อ",
           "type": "string",
           "minLength": 1
         },
         "address": {
+          "title": "ที่อยู่",
           "type": "string",
           "minLength": 1
         },
         "taxId": {
+          "title": "เลขประจำตัวผู้เสียภาษีอากร",
+          "description": "13 หลัก ใส่เมื่อผู้ซื้อจดทะเบียนภาษีมูลค่าเพิ่ม",
           "type": "string",
-          "pattern": "^[0-9]{13}$",
-          "description": "required by law when the buyer is VAT-registered"
+          "pattern": "^[0-9]{13}$"
         },
         "branch": {
+          "title": "สาขา",
+          "description": "00000 = สำนักงานใหญ่ หรือเลขสาขา 5 หลัก",
           "type": "string",
           "pattern": "^[0-9]{5}$"
         }
       }
     },
-    "vatRate": {
-      "type": "string",
-      "format": "decimal",
-      "description": "percent, e.g. \"7\""
-    },
-    "promptpay": {
-      "type": "string",
-      "description": "optional: phone, tax ID or e-wallet ID; prints a PromptPay QR for the grand total"
-    },
     "items": {
+      "title": "รายการสินค้าหรือบริการ",
       "type": "array",
       "minItems": 1,
       "items": {
@@ -91,24 +96,43 @@
         "additionalProperties": false,
         "properties": {
           "code": {
+            "title": "รหัส",
             "type": "string"
           },
           "description": {
+            "title": "รายการ",
             "type": "string"
           },
           "qty": {
+            "title": "จำนวน",
+            "description": "เช่น 3 หรือ 2.5",
             "type": "string",
             "format": "decimal"
           },
           "unit": {
+            "title": "หน่วย",
+            "description": "เช่น ชิ้น งาน เดือน",
             "type": "string"
           },
           "unitPrice": {
+            "title": "ราคาต่อหน่วย",
+            "description": "บาท ไม่รวมภาษี เช่น 2500.00",
             "type": "string",
             "format": "decimal"
           }
         }
       }
+    },
+    "vatRate": {
+      "title": "อัตราภาษีมูลค่าเพิ่ม (%)",
+      "description": "ปกติ 7",
+      "type": "string",
+      "format": "decimal"
+    },
+    "promptpay": {
+      "title": "PromptPay สำหรับรับเงิน",
+      "description": "เบอร์มือถือ เลขประจำตัวผู้เสียภาษี หรือ e-Wallet (เว้นว่างได้)",
+      "type": "string"
     }
   }
 }

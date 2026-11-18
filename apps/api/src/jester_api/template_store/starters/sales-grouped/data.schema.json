@@ -6,17 +6,20 @@
   ],
   "properties": {
     "company": {
+      "title": "บริษัท",
       "type": "object",
       "required": [
         "name"
       ],
       "properties": {
         "name": {
+          "title": "ชื่อบริษัท",
           "type": "string"
         }
       }
     },
     "records": {
+      "title": "รายการขาย",
       "type": "array",
       "items": {
         "type": "object",
@@ -28,19 +31,24 @@
         ],
         "properties": {
           "id": {
+            "title": "รหัส",
             "type": "string"
           },
           "region": {
+            "title": "ภาค",
             "enum": [
               "North",
               "South"
             ]
           },
           "date": {
+            "title": "วันที่",
             "type": "string",
             "format": "date"
           },
           "amount": {
+            "title": "ยอดขาย",
+            "description": "บาท เช่น 2400.00",
             "type": "string",
             "format": "decimal"
           }

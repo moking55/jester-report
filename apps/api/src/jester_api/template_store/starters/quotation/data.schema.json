@@ -9,32 +9,33 @@
   "additionalProperties": false,
   "properties": {
     "company": {
+      "title": "บริษัทผู้เสนอราคา",
       "type": "object",
       "required": [
         "name"
       ],
       "properties": {
         "name": {
+          "title": "ชื่อบริษัท",
           "type": "string"
         }
       }
     },
     "customer": {
+      "title": "ลูกค้า",
       "type": "object",
       "required": [
         "name"
       ],
       "properties": {
         "name": {
+          "title": "ชื่อลูกค้า",
           "type": "string"
         }
       }
     },
-    "discount": {
-      "type": "string",
-      "format": "decimal"
-    },
     "items": {
+      "title": "รายการ",
       "type": "array",
       "items": {
         "type": "object",
@@ -47,21 +48,32 @@
         "additionalProperties": false,
         "properties": {
           "id": {
+            "title": "รหัส",
             "type": "string"
           },
           "description": {
+            "title": "รายละเอียด",
             "type": "string"
           },
           "qty": {
+            "title": "จำนวน",
             "type": "integer",
             "minimum": 0
           },
           "unitPrice": {
+            "title": "ราคาต่อหน่วย",
+            "description": "บาท ไม่รวมภาษี เช่น 1250.50",
             "type": "string",
             "format": "decimal"
           }
         }
       }
+    },
+    "discount": {
+      "title": "ส่วนลด",
+      "description": "บาท เช่น 100.00 (ไม่มีให้ใส่ 0)",
+      "type": "string",
+      "format": "decimal"
     }
   }
 }

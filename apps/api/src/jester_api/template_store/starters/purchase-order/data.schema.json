@@ -6,17 +6,20 @@
   ],
   "properties": {
     "company": {
+      "title": "บริษัทผู้สั่งซื้อ",
       "type": "object",
       "required": [
         "name"
       ],
       "properties": {
         "name": {
+          "title": "ชื่อบริษัท",
           "type": "string"
         }
       }
     },
     "orders": {
+      "title": "ใบสั่งซื้อ",
       "type": "array",
       "items": {
         "type": "object",
@@ -27,12 +30,15 @@
         ],
         "properties": {
           "orderId": {
+            "title": "เลขที่ใบสั่งซื้อ",
             "type": "string"
           },
           "supplier": {
+            "title": "ผู้ขาย",
             "type": "string"
           },
           "details": {
+            "title": "รายการสินค้า",
             "type": "array",
             "items": {
               "type": "object",
@@ -43,12 +49,16 @@
               ],
               "properties": {
                 "detailId": {
+                  "title": "รหัส",
                   "type": "string"
                 },
                 "description": {
+                  "title": "รายละเอียด",
                   "type": "string"
                 },
                 "amount": {
+                  "title": "จำนวนเงิน",
+                  "description": "บาท เช่น 1500.00",
                   "type": "string",
                   "format": "decimal"
                 }

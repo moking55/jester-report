@@ -5,6 +5,7 @@
   ],
   "properties": {
     "title": {
+      "title": "หัวเรื่อง",
       "type": "string"
     }
   }

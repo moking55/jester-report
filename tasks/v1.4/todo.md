@@ -12,15 +12,18 @@
 
 ## Phase F0: ป้ายภาษาไทย
 
-- [ ] **T1 report-definition: `title`/`description` ของ parameter**
+- [x] **T1 report-definition: `title`/`description` ของ parameter**
   - Acceptance: `Parameter` รับ `title` (1–80) และ `description` (1–300); ผิดกติกา → `DEFINITION_INVALID` ที่ pointer ของช่อง; report เดิมผ่าน
   - Verify: pytest `tests/report_definition`, ruff
   - Files: `report_definition/model.py`, `tests/report_definition/test_model.py`
-- [ ] **T2 template-store: ป้ายภาษาไทยในทุก starter**
+- [x] **T2 template-store: ป้ายภาษาไทยในทุก starter**
   - Acceptance: ทุก parameter และทุก property ใน `data.schema.json` (รวม item ของ array) ของ 5 starter มี `title` ภาษาไทย;
     `description` ในช่องที่ไม่ชัด; ลำดับ property อ่านเป็นธรรมชาติ; ไม่เปลี่ยน key/ชนิด/กติกา
   - Verify: test ใหม่เดินทุก schema หา `title` ที่ขาด; test starter เดิม + golden ผ่าน
   - Files: `starters/*/report.json`, `starters/*/data.schema.json` (แก้แบบเดียวกันหลายไฟล์), `tests/template_store/test_starter_titles.py`
+
+บันทึก 18 พ.ย. 2026 (F0): api 649 passed, 3 skipped (บน VM), ruff สะอาด · starter `blank` ไม่มี parameter จึงมีแค่ title ใน schema ·
+เรียงช่องใหม่ใน quotation (items ก่อน discount) และ tax-invoice (items ก่อน vatRate/promptpay) ตามลำดับที่อ่านง่าย
 
 ## Phase F1: โหมดออกเอกสาร
 

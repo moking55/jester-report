@@ -11,6 +11,7 @@
   },
   "parameters": {
     "currency": {
+      "title": "สกุลเงิน",
       "type": "enum",
       "values": [
         "THB"

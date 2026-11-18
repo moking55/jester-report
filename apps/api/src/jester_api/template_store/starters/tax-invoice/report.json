@@ -11,15 +11,20 @@
   },
   "parameters": {
     "invoiceNo": {
+      "title": "เลขที่ใบกำกับภาษี",
+      "description": "เช่น INV-2026-0001",
       "type": "string",
       "required": true,
       "maxLength": 40
     },
     "bookNo": {
+      "title": "เล่มที่",
+      "description": "เว้นว่างได้",
       "type": "string",
       "maxLength": 20
     },
     "issueDate": {
+      "title": "วันที่ออก",
       "type": "date",
       "required": true
     }

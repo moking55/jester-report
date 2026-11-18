@@ -14,10 +14,13 @@
   },
   "parameters": {
     "from": {
+      "title": "ตั้งแต่วันที่",
       "type": "date",
       "required": true
     },
     "toExclusive": {
+      "title": "ถึงก่อนวันที่",
+      "description": "ไม่รวมวันนี้ เช่น สรุปเดือนพฤศจิกายนใส่ 1 ธันวาคม",
       "type": "date",
       "required": true
     }
