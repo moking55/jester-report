@@ -21,7 +21,7 @@ router = APIRouter()
 class NewTemplate(views.Body):
     id: str
     name: str
-    starter: Literal["blank", "quotation", "grouped-table", "master-detail"] = "blank"
+    starter: Literal["blank", "quotation", "grouped-table", "master-detail", "tax-invoice"] = "blank"
 
 
 class Rename(views.Body):

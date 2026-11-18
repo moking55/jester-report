@@ -12,6 +12,7 @@ const STARTERS = [
   ["quotation", "ใบเสนอราคา"],
   ["grouped-table", "ตารางแบ่งกลุ่ม"],
   ["master-detail", "หัว-รายการ (master-detail)"],
+  ["tax-invoice", "ใบกำกับภาษีเต็มรูป"],
 ];
 
 export function CreateTemplate() {

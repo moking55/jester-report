@@ -34,7 +34,7 @@ async def test_create_list_get_rename(store):
     assert await code_of(store.get("nope")) == "NOT_FOUND"
 
 
-@pytest.mark.parametrize("starter", ["blank", "quotation", "grouped-table", "master-detail"])
+@pytest.mark.parametrize("starter", ["blank", "quotation", "grouped-table", "master-detail", "tax-invoice"])
 async def test_every_starter_validates_and_binds(store, starter):
     await store.create("t1", "t", starter, "alice")
     stored = await store.definition_input("t1", "draft")
@@ -49,6 +49,8 @@ async def test_every_starter_validates_and_binds(store, starter):
         params = {"quoteId": "Q1", "docDate": "2026-11-14"} if starter == "quotation" else {}
         if starter == "grouped-table":
             params = {"from": "2026-11-01", "toExclusive": "2026-12-01"}
+        if starter == "tax-invoice":
+            params = {"invoiceNo": "INV-1", "issueDate": "2026-11-18"}
         prepared = prepare(loaded.definition, params, data, {})
         assert prepared.problems == []
         assert bind(loaded.definition, stored.files, stored.assets, prepared.prepared).problems == []

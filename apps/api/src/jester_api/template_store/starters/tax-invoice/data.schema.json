@@ -1,0 +1,114 @@
+{
+  "type": "object",
+  "required": [
+    "seller",
+    "buyer",
+    "vatRate",
+    "items"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "seller": {
+      "type": "object",
+      "required": [
+        "name",
+        "address",
+        "taxId",
+        "branch"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taxId": {
+          "type": "string",
+          "pattern": "^[0-9]{13}$"
+        },
+        "branch": {
+          "type": "string",
+          "pattern": "^[0-9]{5}$",
+          "description": "00000 = head office (สำนักงานใหญ่), otherwise the 5-digit branch number"
+        },
+        "phone": {
+          "type": "string"
+        }
+      }
+    },
+    "buyer": {
+      "type": "object",
+      "required": [
+        "name",
+        "address"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "address": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taxId": {
+          "type": "string",
+          "pattern": "^[0-9]{13}$",
+          "description": "required by law when the buyer is VAT-registered"
+        },
+        "branch": {
+          "type": "string",
+          "pattern": "^[0-9]{5}$"
+        }
+      }
+    },
+    "vatRate": {
+      "type": "string",
+      "format": "decimal",
+      "description": "percent, e.g. \"7\""
+    },
+    "promptpay": {
+      "type": "string",
+      "description": "optional: phone, tax ID or e-wallet ID; prints a PromptPay QR for the grand total"
+    },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "description",
+          "qty",
+          "unit",
+          "unitPrice"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "qty": {
+            "type": "string",
+            "format": "decimal"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "unitPrice": {
+            "type": "string",
+            "format": "decimal"
+          }
+        }
+      }
+    }
+  }
+}

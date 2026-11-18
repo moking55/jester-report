@@ -9,7 +9,7 @@ import { problemMessage } from "@/lib/messages";
 import { VIEW_COOKIE } from "@/lib/session";
 import type { FormState } from "./auth";
 
-const STARTERS = ["blank", "quotation", "grouped-table", "master-detail"];
+const STARTERS = ["blank", "quotation", "grouped-table", "master-detail", "tax-invoice"];
 
 export async function createTemplate(_: FormState, form: FormData): Promise<FormState> {
   const values = {

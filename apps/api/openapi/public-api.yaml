@@ -427,7 +427,7 @@ paths:
                 name: { type: string, minLength: 1, maxLength: 120 }
                 starter:
                   type: string
-                  enum: [blank, quotation, grouped-table, master-detail]
+                  enum: [blank, quotation, grouped-table, master-detail, tax-invoice]
                   default: blank
       responses:
         '201':

@@ -71,3 +71,28 @@ async def test_setup_to_render_matches_the_contract(api):
     assert listed[0]["lastRun"]["status"] == "succeeded"
     assert_fits("RunRetention", (await api.get("/v1/runs/retention?previewDays=7", headers=user)).json())
     assert_fits("Health", (await api.get("/v1/health")).json())
+
+
+async def test_tax_invoice_from_starter_to_render_with_a_limited_key(api, admin):
+    created = await api.post(
+        "/v1/templates", headers=admin, json={"id": "tax", "name": "ใบกำกับภาษี", "starter": "tax-invoice"}
+    )
+    assert_fits("TemplateSummary", created.json())
+    checked = (await api.post("/v1/templates/tax/draft/validate", headers=admin)).json()
+    assert checked["valid"] is True, checked["problems"]
+    assert (
+        await api.post("/v1/templates/tax/versions", headers={**admin, "If-Match": "1"}, json={})
+    ).status_code == 201
+    key = await api.post("/v1/api-keys", headers=admin, json={"name": "erp", "templates": ["tax"]})
+    assert_fits("ApiKey", key.json())
+    draft = (await api.get("/v1/templates/tax/draft", headers=admin)).json()
+    sample = next(f["content"] for f in draft["files"] if f["name"] == "sample.json")
+    rendered = await api.post(
+        "/v1/render",
+        headers={"Authorization": f"Bearer {key.json()['secret']}", "Content-Type": "application/json"},
+        content=(
+            '{"template": {"id": "tax", "version": "published"},'
+            ' "params": {"invoiceNo": "INV-1", "issueDate": "2026-11-18"}, "data": ' + sample + "}"
+        ).encode(),
+    )
+    assert rendered.status_code == 200 and rendered.content.startswith(b"%PDF")

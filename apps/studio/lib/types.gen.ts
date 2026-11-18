@@ -1679,7 +1679,7 @@ export interface operations {
                      * @default blank
                      * @enum {string}
                      */
-                    starter?: "blank" | "quotation" | "grouped-table" | "master-detail";
+                    starter?: "blank" | "quotation" | "grouped-table" | "master-detail" | "tax-invoice";
                 };
             };
         };

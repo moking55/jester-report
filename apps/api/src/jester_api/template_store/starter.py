@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-Starter = Literal["blank", "quotation", "grouped-table", "master-detail"]
+Starter = Literal["blank", "quotation", "grouped-table", "master-detail", "tax-invoice"]
 
 STARTERS_DIR = Path(__file__).parent / "starters"
 _DIRS: dict[str, str] = {
@@ -13,6 +13,7 @@ _DIRS: dict[str, str] = {
     "quotation": "quotation",
     "grouped-table": "sales-grouped",
     "master-detail": "purchase-order",
+    "tax-invoice": "tax-invoice",
 }
 _TEXT = (".html", ".json", ".css")
 

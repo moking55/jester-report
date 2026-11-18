@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "name": "ใบกำกับภาษี",
+  "fonts": {
+    "body": [
+      "TH Sarabun New"
+    ],
+    "headerFooter": [
+      "TH Sarabun New"
+    ]
+  },
+  "parameters": {
+    "invoiceNo": {
+      "type": "string",
+      "required": true,
+      "maxLength": 40
+    },
+    "bookNo": {
+      "type": "string",
+      "maxLength": 20
+    },
+    "issueDate": {
+      "type": "date",
+      "required": true
+    }
+  },
+  "data": {
+    "schema": "data.schema.json",
+    "samples": [
+      "sample.json"
+    ]
+  },
+  "lists": {
+    "items": {
+      "path": "/items",
+      "id": "code",
+      "computed": {
+        "amount": "round(qty * unitPrice, 2)"
+      }
+    }
+  },
+  "totals": {
+    "subtotal": "sum(items.amount)",
+    "vat": "round(subtotal * vatRate / 100, 2)",
+    "grand": "subtotal + vat"
+  }
+}
