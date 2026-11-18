@@ -68,3 +68,18 @@ Build order: H1 → A1–A4 → B1 → B2 → B3 → C1 → C2 (H2 คู่ข�
 ลำดับเขียน spec: `template-store` → `render-service` → `auth` → `data-prep`/`binder` → `public-api` → `studio` → infra
 
 **สถานะ (18 พ.ย. 2026):** ปล่อยทีละ phase — H1 + A1–A4 = `v1.1.0`, B1–B3 = `v1.2.0`, C1–C2 = `v1.3.0` (ผู้ใช้สแกน QR ผ่าน); H2 ยังค้างที่ผู้ใช้ (Actions/billing) · บันทึกผลและจุดที่ต่างจาก spec: [tasks/v1.1/todo.md](tasks/v1.1/todo.md)
+
+## v1.4: ฟอร์มออกเอกสาร (อนุมัติ 18 พ.ย. 2026 หลัง interview)
+
+ผู้ใช้กลุ่มแรก: dev ที่ติดตั้ง Jester แล้วชวน **หัวหน้าทีม** มาลอง (เห็นข้อมูลทั้งหมดได้ จึงไม่มี role) · เป้าของ release:
+หัวหน้ากรอกฟอร์มแล้วได้ PDF เองโดยไม่แตะ JSON และไม่ต้องให้ dev ช่วย เพื่อเก็บ feedback ก่อนตัดสินรอบถัดไป
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| F0 ป้ายภาษาไทย: `title`/`description` ใน parameters ของ `report.json`; starter ทุกตัวเติม `title` ภาษาไทยใน `report.json` และ `data.schema.json` | `report-definition` → `template-store` | — |
+| F1 โหมด "ออกเอกสาร" ใน workspace (เปิดตรงจากปุ่มใน catalog): ฟอร์มจาก parameters + `data.schema.json` ของ version ที่ publish แทน editor, PDF ข้างฟอร์ม | `studio` | F0 |
+
+Build order: F0 → F1 · ปล่อยเป็น `v1.4.0` · ลำดับเขียน spec: `report-definition` → `template-store` → `studio`
+ไม่มี endpoint ใหม่: อ่านไฟล์ของ version ด้วย `getVersion` และออก PDF ด้วย `POST /v1/render` เดิมผ่าน session ของ Studio
+
+**ไม่ทำในรอบนี้ (รอ feedback):** designer ลากวาง · `form.json` และตัวจัดฟอร์มแบบลากเรียง · role · เก็บเอกสารที่ออกและเลขรันอัตโนมัติ

@@ -360,3 +360,18 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 ## Open Questions v1.1
 
 ไม่มีข้อค้างใน module นี้ — status code ของ `ARCHIVED` ต่อ endpoint และขนาด request ของ import ที่ HTTP layer อยู่ใน spec ของ `public-api`
+
+# v1.4: ป้ายภาษาไทยใน starter (F0)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ขึ้นกับ [SPEC-report-definition.md](SPEC-report-definition.md) หัวข้อ v1.4
+
+- starter ทุกตัว (`blank`, `quotation`, `grouped-table`, `master-detail`, `tax-invoice`) เติม `title` ภาษาไทยให้ **ทุก parameter**
+  ใน `report.json` และ **ทุก property** ใน `data.schema.json` (รวม property ของ item ใน array) และ `description` ที่ช่วยคนกรอก
+  (เช่น "00000 = สำนักงานใหญ่") ในช่องที่ไม่ชัด
+- ไม่เปลี่ยนชื่อ key, ชนิด หรือกติกาของ schema — template, sample และ golden test เดิมใช้ได้ตามเดิม
+- ลำดับ property ใน `data.schema.json` คือลำดับช่องในฟอร์ม: เรียงให้อ่านเป็นธรรมชาติ (ผู้ขาย → ผู้ซื้อ → รายการ → อื่น ๆ)
+
+## Testing Strategy v1.4
+
+- test ใหม่: ทุก starter, ทุก parameter และทุก property ใน schema (เดินลงไปใน object และ item ของ array) มี `title` ที่ไม่ว่าง
+- test starter เดิม (validate + prepare + bind + golden) ผ่านโดยไม่แก้

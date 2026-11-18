@@ -256,3 +256,107 @@ apps/studio/
 ## Open Questions v1.1
 
 ไม่มี
+
+# v1.4: โหมดออกเอกสารใน workspace (F1)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** (ปรับตาม interview รอบสอง) · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.4
+
+## Objective
+
+หัวหน้าทีมที่ dev ชวนมาลอง เปิด Studio แล้วออกใบเสนอราคาหรือใบกำกับภาษีได้เองโดยไม่แตะ JSON:
+กดปุ่ม "ออกเอกสาร" ของรายงาน → กรอกฟอร์มภาษาไทย → ได้ PDF ดูข้างฟอร์มและดาวน์โหลดได้ เพื่อเก็บ feedback ก่อนตัดสินรอบถัดไป
+
+## สมมติฐาน v1.4
+
+1. **ไม่มี role** (ผู้ใช้ตัดสิน): ใครที่ login ก็ใช้โหมดนี้ได้ และยังเข้าทุกหน้าของ Studio ได้เหมือนเดิม
+2. **ไม่เก็บเอกสาร** (ผู้ใช้ตัดสิน): PDF ไม่ถูกเก็บ; แต่ละครั้งเป็น run ปกติในประวัติ Render (caller = ผู้ใช้); เลขที่เอกสารคนกรอกใส่เอง
+3. **ใช้ version ที่ publish เสมอ** (ผู้ใช้ตัดสิน) เหมือนระบบอื่นที่เรียก API — ไม่มีลายน้ำ DRAFT และฟอร์มไม่เปลี่ยนตามที่ dev แก้
+   draft ค้างไว้; รายงานที่ยังไม่ publish หรือ archive แล้ว ไม่มีปุ่มออกเอกสาร
+4. **ฟอร์มสร้างจากไฟล์ของ version นั้น** (`getVersion`): parameters ใน `report.json` + `data.schema.json`; ป้ายจาก `title`
+   (ไม่มี → ชื่อ key), คำอธิบายจาก `description`, ค่าเริ่มต้นจาก `default`; ลำดับช่องตามลำดับใน schema
+5. **ไม่มี endpoint ใหม่**: ออก PDF ผ่าน Route Handler ของ Studio ที่ส่งต่อ `POST /v1/render` ด้วย session (แบบเดียวกับ Render dialog)
+6. **ไม่เพิ่ม dependency**: ตรวจค่าในฟอร์มเองตามกติกาที่ใช้บ่อย แล้วให้ api ตรวจเต็มตาม schema; problem จาก api แสดงที่ช่องตาม `pointer`
+7. **ตัวเลขไม่ผ่าน float**: body ของ render ประกอบจากข้อความที่ผู้ใช้กรอก (หลักเดียวกับ `lib/render.ts`) — decimal ส่งเป็น string
+   ตาม schema, integer/number ส่งเป็นตัวเลข JSON จากข้อความที่ผ่าน regex แล้ว
+
+## โหมดออกเอกสาร
+
+- **อยู่ใน workspace เดิม** (ไม่มีหน้าแยก): URL `/templates/<id>?mode=issue`
+- **ทางเข้า:**
+  - catalog: ปุ่ม "ออกเอกสาร" ในแถวและในการ์ด → เปิด workspace ในโหมดออกเอกสารทันที (ไม่เห็นหน้า code ก่อน)
+  - workspace: ปุ่ม "ออกเอกสาร" ใน toolbar → สลับเป็นโหมดออกเอกสาร (ถ้ามีไฟล์ที่ยังไม่บันทึก ถามก่อนเหมือนการออกจากหน้า)
+  - ทั้งสองปุ่มแสดงเฉพาะรายงานที่มี `publishedVersion` และไม่ถูก archive
+- **บนจอในโหมดนี้:** ฟอร์มแทนที่ช่อง code editor และ PDF อยู่ในช่องขวา; **ซ่อน** รายการไฟล์ ทางซ้ายและแท็บล่าง
+  (Problems/Prepared data/Provenance/Versions) และปุ่มของ draft (บันทึก, Preview, Publish, Render…)
+- **toolbar:** ชื่อรายงาน, "version N", "ใช้ข้อมูลตัวอย่าง" (เติมจาก sample แรกของ version), "ล้างฟอร์ม", "ออก PDF" และ
+  "กลับไปแก้ code" (กลับเป็น workspace ปกติ, URL ไม่มี `mode`)
+- **เปิดครั้งแรก:** ฟอร์มว่าง มีแค่ค่า `default` (ผู้ใช้ตัดสิน — กันการออกเอกสารจริงทั้งที่ข้อมูลตัวอย่างค้างอยู่)
+- **ฟอร์ม:** ส่วน "ข้อมูลเอกสาร" = parameters; ส่วนต่อไป = ข้อมูลตาม schema; ช่อง "ชื่อไฟล์" (เลือกใส่, ค่าเริ่มต้น `<id>-v<N>.pdf`)
+- **"ออก PDF":** ตรวจฟอร์ม → ส่ง → สำเร็จ: PDF ในช่องขวา + ลิงก์ "ดาวน์โหลด"; ฟอร์มยังอยู่ แก้แล้วออกใหม่ได้
+- **ล้มเหลว:** problem ที่มี `pointer` (เช่น `/data/items/0/qty`, `/params/issueDate`) แสดงใต้ช่องนั้นและเลื่อนไปช่องแรกที่ผิด;
+  problem อื่นแสดงเป็นรายการบนสุดด้วย `problemMessage`
+
+## การแปลง schema เป็นช่อง (`lib/form.ts`, pure, มี test)
+
+| schema / parameter | ช่อง | ค่าที่ส่ง |
+| --- | --- | --- |
+| parameter `string` / schema `string` | text (`maxLength`, `pattern` ตรวจในฟอร์ม) | string |
+| `string` + `format: "date"` / parameter `date` | `<input type="date">` | `"YYYY-MM-DD"` |
+| `string` + `format: "decimal"` / parameter `decimal` | text `inputmode="decimal"` ตรวจด้วย regex เดียวกับ api | string เช่น `"1250.50"` |
+| `enum` (schema หรือ parameter) | select | ค่าที่เลือก |
+| `integer` / `number` / parameter `integer` | text `inputmode="numeric"` ตรวจ regex | ตัวเลข JSON |
+| `boolean` | checkbox | `true`/`false` |
+| `object` | fieldset ที่มี `title` เป็นหัว | object ของช่องลูก |
+| `array` ของ object | ตาราง: หนึ่งแถวต่อ item, คอลัมน์ = property ของ item, ปุ่ม "+ เพิ่มแถว" / "ลบ" (เคารพ `minItems`/`maxItems`) | array |
+| `array` ของ string/ตัวเลข | รายการช่องเดียวต่อแถว เพิ่ม/ลบได้ | array |
+| อื่น ๆ (`oneOf`, `$ref`, `type` หลายชนิด, …) | textarea JSON ดิบของส่วนนั้น (ตรวจว่าเป็น JSON) | ค่าที่ parse แล้ว |
+
+- `required` → เครื่องหมาย `*` และตรวจว่าไม่ว่าง; ช่องที่ไม่ required และว่าง → ไม่ส่ง key นั้น (ไม่ส่ง `""`)
+- ตรวจในฟอร์ม: required, `maxLength`/`minLength`, `pattern`, รูปแบบ date/decimal/integer, `enum`, `minItems`/`maxItems` — ข้อความไทย
+
+## Project Structure v1.4
+
+```
+apps/studio/
+  app/(app)/templates/[id]/page.tsx → อ่าน `mode=issue`; โหลด getVersion ของ version ที่ publish เมื่ออยู่ในโหมดนี้
+  app/issue/[id]/route.ts           → POST: ส่งต่อ /v1/render (version published), ตอบ PDF หรือ problem JSON — ใหม่
+  components/IssueForm.tsx (+ .module.css) → ฟอร์ม, ตาราง, การแสดง problem — ใหม่
+  components/Workspace.tsx (+ .module.css) → โหมดออกเอกสาร: ซ่อนไฟล์/แท็บล่าง, ฟอร์มแทน editor, PDF ในช่องขวา
+  app/(app)/page.tsx                → ปุ่ม "ออกเอกสาร" ในแถวและการ์ด
+  lib/form.ts                       → schema/parameters → ช่อง, ค่าฟอร์ม → JSON body, ตรวจค่า, pointer → ช่อง — ใหม่
+  tests/form.test.ts                → ใหม่
+  e2e/issue.spec.ts                 → ใหม่
+```
+
+## Testing Strategy v1.4
+
+- **Vitest (`lib/form.ts`):** ทุกแถวในตารางแปลง; ลำดับช่องตาม schema; title/description/default; ช่องว่างที่ไม่ required ไม่ถูกส่ง;
+  decimal `"12345678901234567.89"` ส่งเป็น string ตรงทุกหลัก; integer ส่งเป็นตัวเลขจากข้อความ; ตรวจค่าแต่ละกติกา;
+  pointer `/data/items/1/unitPrice` ชี้ช่องแถวที่ 2; schema ที่ไม่รองรับกลายเป็น textarea; เติมจาก sample ได้ค่าตรง
+- **เบราว์เซอร์กับ api ที่ VM:** แบบเดียวกับรอบก่อน
+- **E2E (`e2e/issue.spec.ts`, หลัง lifecycle บน stack ใหม่):** สร้างรายงานจาก starter `tax-invoice` → publish → กด "ออกเอกสาร"
+  ใน catalog → เปิดในโหมดฟอร์ม (ไม่เห็นรายการไฟล์และแท็บล่าง, ฟอร์มว่าง) → กรอกทุกช่องเอง (ไม่ใช้ปุ่มตัวอย่าง) รวมเพิ่ม 2 แถว → ออก PDF ได้ `application/pdf` ใน iframe และมีลิงก์ดาวน์โหลด;
+  ลบค่าช่อง required → ข้อความใต้ช่องก่อนส่ง; ใส่วันที่ที่ api ปฏิเสธ → problem ใต้ช่องนั้น; browser ไม่เรียก api ตรง
+- lint, typecheck, test, build ผ่าน
+
+## Boundaries v1.4
+
+- **Always:** ประกอบ body จากข้อความ (ไม่ผ่าน float); ทุกค่าจาก browser ตรวจก่อนใส่ URL (เหมือน `draftPath`)
+- **Ask first:** เพิ่ม dependency (เช่น JSON Schema validator ฝั่ง browser), เพิ่ม endpoint หรือเปลี่ยน contract
+- **Never:** เก็บ PDF หรือข้อมูลที่กรอก (ยกเว้น run history เดิม); ให้ browser เรียก api ตรง
+
+## Success Criteria v1.4
+
+1. หัวหน้าออกใบกำกับภาษีจาก starter ได้เองจากหน้า "ออกเอกสาร" โดยไม่เห็น JSON เลย (ยกเว้น schema ส่วนที่ไม่รองรับ)
+2. ป้ายและคำอธิบายในฟอร์มของทุก starter เป็นภาษาไทย
+3. ค่าที่ผิดถูกบอกที่ช่องนั้น ทั้งที่ตรวจในฟอร์มและที่ api ตอบกลับ
+4. ตัวเลขเงินไปถึง api ตรงทุกหลัก
+5. E2E ทุก spec (รวม `issue.spec.ts`) ผ่านบน stack ใหม่; lint, typecheck, test, build ผ่าน
+
+## Open Questions v1.4
+
+ไม่มี — ทางเข้า, หน้าจอ, version และสถานะเริ่มต้นของฟอร์มตัดสินแล้วใน interview รอบสอง (18 พ.ย. 2026)
+
+## Not Doing v1.4
+
+หน้ารายการออกเอกสารแยก · ตัวเลือกให้ดูฟอร์มจาก draft · designer · `form.json` · role · เก็บเอกสารที่ออกและเลขรันอัตโนมัติ

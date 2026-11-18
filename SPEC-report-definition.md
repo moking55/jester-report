@@ -285,3 +285,35 @@ def _check_header_footer_fonts(name: str, html: str, system_fonts: frozenset[str
 ## Out of scope
 
 band ใน `report.json`, block editor, การรันโค้ดของผู้ใช้, string และการต่อ string ในภาษาคำนวณ, config รายชื่อฟอนต์, list ซ้อนเกิน 1 ระดับ, page size อื่นนอกจาก A4
+
+# v1.4: ป้ายของ parameter (F0)
+
+สถานะ: **อนุมัติแล้ว 18 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.4
+
+## การเปลี่ยนแปลง
+
+`Parameter` ใน `report.json` รับเพิ่มสองช่อง (เลือกใส่ได้, ไม่กระทบการตรวจค่าและการ render):
+
+```json
+"parameters": {
+  "invoiceNo": { "type": "string", "required": true, "maxLength": 40,
+                 "title": "เลขที่ใบกำกับภาษี", "description": "เช่น INV-2026-0001" }
+}
+```
+
+| ช่อง | กติกา | ผิดกติกา |
+| --- | --- | --- |
+| `title` | string 1–80 ตัวอักษร | `DEFINITION_INVALID` ที่ pointer ของช่องนั้น (แบบเดียวกับช่องอื่นของ `Parameter`) |
+| `description` | string 1–300 ตัวอักษร | `DEFINITION_INVALID` |
+
+`data.schema.json` ใช้ `title`/`description`/`default` ของ JSON Schema ได้อยู่แล้ว (Draft 2020-12 เป็น annotation) — ไม่มีการเปลี่ยนแปลง
+
+## Testing Strategy v1.4
+
+- `report.json` ที่มี `title`/`description` ผ่าน `load_definition`; ยาวเกินหรือไม่ใช่ string → `DEFINITION_INVALID`
+- report เดิมที่ไม่มีสองช่องนี้ผ่านเหมือนเดิม (test เดิมผ่านโดยไม่แก้)
+
+## Success Criteria v1.4
+
+1. parameter มีป้ายภาษาไทยได้โดย report เดิมไม่ต้องแก้
+2. test เดิมผ่าน, coverage และ `ruff` เท่าเดิม
