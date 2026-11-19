@@ -384,6 +384,12 @@ export function Workspace({
     router.push(`/templates/${state.templateId}?mode=issue`);
   }
 
+  /** To the Document Designer (v1.7); it reads the saved template.html, so unsaved edits would be lost: ask first. */
+  function toDesigner() {
+    if (unsaved && !window.confirm(`มี ${state.dirty.length} ไฟล์ที่ยังไม่บันทึก ไป Document Designer โดยไม่บันทึก?`)) return;
+    router.push(`/templates/${state.templateId}/designer`);
+  }
+
   if (issue) {
     return (
       <div className={styles.workspace}>
@@ -572,6 +578,9 @@ export function Workspace({
                 {schemaAsJson ? "แก้ไขแบบฟอร์ม" : "แก้ไข JSON"}
               </button>
             )}
+            <button type="button" className={styles.paneButton} onClick={toDesigner}>
+              Document Designer
+            </button>
           </div>
           {showBuilder && assetPreview === null && (
             <div className={styles.builderCell}>

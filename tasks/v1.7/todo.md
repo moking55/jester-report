@@ -56,7 +56,7 @@
 
 ## Phase G3: หน้า designer
 
-- [ ] **T6 หน้า, toolbar, บันทึก, Preview pdf**
+- [x] **T6 หน้า, toolbar, บันทึก, Preview pdf**
   - Acceptance: `/templates/<id>/designer`; ปุ่ม "Document Designer" ที่หัวช่อง code (ถามก่อนถ้ามีไฟล์ค้าง); บันทึก `template.html` (`putDraftFile` + revision, 412 → โหลดใหม่),
     ถามก่อนออก/ปิดแท็บถ้ายังไม่บันทึก; "Preview pdf" (ถามบันทึกถ้ามีการแก้) → modal; undo/redo ปุ่ม + คีย์ลัด (ไม่ล้างเมื่อบันทึก); archive = อ่านอย่างเดียว
   - Verify: Vitest component (save/412/leave); เบราว์เซอร์กับ api บน VM
@@ -76,6 +76,10 @@
     autocomplete + snippet + ตรวจด้วย `doc-check` ก่อนปิด (ผิด = ปิดไม่ได้ + บอกบรรทัด)
   - Verify: Vitest component ของ modal; เบราว์เซอร์
   - Files: `components/designer/BlockPanels.tsx`, `components/designer/CustomCodeModal.tsx`, `components/designer/ConditionModal.tsx`
+
+- T5–T6 ตรวจในเบราว์เซอร์ (19 พ.ย., `next dev` + api 1.6.0-rc บน VM): ผืน A4 ของ quotation ใช้ฟอนต์ TH Sarabun New, header ในขอบบน, ชิป expression;
+  "แสดงข้อมูลตัวอย่าง" แทนค่า params/totals/header และแถวตารางตาม sample (`lists.<x>` ใน view model เป็น `{rows, groups}` → แปลงเป็น array ของแถวที่มี `.groups`);
+  Preview pdf เปิด modal ได้ PDF จริงที่หน้าตาใกล้ผืน; ปุ่ม "Document Designer" ที่หัวช่อง code
 
 ## Phase G4: starter
 
