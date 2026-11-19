@@ -215,9 +215,39 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         }
         break;
       }
-      case "table":
-        inner = <div style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: tableHtml(src, b, mode, scope) }} />;
+      case "table": {
+        const d = b.detail.kind === "table" ? b.detail : null;
+        if (!d?.detailRow || !own) {
+          inner = <div style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: tableHtml(src, b, mode, scope) }} />;
+          break;
+        }
+        // a table with a detail row: rows are drawn here so the detail cell can hold blocks of its own (SPEC v1.8)
+        const slice = (r: { start: number; end: number }) => src.slice(r.start, r.end);
+        const cells = (cs: { range: { start: number; end: number } }[], sc: Scope | null) => cs.map((c) => renderSource(slice(c.range), mode, sc)).join("");
+        const thead = own.children.find((c) => c.kind === "element" && c.name === "thead");
+        const attrOf = (name: string) => own.attrs.find((a) => a.name === name)?.value ?? undefined;
+        const items = scope ? lookup(scope, d.loop.iterable) : null;
+        const per: (Scope | null)[] = scope && Array.isArray(items) ? items.map((item, i) => ({ ...scope, [d.loop.variable]: item, loop: { index: i + 1 } })) : [null];
+        inner = (
+          <table style={styleObject(attrOf("style") ?? "")} className={attrOf("class")}>
+            {thead && thead.kind === "element" && (
+              <thead dangerouslySetInnerHTML={{ __html: renderSource(src.slice(thead.open.end, thead.close ? thead.close.start : thead.end), mode, scope) }} />
+            )}
+            <tbody>
+              {per.flatMap((sc, i) => [
+                <tr key={`r${i}`} dangerouslySetInnerHTML={{ __html: cells(d.cells, sc) }} />,
+                <tr key={`d${i}`} data-jd="detail">
+                  <td colSpan={d.cells.length}>{renderList(b.lists[0].list, sc, listId(b, 0))}</td>
+                </tr>,
+              ])}
+              {d.footer.map((f, i) => (
+                <tr key={`f${i}`} dangerouslySetInnerHTML={{ __html: cells(f, scope) }} />
+              ))}
+            </tbody>
+          </table>
+        );
         break;
+      }
       case "grid": {
         const d = b.detail.kind === "grid" ? b.detail : null;
         const attrOf = (el: { attrs: { name: string; value: string | null }[] } | null, name: string) =>

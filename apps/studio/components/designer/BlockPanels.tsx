@@ -9,6 +9,8 @@ import { checkCode } from "@/lib/doc-check";
 import {
   addBranch,
   addColumn,
+  addDetailRow,
+  removeDetailRow,
   addRowColumn,
   columnWidths,
   readStyle,
@@ -285,6 +287,19 @@ export function BlockPanel(props: Props) {
       return (
         <div className={styles.props}>
           <LoopFields {...props} tag={d.loop.tag} variable={variable} iterable={d.loop.iterable} />
+          {!readOnly && (
+            <label className={styles.check}>
+              <input
+                type="checkbox"
+                checked={d.detailRow !== null}
+                onChange={(e) => {
+                  if (e.target.checked) return apply(addDetailRow(src, block));
+                  if (!block.lists[0]?.list.items.length || window.confirm("ลบแถวรายละเอียดพร้อมบล็อกข้างใน?")) apply(removeDetailRow(src, block));
+                }}
+              />{" "}
+              แถวรายละเอียดใต้ทุกแถว (ใส่ตารางหรือวนซ้ำของรายการลูกได้)
+            </label>
+          )}
           <h3>คอลัมน์</h3>
           {d.cells.map((c, i) => (
             <div key={`${i}-${c.range.start}`} className={styles.column}>

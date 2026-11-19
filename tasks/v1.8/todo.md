@@ -52,7 +52,7 @@
   - Acceptance: ดับเบิลคลิกโซนบน/ล่าง → แก้ด้วยบล็อกชุดเล็ก + ชิป "หน้า X/Y"; history/บันทึกครอบ 4 ไฟล์; สร้างไฟล์ให้เมื่อยังไม่มี; ม้วน/อิสระไม่มีโซน
   - Verify: Vitest (history 4 ไฟล์, ชิปเลขหน้า); เบราว์เซอร์ + Preview pdf มีโลโก้/เลขหน้าทุกหน้า
   - Files: `DesignerPage.tsx`, `Workbench.tsx`, `PaperCanvas.tsx`, `lib/doc-edit.ts`
-- [ ] **T10 ซ้อนหลายชั้นใน designer**
+- [x] **T10 ซ้อนหลายชั้นใน designer**
   - Acceptance: วนซ้ำซ้อน 3 ชั้น; ตารางรายการ "แถวรายละเอียด" (เปิด/ปิด) ใส่ตาราง/วนซ้ำของ array ลูกได้; ยอดชั้นย่อยเป็นชิป; ตารางเดิมไม่เปลี่ยน
   - Verify: Vitest `doc-blocks`/`doc-edit` (แถวรายละเอียด, round-trip); เบราว์เซอร์ใบสั่งซื้อ 3 ชั้น + PDF
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `PaperCanvas.tsx`, `BlockPanels.tsx`
