@@ -1,6 +1,6 @@
 # Tasks v1.6: Form builder
 
-แผน: [plan.md](plan.md) · สถานะ: **อนุมัติ 19 พ.ย. 2026 · T1–T10 เสร็จ รอ checkpoint ของผู้ใช้**
+แผน: [plan.md](plan.md) · สถานะ: **ปล่อย v1.6.0 แล้ว (ผู้ใช้อนุมัติ 19 พ.ย. 2026)**
 
 กติกา: commit ทุก task, ไม่ push ระหว่างทาง; ผู้ใช้ทบทวนที่ checkpoint; อนุมัติแล้ว → version 1.6.0, tag `v1.6.0`, push `master` + tag;
 ไม่สร้าง GitHub Release; VM เป็นเครื่องทดสอบล้วน
@@ -127,5 +127,5 @@
 ## Checkpoint: ปล่อย v1.6.0
 
 - [x] studio 4 คำสั่ง + E2E ผ่านทั้งหมด
-- [ ] ผู้ใช้ลองสร้างฟอร์มจาก `blank` เองโดยไม่เปิด JSON แล้วออก PDF ได้
-- [ ] อนุมัติ → version 1.6.0 (api, studio, compose tag), tag `v1.6.0`, push, deploy บน VM
+- [x] ผู้ใช้ลองสร้างฟอร์มจาก `blank` เองโดยไม่เปิด JSON แล้วออก PDF ได้
+- [x] อนุมัติ → version 1.6.0 (api, studio, compose tag), tag `v1.6.0`, push, deploy บน VM
