@@ -1,0 +1,152 @@
+// v1.6 (tasks/v1.6/todo.md T10): a developer builds a report's form by dragging fields, never opening a JSON file;
+// a hand edit of the schema shows in the builder; the lead's issue form follows form.json and gives a PDF.
+// Runs on the same fresh stack after checkpoint-a (the E2E user) and after full-flow (which wants an empty
+// catalog), so the file name sorts after both; makes its own template from the blank starter.
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+import { login } from "./shared";
+
+const ID = process.env.E2E_FORM_ID ?? "e2e-form"; // a fresh id to rerun on a stack that has one
+
+type View = { state: { doc: { length: number; toString(): string } }; dispatch: (tr: object) => void };
+const editorText = (page: Page) =>
+  page.evaluate(() =>
+    (document.querySelector(".cm-content") as unknown as { cmTile: { view: View } }).cmTile.view.state.doc.toString(),
+  );
+const setEditorText = (page: Page, text: string) =>
+  page.evaluate((value) => {
+    const view = (document.querySelector(".cm-content") as unknown as { cmTile: { view: View } }).cmTile.view;
+    view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
+  }, text);
+
+/** A real mouse drag: press, move past the 5px start distance, glide to the target's centre, release. */
+async function drag(page: Page, from: Locator, to: Locator) {
+  // the target in the middle of the screen: near an edge, @dnd-kit's auto-scroll moves the canvas mid-drag
+  await to.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await from.scrollIntoViewIfNeeded();
+  const a = (await from.boundingBox())!;
+  const b = (await to.boundingBox())!;
+  await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(a.x + a.width / 2 + 12, a.y + a.height / 2 + 12, { steps: 4 });
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 15 });
+  await page.mouse.up();
+  await settled(page);
+}
+
+/** Wait until no card is mid-animation, so the next drag aims at where cards really are. */
+async function settled(page: Page) {
+  await expect
+    .poll(() => page.evaluate(() => document.getAnimations().filter((a) => a.playState === "running").length))
+    .toBe(0);
+  await page.waitForTimeout(250); // the drop's transform transition (not a Web Animation)
+}
+
+const palette = (page: Page, kind: string) => page.locator(`[data-kind="${kind}"]`);
+const card = (page: Page, pointer: string) => page.locator(`[data-pointer="${pointer}"]`);
+const box = (page: Page, id: string) => page.locator(`[data-container="${id}"]`);
+const order = (page: Page, id: string) =>
+  box(page, id).evaluate((el) => [...el.children].map((c) => (c as HTMLElement).dataset.pointer).filter(Boolean));
+
+async function select(page: Page, pointer: string) {
+  await card(page, pointer).locator("button[aria-pressed]").first().click();
+}
+
+test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
+  test.setTimeout(240_000);
+  await login(page);
+
+  const create = page.getByRole("form", { name: "สร้างรายงาน" });
+  await create.getByLabel("id", { exact: true }).fill(ID);
+  await create.getByLabel("ชื่อรายงาน").fill("ฟอร์มที่สร้างเอง");
+  await create.getByLabel("เริ่มจาก").selectOption({ label: "ว่าง" });
+  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
+  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
+
+  await page.getByRole("button", { name: "ออกแบบฟอร์ม" }).click();
+  await expect(page).toHaveURL(new RegExp(`/templates/${ID}\\?mode=form$`));
+  await expect(card(page, "/data/title")).toBeVisible({ timeout: 30_000 });
+
+  // the nine kinds into the data, each dropped on the starter's title (so it lands before it)
+  const kinds = ["text", "textarea", "number", "money", "date", "choice", "checkbox", "group", "table"];
+  for (const kind of kinds) await drag(page, palette(page, kind), card(page, "/data/title"));
+  expect((await order(page, "c:data")).sort()).toEqual([...kinds.map((_, i) => `/data/field${i + 1}`), "/data/title"].sort());
+
+  // a field in the group; three columns in the table, money among them
+  await drag(page, palette(page, "text"), box(page, "c:data/field8"));
+  await drag(page, palette(page, "text"), box(page, "c:data/field9"));
+  await drag(page, palette(page, "number"), card(page, "/data/field9/field1"));
+  await drag(page, palette(page, "money"), card(page, "/data/field9/field1"));
+  expect(await order(page, "c:data/field9")).toHaveLength(3);
+  // a group cannot be a column: refused with the reason
+  await drag(page, palette(page, "group"), card(page, "/data/field9/field1"));
+  await expect(page.getByText("คอลัมน์ในตารางต้องเป็นช่องธรรมดา")).toBeVisible(); // next also has a role=alert announcer
+
+  // two parameters
+  await drag(page, palette(page, "text"), box(page, "c:params"));
+  await drag(page, palette(page, "choice"), card(page, "/params/field1"));
+  expect((await order(page, "c:params")).sort()).toEqual(["/params/field1", "/params/field2"]);
+
+  // the keyboard moves the first field down one place: Space, ArrowDown, Space
+  const before = await order(page, "c:data");
+  await card(page, before[0]!).getByRole("button", { name: /^ลาก / }).focus();
+  await page.keyboard.press("Space");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Space");
+  await expect.poll(() => order(page, "c:data")).toEqual([before[1], before[0], ...before.slice(2)]);
+  await settled(page);
+  const dataOrder = await order(page, "c:data");
+
+  // properties: a label, half width, radio for the choice
+  await select(page, "/data/field1");
+  const label = page.locator("label", { hasText: /^ป้าย/ }).locator("input");
+  await label.fill("ชื่อผู้ติดต่อ");
+  await label.blur();
+  await page.locator("label", { hasText: /^ความกว้าง/ }).locator("select").selectOption("half");
+  await select(page, "/data/field6");
+  await page.locator("label", { hasText: /^แสดงเป็น/ }).locator("select").selectOption("radio");
+
+  await page.getByRole("button", { name: "บันทึก", exact: true }).click();
+  await expect(page.getByText("ไม่มี problem")).toBeVisible({ timeout: 30_000 });
+
+  // a hand edit of the schema shows in the builder
+  await page.getByRole("button", { name: "กลับไปแก้ code" }).click();
+  await expect(page.getByRole("navigation", { name: "ไฟล์" })).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("navigation", { name: "ไฟล์" }).getByRole("button", { name: "data.schema.json", exact: true }).click();
+  const schema = JSON.parse(await editorText(page));
+  schema.properties.field3.title = "จำนวนที่แก้มือ";
+  await setEditorText(page, `${JSON.stringify(schema, null, 2)}\n`);
+  await page.getByRole("button", { name: "บันทึก (Ctrl+S)" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible();
+  await page.getByRole("button", { name: "ออกแบบฟอร์ม" }).click();
+  await expect(card(page, "/data/field3")).toContainText("จำนวนที่แก้มือ", { timeout: 30_000 });
+
+  // publish, then the lead's form follows form.json
+  await page.getByRole("button", { name: "กลับไปแก้ code" }).click();
+  await page.getByRole("button", { name: "Publish" }).click();
+  const publish = page.getByRole("dialog", { name: "Publish" });
+  await publish.getByRole("button", { name: "Publish" }).click();
+  await expect(publish).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Versions" })).toHaveAttribute("aria-selected", "true");
+
+  await page.goto(`/templates/${ID}?mode=issue`);
+  const form = page.getByRole("form", { name: "ฟอร์มออกเอกสาร" });
+  await expect(form).toBeVisible({ timeout: 30_000 });
+  const pointers = await form.evaluate((el) =>
+    [...el.querySelectorAll(":scope > [data-pointer]")].map((c) => (c as HTMLElement).dataset.pointer),
+  );
+  expect(pointers).toEqual(dataOrder); // the builder's order is the form's order
+  await expect(form.locator('[data-pointer="/data/field2"] textarea')).toBeVisible();
+  await expect(form.locator('[data-pointer="/data/field6"] [role="radiogroup"]')).toBeVisible();
+  expect(await form.locator('[data-pointer="/data/field1"]').getAttribute("class")).toMatch(/half/);
+  await expect(form.getByText("ชื่อผู้ติดต่อ")).toBeVisible();
+
+  await form.locator("#f-data-title").fill("สวัสดีจากฟอร์มที่สร้างเอง");
+  await form.locator("#f-data-field1").fill("สมชาย");
+  await form.locator("#f-data-field4").fill("1250.5");
+  const response = page.waitForResponse((r) => r.url().endsWith(`/issue/${ID}`) && r.request().method() === "POST");
+  await page.getByRole("button", { name: "ออก PDF" }).click();
+  const issued = await response;
+  expect(issued.status(), await issued.text().catch(() => "")).toBe(200);
+  expect(issued.headers()["content-type"]).toContain("application/pdf");
+});
