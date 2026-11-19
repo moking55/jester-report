@@ -103,8 +103,8 @@ def template(t: TemplateSummary, last: Run | None = None) -> dict[str, Any]:
         "archivedAt": iso(t.archived_at),
         "archivedBy": t.archived_by,
     }
-    if t.orientation:
-        out["page"] = {"size": "A4", "orientation": t.orientation}
+    if t.page:
+        out["page"] = t.page
     return out
 
 

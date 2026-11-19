@@ -8,6 +8,7 @@ import { TemplateMenu } from "@/components/TemplateMenu";
 import { ViewToggle } from "@/components/ViewToggle";
 import { api } from "@/lib/api";
 import { when } from "@/lib/format";
+import { sizeLabel } from "@/lib/paper";
 import { VIEW_COOKIE } from "@/lib/session";
 import type { components } from "@/lib/types.gen";
 
@@ -52,6 +53,14 @@ function DocumentsLink({ t, className }: { t: TemplateSummary; className?: strin
       เอกสารที่ออก
     </Link>
   );
+}
+
+/** The sheet on a catalog card: the size, the orientation of a sheet, and a free layout's name. */
+function pageLabel(page: TemplateSummary["page"]): string {
+  const size = page?.size ?? "A4";
+  if (size === "roll") return sizeLabel("roll", page?.rollWidthMm);
+  const sheet = `${sizeLabel(size)} ${page?.orientation === "landscape" ? "แนวนอน" : "แนวตั้ง"}`;
+  return page?.layout === "free" ? `${sheet} · อิสระ` : sheet;
 }
 
 function Archived({ t }: { t: TemplateSummary }) {
@@ -163,8 +172,7 @@ function Cards({ templates, back }: { templates: TemplateSummary[]; back: string
               {t.publishedVersion === null
                 ? "ยังไม่ publish"
                 : `v${t.publishedVersion}`}{" "}
-              · {t.page?.size ?? "A4"}{" "}
-              {t.page?.orientation === "landscape" ? "แนวนอน" : "แนวตั้ง"}
+              · {pageLabel(t.page)}
             </span>
           </div>
           <div className={styles.pills}>

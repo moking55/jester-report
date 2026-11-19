@@ -176,6 +176,9 @@ async def test_create_with_a_page_writes_report_json_and_a_matching_template(sto
         'data-jd="page"' in files["template.html"] and "width: 210mm; height: 148mm" in files["template.html"]
     )
     assert "header.html" not in files
+    pages = {t.id: t.page for t in await store.list()}
+    assert pages["form"] == {"size": "A5", "orientation": "landscape", "layout": "free"}  # what the catalog shows
+    assert pages["rec"] == {"size": "roll", "orientation": "portrait", "layout": "flow", "rollWidthMm": 80}
 
     await store.create("a5", "A5", "blank", "alice", {"size": "A5"})
     files = {f.name: f.content for f in (await store.get_draft("a5")).files}

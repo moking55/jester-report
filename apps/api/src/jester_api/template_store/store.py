@@ -59,6 +59,7 @@ class TemplateSummary:
     updated_at: datetime
     archived_at: datetime | None = None
     archived_by: str | None = None
+    page: dict[str, Any] | None = None  # the draft's sheet: size, orientation, layout (rollWidthMm for a roll)
 
 
 @dataclass(frozen=True)
@@ -135,6 +136,23 @@ def _orientation(report_json: str | None) -> str | None:
     try:
         page = json.loads(report_json or "").get("page") or {}
         return page.get("orientation", "portrait")
+    except (ValueError, AttributeError):
+        return None
+
+
+def _page(report_json: str | None) -> dict[str, Any] | None:
+    """The draft's sheet as the catalog shows it (v1.8): what report.json's `page` says, with the defaults filled in."""
+    try:
+        page = json.loads(report_json or "").get("page") or {}
+        size = page.get("size", "A4")
+        out: dict[str, Any] = {
+            "size": size,
+            "orientation": "portrait" if size == "roll" else page.get("orientation", "portrait"),
+            "layout": "flow" if size == "roll" else page.get("layout", "flow"),
+        }
+        if size == "roll":
+            out["rollWidthMm"] = page.get("rollWidthMm", 80)
+        return out
     except (ValueError, AttributeError):
         return None
 
@@ -422,6 +440,7 @@ class TemplateStore:
                         updated_at,
                         archived_at,
                         archived_by,
+                        _page(report_json),
                     )
                 )
         return out

@@ -1572,9 +1572,12 @@ components:
         draftChangedSincePublish: { type: boolean }
         page:
           type: object
+          description: the draft's sheet (v1.8); a roll is always portrait and flow
           properties:
-            size: { const: A4 }
+            size: { type: string, enum: [A3, A4, A5, A6, B5, Letter, Legal, DL, custom, roll] }
             orientation: { type: string, enum: [portrait, landscape] }
+            layout: { type: string, enum: [flow, free] }
+            rollWidthMm: { type: integer, enum: [58, 80], description: roll size only }
         lastRun:
           oneOf:
             - $ref: '#/components/schemas/RunSummary'

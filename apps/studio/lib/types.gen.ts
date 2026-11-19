@@ -920,11 +920,19 @@ export interface components {
             latestVersion?: number | null;
             draftRevision: number;
             draftChangedSincePublish?: boolean;
+            /** @description the draft's sheet (v1.8); a roll is always portrait and flow */
             page?: {
-                /** @constant */
-                size?: "A4";
+                /** @enum {string} */
+                size?: "A3" | "A4" | "A5" | "A6" | "B5" | "Letter" | "Legal" | "DL" | "custom" | "roll";
                 /** @enum {string} */
                 orientation?: "portrait" | "landscape";
+                /** @enum {string} */
+                layout?: "flow" | "free";
+                /**
+                 * @description roll size only
+                 * @enum {integer}
+                 */
+                rollWidthMm?: 58 | 80;
             };
             lastRun?: components["schemas"]["RunSummary"] | null;
             /** Format: date-time */

@@ -13,7 +13,7 @@ async def test_template_lifecycle(api, admin):
         "/v1/templates", headers=admin, json={"id": "quote", "name": "Q", "starter": "quotation"}
     )
     assert created.status_code == 201 and created.json()["draftRevision"] == 1
-    assert created.json()["page"] == {"size": "A4", "orientation": "portrait"}
+    assert created.json()["page"] == {"size": "A4", "orientation": "portrait", "layout": "flow"}
     dup = await api.post("/v1/templates", headers=admin, json={"id": "quote", "name": "again"})
     assert (dup.status_code, dup.json()["code"]) == (409, "CONFLICT")
     assert [t["id"] for t in (await api.get("/v1/templates", headers=admin)).json()] == ["quote"]
