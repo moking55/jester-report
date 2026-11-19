@@ -14,8 +14,8 @@ import {
 } from "@dnd-kit/core";
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList } from "@/lib/doc-blocks";
-import { insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type Result } from "@/lib/doc-edit";
+import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList, type Rect } from "@/lib/doc-blocks";
+import { addBox, boxSize, insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 import { paperOf, setMargins } from "@/lib/paper";
@@ -26,6 +26,8 @@ import type { Scope } from "@/lib/doc-sample";
 
 import styles from "./Designer.module.css";
 import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCanvas";
+import { boxRects, useFree } from "./FreeCanvas";
+import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
@@ -78,6 +80,17 @@ export const PALETTE: { kind: NewBlock["kind"]; label: string }[] = [
 
 /** The palette's groups (SPEC v1.7 รอบแก้ข้อ 2): Jinja-made blocks are "มาโคร". */
 export const MACROS = new Set<string>(["condition", "repeat", "set", "custom"]);
+/** What a free-layout sheet can hold (v1.8): each is dropped as a box at the pointer. */
+export const FREE_PALETTE: { kind: string; label: string }[] = [
+  { kind: "text", label: "ข้อความ" },
+  { kind: "heading", label: "หัวข้อ" },
+  { kind: "field", label: "ค่าช่องข้อมูล" },
+  { kind: "image", label: "รูป / โลโก้" },
+  { kind: "code", label: "QR / บาร์โค้ด" },
+  { kind: "grid", label: "ตารางเปล่า" },
+  { kind: "rect", label: "สี่เหลี่ยม" },
+  { kind: "line", label: "เส้น" },
+];
 /** What a header or footer can hold: text, fields, an image, a row of columns, a rule, a gap. */
 export const RUNNING_KINDS = new Set<string>(["text", "heading", "field", "image", "row", "rule", "space"]);
 const PAGE_FIELDS = [
@@ -218,7 +231,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   const [coding, setCoding] = useState<number | null>(null); // the start of the block in the Custom Code modal
   const [panes, setPanes] = useState(DEFAULT_PANES);
   const imagePicker = useRef<HTMLInputElement>(null);
-  const imageAt = useRef<{ list: string; index: number } | null>(null); // where a dropped image goes once uploaded
+  const imageAt = useRef<{ list: string; index: number; rect?: Rect } | null>(null); // where a dropped image goes once uploaded (rect: on a free sheet)
   const latest = useRef({ src, blocks });
   useEffect(() => {
     latest.current = { src, blocks };
@@ -262,8 +275,10 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
 
   const flat = useMemo(() => allBlocks(blocks), [blocks]);
   const fields = useMemo(() => [...(part === "body" ? [] : PAGE_FIELDS), ...suggestions(files)], [files, part]);
+  const paper = useMemo(() => paperOf(files["report.json"]), [files]);
+  const free = paper.layout === "free" && part === "body"; // one sheet of boxes placed in mm (v1.8)
   const kinds = (macro: boolean) =>
-    PALETTE.filter((p) => (part === "body" ? MACROS.has(p.kind) === macro : !macro && RUNNING_KINDS.has(p.kind)));
+    free ? (macro ? [] : (FREE_PALETTE as { kind: NewBlock["kind"]; label: string }[])) : PALETTE.filter((p) => (part === "body" ? MACROS.has(p.kind) === macro : !macro && RUNNING_KINDS.has(p.kind)));
   const current = flat.find((b) => keyOf(b) === selected) ?? null;
   const codeBlock = coding === null ? null : (flat.find((b) => b.start === coding) ?? null);
 
@@ -321,7 +336,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   }
 
   function onDragMove(e: DragMoveEvent) {
-    if (!shot.current || !at.current) return;
+    if (free || !shot.current || !at.current) return; // a free sheet has no drop slots: the box lands at the pointer
     const pal = area.current?.getBoundingClientRect();
     const { x, y } = at.current;
     const overPalette = !!pal && String(e.active.id).startsWith("b:") && x >= pal.left && x <= pal.right && y >= pal.top && y <= pal.bottom;
@@ -342,9 +357,31 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     setDrop(null);
   }
 
+  /** Drop a palette item on a free sheet: a box with its top-left corner at the pointer (snapped, kept on the sheet). */
+  function placeNew(kind: string, p: { x: number; y: number } | null) {
+    const sheet = blocks.items.find((b) => b.kind === "page");
+    if (!sheet) return setMessage("ไม่พบหน้ากระดาษ (data-jd=\"page\") ในไฟล์นี้ — แก้ใน HTML");
+    const el = shadow()?.querySelector("[data-jd-page]");
+    const box = el?.getBoundingClientRect();
+    if (!p || !box || p.x < box.left || p.x > box.right || p.y < box.top || p.y > box.bottom) return; // dropped off the sheet
+    const scale = box.width / paper.widthMm;
+    const nb: NewBox = kind === "rect" || kind === "line" ? { kind } : newBlockFor(kind as NewBlock["kind"], files, assets);
+    const size = boxSize(nb);
+    const clamp = (v: number, max: number) => Math.max(0, Math.min(v, Math.max(0, max)));
+    const raw = { x: clamp((p.x - box.left) / scale, paper.widthMm - size.w), y: clamp((p.y - box.top) / scale, paper.heightMm - size.h), ...size };
+    const rect = snapMove(raw, { page: { w: paper.widthMm, h: paper.heightMm }, others: boxRects(sheet).map((o) => o.rect), threshold: 6 / scale }).rect;
+    if (nb.kind === "image" && onUpload && !assets.some(isImageName)) {
+      imageAt.current = { list: "root", index: 0, rect };
+      return imagePicker.current?.click();
+    }
+    apply(addBox(src, sheet, nb, rect));
+  }
+
   function onDragEnd(e: DragEndEvent) {
     const d = dropRef.current;
+    const pointer = at.current;
     finish();
+    if (free && String(e.active.id).startsWith("new:")) return readOnly ? undefined : placeNew(String(e.active.id).slice(4), pointer);
     if (!d || readOnly) return;
     if (d.reason) return setMessage(d.reason);
     if (d.container === TRASH) {
@@ -412,6 +449,24 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     apply(out);
   }
 
+  const innerOf = (box: Block) => box.lists[0]?.list.items.find((b) => b.render) ?? null;
+  const freeSheet = useFree({
+    blocks,
+    page: { w: paper.widthMm, h: paper.heightMm },
+    readOnly: readOnly || !free,
+    selected,
+    current,
+    editing,
+    keyOf,
+    select: setSelected,
+    edit: (box) => {
+      const inner = innerOf(box);
+      if (inner?.kind === "text") setEditing(keyOf(inner));
+    },
+    apply,
+    src,
+  });
+
   const frame: BlockFrame = ({ block, children }) => (
     <Frame
       block={block}
@@ -433,11 +488,11 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     const cell = b.detail.rows[r]?.cells[c];
     return cell ? <TextEditor key={`${b.start}-${r}-${c}`} el={cell.node} inner={cell.inner} src={src} fields={fields} onDone={(inner) => typed(b, cell.inner, inner)} /> : null;
   };
-  const list: ListFrame = ({ id, children }) => <ListBox id={id}>{children}</ListBox>;
+  const list: ListFrame = ({ id, children }) => (free ? <>{children}</> : <ListBox id={id}>{children}</ListBox>);
 
   const label = active
     ? active.startsWith("new:")
-      ? PALETTE.find((p) => p.kind === active.slice(4))?.label
+      ? [...PALETTE, ...FREE_PALETTE].find((p) => p.kind === active.slice(4))?.label
       : KIND_NAME[flat.find((b) => keyOf(b) === active.slice(2))?.kind ?? "custom"]
     : "";
 
@@ -507,7 +562,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                 onReport?.(next);
               }}
             >
-            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} part={part} onZone={onZone} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
+            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} part={part} onZone={onZone} renderBox={free ? freeSheet.renderBox : undefined} placed={free ? freeSheet.placed : undefined} overlay={free ? freeSheet.overlay : undefined} onPage={free ? () => setSelected(null) : undefined} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
             </Rulers>
           </div>
         </div>
@@ -585,7 +640,10 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             const name = await onUpload(file);
             const { src: now, blocks: tree } = latest.current;
             const target = name ? listById(tree, at.list) : null;
-            if (name && target) apply(insertBlock(now, target, at.index, newBlockHtml({ kind: "image", src: name })));
+            if (name && at.rect) {
+              const sheet = tree.items.find((b) => b.kind === "page");
+              if (sheet) apply(addBox(now, sheet, { kind: "image", src: name }, at.rect));
+            } else if (name && target) apply(insertBlock(now, target, at.index, newBlockHtml({ kind: "image", src: name })));
           }}
         />
         {codeBlock && (

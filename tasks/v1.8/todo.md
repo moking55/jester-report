@@ -67,7 +67,7 @@
   - Acceptance: `doc-blocks` อ่าน `data-jd="page"`/`box`/`rect`/`line` (ส่วนอื่น = Custom Code); `doc-edit`: `addBox`, `setBoxRect`, `moveBoxOrder`, ลบกล่อง; `lib/snap.ts`
   - Verify: Vitest (round-trip, rect เป็น mm 0.1, snap ขอบ/กึ่งกลาง/กล่องอื่น/ตาราง)
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `lib/snap.ts`, tests
-- [ ] **T13 ผืนแบบอิสระ: วาง ลาก ปรับขนาด snap**
+- [x] **T13 ผืนแบบอิสระ: วาง ลาก ปรับขนาด snap**
   - Acceptance: palette ชุดอิสระ; ปล่อยที่ไหน = กล่องตรงนั้น; ลากย้าย/จุดปรับขนาด; เส้นนำทาง snap; Alt ปิด snap; ลูกศร 0.5/5 mm; หนึ่งขั้น undo ต่อการปล่อย
   - Verify: เบราว์เซอร์ (Playwright วัดตำแหน่งกล่องหลังลาก = ตัวเลขในแผง); zoom 75/100/150%
   - Files: `components/designer/FreeCanvas.tsx` (ใหม่), `Workbench.tsx`, `DesignerPage.tsx`

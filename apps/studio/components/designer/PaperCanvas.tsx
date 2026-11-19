@@ -8,6 +8,8 @@ import { BASE_CSS, fontFaces, renderSource, scopeReportCss, type RenderMode } fr
 import { lookup, test, type Scope } from "@/lib/doc-sample";
 import { readStyle } from "@/lib/doc-edit";
 import { pageBreaks, paperOf, PX_PER_MM } from "@/lib/paper";
+import type { Rect } from "@/lib/doc-blocks";
+import type { RenderBox } from "./FreeCanvas";
 
 // The A4 paper of the Document Designer (SPEC-studio.md "v1.7"): a shadow root keeps report.css away from
 // Studio's styles; blocks are drawn by React from the block tree (lib/doc-blocks), so later steps can wrap them
@@ -37,6 +39,12 @@ type Props = {
   list?: ListFrame; // wraps each list's children (drop slots) — T7
   part?: "body" | "header" | "footer"; // which file `blocks` and `src` are (v1.8); the others are drawn as they are
   onZone?: (part: "header" | "footer") => void; // double-click on the header or footer zone
+  // a free-layout sheet (v1.8): how a box is drawn (selection, handles), a rect that replaces its own while it is dragged,
+  // lines drawn over the sheet (snap guides), and a click on the empty sheet
+  renderBox?: RenderBox;
+  placed?: (b: Block) => Rect | undefined;
+  overlay?: React.ReactNode;
+  onPage?: () => void;
 };
 
 const asset = (templateId: string) => (name: string) => `/assets/${templateId}?name=${encodeURIComponent(name)}`;
@@ -73,6 +81,20 @@ const PAPER_CSS = `
 .jd-doc { margin: 8px; } /* Chromium's default body margin, which the PDF has too; report.css may change it */
 .jd-break { position: absolute; left: -8mm; right: -8mm; border-top: 1px dashed #d33; pointer-events: none; }
 .jd-break span { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #d33; background: #fff; padding: 0 4px; }
+.jd-fbox { box-sizing: border-box; cursor: move; touch-action: none; user-select: none; }
+.jd-fbox:hover { outline: 1px solid #b9cdf0; }
+.jd-fbox.jd-selected { outline: 2px solid #2f6fe0; z-index: 1; }
+.jd-fbox.jd-moving { opacity: .85; }
+.jd-fbox img { -webkit-user-drag: none; user-select: none; }
+.jd-fbox[data-kind="line"]::before { content: ""; position: absolute; left: 0; right: 0; top: -2mm; bottom: -2mm; }
+.jd-rh { position: absolute; width: 9px; height: 9px; margin: -5px 0 0 -5px; box-sizing: border-box; background: #fff;
+  border: 1px solid #2f6fe0; border-radius: 2px; touch-action: none; z-index: 4; }
+.jd-rh-nw { left: 0; top: 0; cursor: nwse-resize; } .jd-rh-n { left: 50%; top: 0; cursor: ns-resize; }
+.jd-rh-ne { left: 100%; top: 0; cursor: nesw-resize; } .jd-rh-e { left: 100%; top: 50%; cursor: ew-resize; }
+.jd-rh-se { left: 100%; top: 100%; cursor: nwse-resize; } .jd-rh-s { left: 50%; top: 100%; cursor: ns-resize; }
+.jd-rh-sw { left: 0; top: 100%; cursor: nesw-resize; } .jd-rh-w { left: 0; top: 50%; cursor: ew-resize; }
+.jd-gl { position: absolute; pointer-events: none; z-index: 5; border: 0 solid #e0357a; }
+.jd-gl-x { top: 0; bottom: 0; border-left-width: 1px; } .jd-gl-y { left: 0; right: 0; border-top-width: 1px; }
 .jd-guide { position: absolute; inset: 0; outline: 1px dashed #c8d3e0; pointer-events: none; }
 .jd-chip { display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: bottom; padding: 0 3px; border-radius: 4px;
   font-size: 0.85em; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line, never wider than its place */
@@ -102,7 +124,7 @@ const PAPER_CSS = `
 .jd-slot-bad { border-color: #d33; background: rgba(221,51,51,.08); color: #d33; }
 `;
 
-export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor, cellEditor, onCell, part = "body", onZone }: Props) {
+export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor, cellEditor, onCell, part = "body", onZone, renderBox, placed, overlay, onPage }: Props) {
   useDocumentFonts();
   const host = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<ShadowRoot | null>(null);
@@ -148,7 +170,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
     <div style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: renderSource(src.slice(b.start, b.end), mode, scope) }} />
   );
 
-  const renderBlock = (b: Block, scope: Scope | null): React.ReactNode => {
+  const renderBlock = (b: Block, scope: Scope | null, bare = false): React.ReactNode => {
     let inner: React.ReactNode;
     const own = b.node.kind === "element" ? b.node : null;
     switch (b.kind) {
@@ -276,6 +298,32 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         );
         break;
       }
+      case "page": {
+        // the one sheet of a free layout: boxes drawn where their style puts them, in stacking order
+        const own = b.node.kind === "element" ? b.node : null;
+        const at = (name: string) => own?.attrs.find((a) => a.name === name)?.value ?? undefined;
+        inner = (
+          <div data-jd-page className={at("class")} style={styleObject(at("style") ?? "")} onClick={(e) => e.target === e.currentTarget && onPage?.()}>
+            {b.lists[0].list.items.filter(visible).map((x) => renderBlock(x, scope))}
+            {overlay}
+          </div>
+        );
+        break;
+      }
+      case "box":
+      case "rect":
+      case "line": {
+        const at = (name: string) => own?.attrs.find((a) => a.name === name)?.value ?? undefined;
+        const over = placed?.(b);
+        const style = {
+          ...styleObject(at("style") ?? ""),
+          ...(over ? { left: `${over.x}mm`, top: `${over.y}mm`, width: `${over.w}mm`, ...(b.kind === "line" ? {} : { height: `${over.h}mm` }) } : {}),
+        };
+        const kids = b.kind === "box" ? b.lists[0].list.items.filter(visible).map((x) => renderBlock(x, scope, true)) : null;
+        const cls = at("class");
+        inner = renderBox ? renderBox({ block: b, style, className: cls, children: kids }) : <div style={style} className={cls}>{kids}</div>;
+        return <FrameKey key={`${b.path.join(".")}@${b.start}`}>{inner}</FrameKey>;
+      }
       case "custom":
         inner = (
           <div className="jd-custom">
@@ -288,7 +336,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         inner = editor?.(b) ?? leaf(b, scope);
     }
     const key = `${b.path.join(".")}@${b.start}`;
-    return frame ? <FrameKey key={key}>{frame({ block: b, children: inner })}</FrameKey> : <FrameKey key={key}>{inner}</FrameKey>;
+    return frame && !bare && b.kind !== "page" ? <FrameKey key={key}>{frame({ block: b, children: inner })}</FrameKey> : <FrameKey key={key}>{inner}</FrameKey>;
   };
 
   /**
