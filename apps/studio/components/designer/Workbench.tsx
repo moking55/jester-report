@@ -639,24 +639,34 @@ function ColumnHandles({ onCommit }: { onCommit: (widths: number[]) => void }) {
     const scale = frame.getBoundingClientRect().width / (frame.offsetWidth || 1); // the paper's zoom
     return { frame, table, cells: [...row.cells] as HTMLElement[], scale };
   };
+  // the table is drawn anew after every edit (a drag commits new widths): measure the table that is there now
   useLayoutEffect(() => {
-    const p = parts();
-    if (!p) return;
+    const frame = box.current?.parentElement;
+    if (!frame) return;
     const measure = () => {
+      const p = parts();
+      if (!p) return setEdges([]);
       const f = p.frame.getBoundingClientRect();
       const t = p.table.getBoundingClientRect();
-      setEdges(
-        p.cells.slice(0, -1).map((c) => ({
-          x: (c.getBoundingClientRect().right - f.left) / p.scale,
-          top: (t.top - f.top) / p.scale,
-          height: t.height / p.scale,
-        })),
-      );
+      const next = p.cells.slice(0, -1).map((c) => ({
+        x: (c.getBoundingClientRect().right - f.left) / p.scale,
+        top: (t.top - f.top) / p.scale,
+        height: t.height / p.scale,
+      }));
+      setEdges((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
     };
     measure();
     const ro = new ResizeObserver(measure);
-    ro.observe(p.table);
-    return () => ro.disconnect();
+    ro.observe(frame);
+    // a changed table (new cells, new widths) — but not the handles themselves moving
+    const mo = new MutationObserver((records) => {
+      if (records.some((r) => !box.current?.contains(r.target))) measure();
+    });
+    mo.observe(frame, { subtree: true, childList: true, attributes: true, attributeFilter: ["style"] });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
   }, []);
   return (
     <div ref={box} aria-hidden>
