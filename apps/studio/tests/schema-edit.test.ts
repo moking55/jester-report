@@ -190,9 +190,33 @@ describe("add", () => {
     b = unwrap(addField(b, "data", ["field2"], 0, "money")).builder;
     expect(schemaOf(b).properties.field2.items.properties.field1.format).toBe("decimal");
     expect(findField(b, data("field2", "field1"))!.pointer).toBe("/data/field2/field1");
-    expect(addField(b, "data", ["field2"], 0, "group").ok).toBe(false);
-    expect(addField(b, "data", ["field2"], 0, "table").ok).toBe(false);
+    expect(addField(b, "data", ["field2"], 0, "group").ok).toBe(false); // a column is plain or a table
     expect(addField(b, "data", ["title"], 0, "text").ok).toBe(false);
+  });
+
+  it("tables nest three deep (v1.8): a table in a table in a table, not a fourth", () => {
+    let b = blank();
+    b = unwrap(addField(b, "data", [], 99, "table")).builder; // field1
+    b = unwrap(addField(b, "data", ["field1"], 0, "table")).builder; // field1/field1
+    b = unwrap(addField(b, "data", ["field1", "field1"], 0, "table")).builder; // third level
+    b = unwrap(addField(b, "data", ["field1", "field1", "field1"], 0, "text")).builder;
+    const deep = addField(b, "data", ["field1", "field1", "field1"], 0, "table");
+    expect(!deep.ok && deep.error).toMatch(/3 ชั้น/);
+    expect(findField(b, data("field1", "field1", "field1", "field1"))!.kind).toBe("text");
+    // and it is read back as the same tables
+    expect(findField(b, data("field1", "field1", "field1"))!.kind).toBe("table");
+  });
+
+  it("moving a table with a table inside counts both levels", () => {
+    let b = blank();
+    b = unwrap(addField(b, "data", [], 99, "table")).builder; // field1
+    b = unwrap(addField(b, "data", ["field1"], 0, "table")).builder; // field1/field1 (a table in it)
+    b = unwrap(addField(b, "data", [], 99, "table")).builder; // field2
+    b = unwrap(addField(b, "data", ["field2"], 0, "table")).builder; // field2/field1
+    // field1 (height 2) into field2/field1 (depth 2) would be 4 deep
+    expect(canMove(b, data("field1"), { section: "data", parentKeys: ["field2", "field1"], index: 0 })).toMatch(/3 ชั้น/);
+    b = unwrap(addField(b, "data", [], 99, "table")).builder; // field3, empty
+    expect(canMove(b, data("field1"), { section: "data", parentKeys: ["field3"], index: 0 })).toBeNull(); // 1 + 2 = 3
   });
 });
 

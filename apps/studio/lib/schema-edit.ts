@@ -179,7 +179,11 @@ function paramKind(p: Json, widget: Widget | undefined): Kind | null {
 }
 
 /** The kind of a schema node, or a Thai reason it is read-only. */
-function schemaKind(node: unknown, widget: Widget | undefined, inTable: boolean): Kind | string {
+/** Tables nest this deep at most (SPEC-studio.md v1.8: the same as a report's lists). */
+export const MAX_TABLE_DEPTH = 3;
+
+function schemaKind(node: unknown, widget: Widget | undefined, tables: number): Kind | string {
+  const inTable = tables > 0;
   if (!isObject(node)) return "ไม่ใช่ schema แบบ object";
   if (UNSUPPORTED.some((k) => k in node)) return "ใช้ keyword ที่ builder ยังไม่รองรับ";
   if (Array.isArray(node.type)) return "มีหลายชนิด (type เป็น array)";
@@ -203,7 +207,7 @@ function schemaKind(node: unknown, widget: Widget | undefined, inTable: boolean)
       if (inTable) return "กลุ่มในตารางยังไม่รองรับ";
       return isObject(node.properties) ? "group" : "object ที่ไม่มี properties";
     case "array":
-      if (inTable) return "ตารางซ้อนตารางยังไม่รองรับ";
+      if (tables >= MAX_TABLE_DEPTH) return `ตารางซ้อนได้ไม่เกิน ${MAX_TABLE_DEPTH} ชั้น`;
       return isObject(node.items) && node.items.type === "object" && isObject(node.items.properties)
         ? "table"
         : "array ที่ไม่ใช่ตารางของ object";
@@ -249,18 +253,18 @@ function paramProps(p: Json, layout: Layout, pointer: string, kind: Kind | null)
   };
 }
 
-function schemaFields(node: Json, keys: string[], layout: Layout, inTable: boolean): BuilderField[] {
+function schemaFields(node: Json, keys: string[], layout: Layout, tables: number): BuilderField[] {
   const props = isObject(node.properties) ? node.properties : {};
   const required = new Set(Array.isArray(node.required) ? node.required : []);
   return Object.entries(props).map(([key, child]) => {
     const path: FieldPath = { section: "data", keys: [...keys, key] };
     const pointer = pointerOf(path);
-    const found = NAME.test(key) ? schemaKind(child, layout[pointer]?.widget, inTable) : "ชื่อ key ไม่ตรงกติกา (ขึ้นต้นด้วยตัวอักษรหรือ _)";
+    const found = NAME.test(key) ? schemaKind(child, layout[pointer]?.widget, tables) : "ชื่อ key ไม่ตรงกติกา (ขึ้นต้นด้วยตัวอักษรหรือ _)";
     const kind = kindOrNull(found);
     const childNode = isObject(child) ? child : {};
     let children: BuilderField[] = [];
-    if (kind === "group") children = schemaFields(childNode, path.keys, layout, false);
-    if (kind === "table") children = schemaFields(childNode.items as Json, path.keys, layout, true);
+    if (kind === "group") children = schemaFields(childNode, path.keys, layout, 0);
+    if (kind === "table") children = schemaFields(childNode.items as Json, path.keys, layout, tables + 1);
     return {
       path,
       pointer,
@@ -290,7 +294,7 @@ export function fieldTree(b: Builder): { params: BuilderField[]; data: BuilderFi
       children: [],
     };
   });
-  return { params, data: schemaFields(b.schema, [], b.layout, false) };
+  return { params, data: schemaFields(b.schema, [], b.layout, 0) };
 }
 
 function allPointers(b: Builder): string[] {
@@ -460,7 +464,10 @@ export function addField(
   if (parentKeys.length && (!parent || (parent.kind !== "group" && parent.kind !== "table"))) {
     return fail("วางได้เฉพาะในกลุ่มหรือตาราง");
   }
-  if (parent?.kind === "table" && !SCALAR_KINDS.includes(kind)) return fail("คอลัมน์ในตารางต้องเป็นช่องธรรมดา (ไม่ใช่กลุ่มหรือตาราง)");
+  if (parent?.kind === "table") {
+    const why = columnReason(b, parentKeys, kind);
+    if (why) return fail(why);
+  }
   const container = containerAt(b.schema, parentKeys);
   if (!container) return fail("ไม่พบตำแหน่งที่จะวาง");
   const key = nextKey(Object.keys(isObject(container.properties) ? container.properties : {}));
@@ -842,6 +849,23 @@ export function removeField(b: Builder, path: FieldPath): Result<Builder> {
 export type Target = { section: Section; parentKeys: string[]; index: number };
 
 /** Why `from` cannot go to `to` (Thai), or null when it can. */
+/** How many tables a field holds from itself down: 0 for a plain field, 1 for a table of plain columns, 2 with a table in it… */
+function tableHeight(f: BuilderField): number {
+  return f.kind === "table" ? 1 + Math.max(0, ...f.children.map(tableHeight)) : 0;
+}
+
+/** The tables around `keys` (a field inside a table of a table is at depth 2). */
+function tableDepthAt(b: Builder, section: Section, keys: string[]): number {
+  return keys.filter((_, i) => findField(b, { section, keys: keys.slice(0, i + 1) })?.kind === "table").length;
+}
+
+/** Why a new field of `kind` cannot go into the table `parentKeys` (Thai), or null: columns are plain or a table (≤ 3 deep). */
+export function columnReason(b: Builder, parentKeys: string[], kind: Kind | string): string | null {
+  if (SCALAR_KINDS.includes(kind as Kind)) return null;
+  if (kind !== "table") return "คอลัมน์ในตารางต้องเป็นช่องธรรมดาหรือตาราง";
+  return tableDepthAt(b, "data", parentKeys) + 1 > MAX_TABLE_DEPTH ? `ตารางซ้อนได้ไม่เกิน ${MAX_TABLE_DEPTH} ชั้น` : null;
+}
+
 export function canMove(b: Builder, from: FieldPath, to: Target): string | null {
   const field = findField(b, from);
   if (!field) return "ไม่พบช่องนี้";
@@ -854,7 +878,11 @@ export function canMove(b: Builder, from: FieldPath, to: Target): string | null 
   if (to.parentKeys.length && (!parent || (parent.kind !== "group" && parent.kind !== "table"))) {
     return "วางได้เฉพาะในกลุ่มหรือตาราง";
   }
-  if (parent?.kind === "table" && !SCALAR_KINDS.includes(field.kind)) return "คอลัมน์ในตารางต้องเป็นช่องธรรมดา";
+  if (parent?.kind === "table") {
+    const why = columnReason(b, to.parentKeys, field.kind);
+    if (why) return why;
+    if (tableDepthAt(b, to.section, to.parentKeys) + tableHeight(field) > MAX_TABLE_DEPTH) return `ตารางซ้อนได้ไม่เกิน ${MAX_TABLE_DEPTH} ชั้น`;
+  }
   const lock = listLock(b.report, from.keys);
   if (lock) return `ย้ายข้ามกลุ่มไม่ได้: ${lock}`;
   const siblings = (parent ? parent.children : fieldTree(b).data).map((f) => f.key);

@@ -56,7 +56,7 @@
   - Acceptance: วนซ้ำซ้อน 3 ชั้น; ตารางรายการ "แถวรายละเอียด" (เปิด/ปิด) ใส่ตาราง/วนซ้ำของ array ลูกได้; ยอดชั้นย่อยเป็นชิป; ตารางเดิมไม่เปลี่ยน
   - Verify: Vitest `doc-blocks`/`doc-edit` (แถวรายละเอียด, round-trip); เบราว์เซอร์ใบสั่งซื้อ 3 ชั้น + PDF
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `PaperCanvas.tsx`, `BlockPanels.tsx`
-- [ ] **T11 form builder + ฟอร์มออกเอกสาร: ตารางซ้อน 3 ชั้น**
+- [x] **T11 form builder + ฟอร์มออกเอกสาร: ตารางซ้อน 3 ชั้น**
   - Acceptance: ลากตารางลงตาราง (≤ 3 ชั้น); ฟอร์มออกเอกสารกรอก/เพิ่ม/ลบแถวในตารางซ้อนได้; schema ที่ได้ผ่าน api
   - Verify: Vitest `schema-edit`, `form`; E2E เพิ่มใน `self-built-form`
   - Files: `lib/schema-edit.ts`, `components/FormBuilder.tsx`, `components/BuilderCanvas.tsx`, `components/IssueForm.tsx`

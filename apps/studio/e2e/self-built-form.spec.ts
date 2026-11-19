@@ -97,6 +97,21 @@ test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
   await drag(page, palette(page, "group"), card(page, "/data/field9/field1"));
   await expect(page.getByText("คอลัมน์ในตารางต้องเป็นช่องธรรมดา")).toBeVisible(); // next also has a role=alert announcer
 
+  // a table can be a column of a table (v1.8, up to three deep): with the table selected, the palette adds one inside it
+  await select(page, "/data/field9");
+  await palette(page, "table").click();
+  expect(await order(page, "c:data/field9")).toHaveLength(4);
+  await select(page, "/data/field9/field4");
+  await palette(page, "table").click(); // a third level
+  expect(await order(page, "c:data/field9/field4")).toHaveLength(1);
+  await select(page, "/data/field9/field4/field1");
+  await palette(page, "table").click(); // a fourth is refused
+  await expect(page.getByText(/ตารางซ้อนได้ไม่เกิน 3 ชั้น/).first()).toBeVisible();
+
+  // dragging a table onto a table's column puts it in that table too
+  await drag(page, palette(page, "table"), card(page, "/data/field9/field2"));
+  expect(await order(page, "c:data/field9")).toHaveLength(5);
+
   // two parameters
   await drag(page, palette(page, "text"), box(page, "c:params"), 0.5);
   await drag(page, palette(page, "choice"), card(page, "/params/field1"));

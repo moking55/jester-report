@@ -26,9 +26,9 @@ import { followPointer, placeNow, snapshot, type Snapshot } from "@/lib/drop-pla
 
 import {
   canMove,
+  columnReason,
   KIND_LABEL,
   PARAM_KINDS,
-  SCALAR_KINDS,
   type Builder,
   type BuilderField,
   type FieldPath,
@@ -120,7 +120,7 @@ export function BuilderDnd({ builder, tree, readOnly, onMove, onAdd, onMessage, 
       const kind = dragged.slice(4) as Kind;
       if (to.section === "params") return PARAM_KINDS.includes(kind) ? null : `${KIND_LABEL[kind]} ใช้ใน "ข้อมูลเอกสาร" ไม่ได้`;
       const parent = to.parentKeys.length ? slots.get(`/data/${to.parentKeys.join("/")}`)?.field : null;
-      return parent?.kind === "table" && !SCALAR_KINDS.includes(kind) ? "คอลัมน์ในตารางต้องเป็นช่องธรรมดา" : null;
+      return parent?.kind === "table" ? columnReason(builder, to.parentKeys, kind) : null;
     }
     const slot = slots.get(dragged);
     return slot ? canMove(builder, slot.field.path, to) : "ไม่พบช่องนี้";

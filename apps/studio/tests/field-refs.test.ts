@@ -34,7 +34,7 @@ describe("field refs", () => {
     const f = byPointer(starter("purchase-order"));
     expect(f["/data/orders"].expression).toBe("{% for item in lists.orders %}…{% endfor %}");
     expect(f["/data/orders/details"].expression).toBe("{% for row in item.details %}…{% endfor %}");
-    expect(f["/data/orders/details"].kind).toBeNull(); // a table in a table: read-only in the builder
+    expect(f["/data/orders/details"].kind).toBe("table"); // a table in a table is read as a table (v1.8, up to 3 deep)
   });
 
   it("loops a table that no list uses over data", () => {
