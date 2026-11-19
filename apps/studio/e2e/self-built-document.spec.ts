@@ -2,7 +2,8 @@
 // guarded, undo/redo spans the edits, its own save writes template.html, Preview pdf gives a PDF, and the code view
 // shows the new HTML; a hand-written comment survives an edit of another block in the designer.
 // Starts from the quotation starter: it has a list, totals and a logo, so a table, a summary and an image bind to
-// real data and Preview pdf renders. Makes its own template; runs after checkpoint-a (the E2E user).
+// real data and Preview pdf renders. Makes its own template; the file name sorts after full-flow (which wants an
+// empty catalog) and lifecycle, like self-built-form.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { login } from "./shared";

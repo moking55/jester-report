@@ -109,11 +109,14 @@
   - Verify: สคริปต์ Playwright (ไม่อยู่ใน E2E) + บันทึกผล
   - Files: `tasks/v1.7/fidelity/*`
   - ผล (19 พ.ย.): ต่างมากสุด 0.53 mm หลังแก้ผืน 6 จุด — ดู `tasks/v1.7/fidelity/README.md`
-- [ ] **T12 E2E `designer.spec.ts`**
+- [x] **T12 E2E `designer.spec.ts`**
   - Acceptance: ตาม Testing Strategy v1.7 ของ SPEC-studio (blank → บล็อกครบ → วนซ้ำ + ตาราง → Custom Code ผิด/ถูก → undo/redo → บันทึก → Preview pdf → HTML ใหม่;
     comment ที่เขียนมือยังอยู่หลังแก้บล็อกอื่น)
   - Verify: E2E ทุก spec ผ่านบน `jester-e2e` (ไม่ใช้ retry)
   - Files: `e2e/designer.spec.ts`
+  - เขียนแล้ว (19 พ.ย.): เริ่มจาก starter quotation แทน blank — blank ไม่มี list/totals/โลโก้ ตาราง สรุปยอด รูป จึงผูกข้อมูลจริงไม่ได้และ Preview pdf ไม่ผ่าน;
+    ผ่านกับ `next dev` + api บน VM (17.8 วินาที); ไฟล์ชื่อ `self-built-document.spec.ts` ให้เรียงหลัง full-flow (ต้องการ catalog ว่าง)
+    และ lifecycle; E2E ทั้ง 7 spec ผ่านบน stack สด `jester-e2e` image 1.7.0-rc (2.5 นาที, ไม่ retry)
 
 ## Checkpoint: ปล่อย v1.7.0
 
