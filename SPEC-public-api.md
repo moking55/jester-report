@@ -274,3 +274,4 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 - `POST /v1/templates` รับ `page` (optional) รูปแบบเดียวกับ `report.json` → `page`; ใช้ได้กับ starter `blank` เท่านั้น
 - ไม่มี endpoint ใหม่อื่น; ขนาดกระดาษเปลี่ยนทีหลังด้วย `putDraftFile` ของ `report.json` ตามเดิม
 - contract test + OpenAPI อัปเดต (`PageSpec` schema)
+- `TemplateSummary.page` (รายการรายงาน, `GET /v1/templates`) บอกกระดาษจริงของ draft: `size`, `orientation`, `layout`, และ `rollWidthMm` เมื่อเป็นม้วน (เดิมเป็น `A4` เสมอ) — เพิ่ม field เท่านั้น; การ์ดในแคตตาล็อกแสดงตามนี้
