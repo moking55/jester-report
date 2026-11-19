@@ -127,6 +127,10 @@ export const KIND_NAME: Record<BlockKind, string> = {
   condition: "เงื่อนไข",
   repeat: "วนซ้ำ",
   set: "ตั้งค่าตัวแปร",
+  page: "หน้ากระดาษ",
+  box: "กล่อง",
+  rect: "สี่เหลี่ยม",
+  line: "เส้น",
   head: "stylesheet",
   custom: "Custom Code",
 };

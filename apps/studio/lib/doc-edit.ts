@@ -3,7 +3,7 @@
 // source and the new range of the block it touched (to reselect it after the file is read again).
 // Undo is a stack of whole sources: small files, exact bytes back.
 
-import type { Block, BlockList, GridCell } from "./doc-blocks";
+import type { Block, BlockList, GridCell, Rect } from "./doc-blocks";
 import type { ElementNode, Node, Range } from "./doc-parse";
 
 export type Edited = { src: string; at: Range | null };
@@ -706,3 +706,84 @@ export const undo = <T,>(h: History<T>): History<T> =>
 
 export const redo = <T,>(h: History<T>): History<T> =>
   h.future.length ? { past: [...h.past, h.now], now: h.future[0], future: h.future.slice(1) } : h;
+
+// ---- free layout (v1.8): boxes on a sheet, in mm ---------------------------------------------------
+
+/** Millimetres as written in style="": to 0.1 mm, no trailing zero ("12.5mm", "30mm"). */
+export const mmText = (n: number) => `${Math.round(n * 10) / 10 + 0}mm`;
+
+const rectStyle = (r: Rect) =>
+  `position: absolute; left: ${mmText(r.x)}; top: ${mmText(r.y)}; width: ${mmText(r.w)}; height: ${mmText(r.h)}`;
+
+/** What a free layout can put on the sheet: the blocks that make sense at a spot, a rectangle and a line. */
+export type NewBox = NewBlock | { kind: "rect" } | { kind: "line" };
+
+/** A starting size for each kind (mm), used when a drop gives only a point. */
+export function boxSize(b: NewBox): { w: number; h: number } {
+  switch (b.kind) {
+    case "text":
+      return { w: 60, h: 8 };
+    case "heading":
+      return { w: 70, h: 10 };
+    case "field":
+      return { w: 50, h: 7 };
+    case "image":
+      return { w: 40, h: 30 };
+    case "code":
+      return { w: 25, h: 25 };
+    case "grid":
+      return { w: 80, h: 20 };
+    case "rect":
+      return { w: 40, h: 20 };
+    case "line":
+      return { w: 60, h: 0 };
+    default:
+      return { w: 60, h: 10 };
+  }
+}
+
+/** The element of a new box: a rect / line itself, otherwise a box around the block. */
+export function boxHtml(b: NewBox, r: Rect): string {
+  if (b.kind === "rect") return `<div data-jd="rect" style="${rectStyle(r)}; border: 0.3mm solid #000"></div>`;
+  if (b.kind === "line") return `<div data-jd="line" style="${rectStyle({ ...r, h: 0 })}; border-top: 0.3mm solid #000"></div>`;
+  // a block in a box has no margin of its own: the box is its place
+  const inner =
+    b.kind === "text"
+      ? '<p style="margin-top: 0mm; margin-bottom: 0mm">ข้อความ</p>'
+      : b.kind === "heading"
+        ? '<h2 style="margin-top: 0mm; margin-bottom: 0mm">หัวข้อ</h2>'
+        : b.kind === "image"
+          ? `<img src="${b.src}" alt="" style="width: 100%">`
+          : newBlockHtml(b);
+  return `<div data-jd="box" style="${rectStyle(r)}">\n  ${indentRest(inner, "  ")}\n</div>`;
+}
+
+/** Put a new box on the sheet, in front of every other (last in the page). */
+export function addBox(src: string, page: Block, b: NewBox, r: Rect): Result<Edited> {
+  if (page.kind !== "page") return fail("ไม่ใช่หน้ากระดาษแบบอิสระ");
+  const list = page.lists[0].list;
+  return ok(insertBlock(src, list, list.items.length, boxHtml(b, r)));
+}
+
+/** Set any of a box's place (mm, 0.1). A line keeps its height: it is only a line. */
+export function setBoxRect(src: string, block: Block, rect: Partial<Rect>): Result<Edited> {
+  const props: Record<string, string | null> = {};
+  const put = (key: string, n: number | undefined) => {
+    if (n !== undefined && Number.isFinite(n)) props[key] = mmText(n);
+  };
+  put("left", rect.x);
+  put("top", rect.y);
+  put("width", rect.w === undefined ? undefined : Math.max(1, rect.w));
+  if (block.kind !== "line") put("height", rect.h === undefined ? undefined : Math.max(1, rect.h));
+  return setStyle(src, block, props);
+}
+
+/** Stack order is document order (later = in front): front, back, one step up or one step down. */
+export function moveBoxOrder(src: string, block: Block, page: Block, to: "front" | "back" | "up" | "down"): Result<Edited> {
+  const list = page.lists[0]?.list;
+  const now = list ? list.items.findIndex((b) => b.start === block.start) : -1;
+  if (!list || now < 0) return fail("กล่องนี้ไม่ได้อยู่บนหน้ากระดาษ");
+  const last = list.items.length - 1;
+  const index = to === "front" ? last : to === "back" ? 0 : to === "up" ? now + 1 : now - 1;
+  return moveBlock(src, block, list, Math.max(0, Math.min(index, last)));
+}

@@ -63,7 +63,7 @@
 
 ## Phase D: แบบอิสระ
 
-- [ ] **T12 model แบบอิสระ**
+- [x] **T12 model แบบอิสระ**
   - Acceptance: `doc-blocks` อ่าน `data-jd="page"`/`box`/`rect`/`line` (ส่วนอื่น = Custom Code); `doc-edit`: `addBox`, `setBoxRect`, `moveBoxOrder`, ลบกล่อง; `lib/snap.ts`
   - Verify: Vitest (round-trip, rect เป็น mm 0.1, snap ขอบ/กึ่งกลาง/กล่องอื่น/ตาราง)
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `lib/snap.ts`, tests

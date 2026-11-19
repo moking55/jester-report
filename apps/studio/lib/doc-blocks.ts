@@ -20,11 +20,18 @@ export type BlockKind =
   | "condition" // {% if %}…{% elif %}…{% else %}…{% endif %} around blocks
   | "repeat" // {% for v in X %}…{% else %}…{% endfor %} around blocks
   | "set" // {% set x = … %}
+  | "page" // <div data-jd="page">: the one sheet of a free layout (v1.8), holding boxes
+  | "box" // <div data-jd="box">: a block placed at a spot of the sheet, in mm
+  | "rect" // <div data-jd="rect">: a drawn rectangle at a spot of the sheet
+  | "line" // <div data-jd="line">: a drawn line at a spot of the sheet
   | "head" // <link rel="stylesheet" href="report.css">: not a block on the page, kept in place
   | "custom"; // anything else
 
 /** A run of blocks inside a container: `range` is the container's inner range, tiled by items and gaps. */
 export type BlockList = { range: Range; indent: string; items: Block[] };
+
+/** Where a box sits on a free-layout sheet: millimetres from its top-left corner. */
+export type Rect = { x: number; y: number; w: number; h: number };
 
 export type Block = Range & {
   kind: BlockKind;
@@ -34,6 +41,7 @@ export type Block = Range & {
   style: { range: Range | null; readOnly: boolean } | null; // the style="…" value range (null: no attribute yet)
   lists: { key: string; label: string; list: BlockList }[]; // what can hold blocks: columns, branches, loop body
   detail: Detail;
+  rect?: Rect; // box / rect / line: its place on the sheet, when style="" gives left, top, width and height in mm
 };
 
 export type Cell = { range: Range; inner: Range }; // a <th>/<td>: the whole cell and its content
@@ -43,6 +51,7 @@ export type Detail =
   | { kind: "field" | "code"; expr: Range; inner: string }
   | { kind: "image"; src: Range | null; width: Range | null }
   | { kind: "row" }
+  | { kind: "page" | "box" }
   | {
       kind: "table";
       head: Cell[] | null;
@@ -83,6 +92,20 @@ function isInline(src: string, n: Node): boolean {
     default:
       return false;
   }
+}
+
+const MM = /^(-?\d+(?:\.\d+)?)mm$/;
+
+/** The place a free-layout element gives in style="left; top; width; height" (all in mm), or undefined. */
+function rectOf(el: ElementNode): Rect | undefined {
+  const value = el.attrs.find((a) => a.name === "style")?.value ?? "";
+  const get = (name: string) => {
+    const d = value.split(";").map((x) => x.trim()).find((x) => x.toLowerCase().startsWith(`${name}:`));
+    const m = d ? MM.exec(d.slice(name.length + 1).trim()) : null;
+    return m ? Number(m[1]) : null;
+  };
+  const [x, y, w, h] = [get("left"), get("top"), get("width"), get("height")];
+  return x === null || y === null || w === null || h === null ? undefined : { x, y, w, h };
 }
 
 function styleOf(el: ElementNode): Block["style"] {
@@ -262,6 +285,11 @@ function classify(src: string, n: Node, path: number[]): Classified {
     const a = (name: string) => el.attrs.find((x) => x.name === name)?.valueRange ?? null;
     return attr(el, "src") ? known("image", { kind: "image", src: a("src"), width: a("width") }) : custom(true);
   }
+  if (el.name === "div" && tag === "page") return known("page", { kind: "page" }, [{ key: "boxes", label: "หน้า", list: listOf(src, el.children, inner(el), [...path, 0]) }]);
+  if (el.name === "div" && tag === "box") {
+    return { ...known("box", { kind: "box" }, [{ key: "content", label: "กล่อง", list: listOf(src, el.children, inner(el), [...path, 0]) }]), rect: rectOf(el) };
+  }
+  if (el.name === "div" && (tag === "rect" || tag === "line") && kids.length === 0) return { ...known(tag, { kind: "none" }), rect: rectOf(el) };
   if (el.name === "hr") return known("rule", { kind: "none" });
   if (el.name === "div" && tag === "space" && kids.length === 0) return known("space", { kind: "none" });
   if (el.name === "div" && tag === "page-break" && kids.length === 0) return known("pagebreak", { kind: "none" });
