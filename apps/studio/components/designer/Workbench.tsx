@@ -17,6 +17,7 @@ import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList } from "@/lib/doc-blocks";
 import { insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type Result } from "@/lib/doc-edit";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
+import { paperOf, setMargins } from "@/lib/paper";
 import { followPointer, placeNow, snapshot, type Place, type Snapshot } from "@/lib/drop-place";
 import { fieldRefs, type FieldRef } from "@/lib/field-refs";
 import type { Range } from "@/lib/doc-parse";
@@ -27,6 +28,7 @@ import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCa
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
+import { Rulers } from "./Rulers";
 import { StylePanel } from "./StylePanel";
 import { keepEditing, TextEditor, type Suggestion } from "./TextEditor";
 
@@ -38,6 +40,7 @@ type Props = {
   src: string;
   blocks: BlockList;
   edit: (src: string) => void;
+  onReport?: (reportJson: string) => void; // report.json with new page margins (one undo step)
   readOnly: boolean;
   files: Record<string, string>;
   templateId: string;
@@ -191,7 +194,7 @@ export function listById(blocks: BlockList, id: string): BlockList | null {
   return owner?.lists[Number(index)]?.list ?? null;
 }
 
-export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom }: Props) {
+export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom, onReport }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
@@ -467,7 +470,19 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             </p>
           )}
           <div style={{ zoom }}>
+            <Rulers
+              paper={paperOf(files["report.json"])}
+              zoom={zoom}
+              readOnly={readOnly || !onReport}
+              onMargins={(m) => {
+                const next = setMargins(files["report.json"] ?? "{}", m);
+                if (next === null) return setMessage("report.json อ่านไม่ได้ — แก้ขอบกระดาษในหน้า code");
+                setMessage(null);
+                onReport?.(next);
+              }}
+            >
             <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
+            </Rulers>
           </div>
         </div>
         <Resizer

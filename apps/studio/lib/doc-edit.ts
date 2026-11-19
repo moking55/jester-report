@@ -671,17 +671,18 @@ export function newBlockHtml(b: NewBlock): string {
 // ---- history --------------------------------------------------------------------------------------
 
 /** Undo/redo over whole sources (SPEC v1.7: not cleared by a save). */
-export type History = { past: string[]; now: string; future: string[] };
+export type History<T = string> = { past: T[]; now: T; future: T[] };
 
-export const startHistory = (src: string): History => ({ past: [], now: src, future: [] });
+export const startHistory = <T,>(now: T): History<T> => ({ past: [], now, future: [] });
 
-export function record(h: History, src: string): History {
-  if (src === h.now) return h;
-  return { past: [...h.past, h.now].slice(-200), now: src, future: [] };
+/** One undo step, unless nothing changed (`same` compares states; strings by value). */
+export function record<T>(h: History<T>, next: T, same: (a: T, b: T) => boolean = Object.is): History<T> {
+  if (same(next, h.now)) return h;
+  return { past: [...h.past, h.now].slice(-200), now: next, future: [] };
 }
 
-export const undo = (h: History): History =>
+export const undo = <T,>(h: History<T>): History<T> =>
   h.past.length ? { past: h.past.slice(0, -1), now: h.past[h.past.length - 1], future: [h.now, ...h.future] } : h;
 
-export const redo = (h: History): History =>
+export const redo = <T,>(h: History<T>): History<T> =>
   h.future.length ? { past: [...h.past, h.now], now: h.future[0], future: h.future.slice(1) } : h;

@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { dragMargin } from "@/components/designer/Rulers";
+
 import { codeBox, compactLabel, fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
-import { pageBreaks, paperOf } from "@/lib/paper";
+import { pageBreaks, paperOf, setMargins } from "@/lib/paper";
 
 describe("paper", () => {
   it("is A4 portrait with the default margins, or as report.json says", () => {
@@ -69,4 +71,37 @@ describe("compactLabel", () => {
     ["if data.seller.phone", "if seller.phone"],
     ["loop.index", "index"],
   ])("%s → %s", (expr, label) => expect(compactLabel(expr)).toBe(label));
+});
+
+describe("setMargins", () => {
+  const M = { top: 25, bottom: 18.5, left: 12, right: 12 };
+  it("adds page.marginsMm when the report has no page, keeping the rest as written", () => {
+    const src = '{\n  "schemaVersion": 1,\n  "name": "x"\n}\n';
+    const out = setMargins(src, M)!;
+    expect(out).toContain('"name": "x"');
+    expect(JSON.parse(out).page.marginsMm).toEqual(M);
+    expect(paperOf(out).margins).toEqual(M);
+  });
+  it("adds marginsMm into an existing page", () => {
+    const out = setMargins('{"page": {"orientation": "landscape"}}', M)!;
+    expect(JSON.parse(out).page).toEqual({ orientation: "landscape", marginsMm: M });
+  });
+  it("changes only the numbers of an existing marginsMm, and adds a missing side", () => {
+    const src = '{\n  "page": {\n    "marginsMm": { "top": 20, "left": 15, "right": 15 }\n  },\n  "x": 1\n}\n';
+    const out = setMargins(src, M)!;
+    expect(out).toBe('{\n  "page": {\n    "marginsMm": { "top": 25, "left": 12, "right": 12, "bottom": 18.5 }\n  },\n  "x": 1\n}\n');
+  });
+  it("refuses a report.json that is not an object", () => {
+    expect(setMargins("[1]", M)).toBeNull();
+    expect(setMargins("{oops", M)).toBeNull();
+  });
+});
+
+describe("dragMargin", () => {
+  const paper = paperOf("{}"); // A4 portrait, 20/20/15/15
+  it("moves a margin by whole millimetres within 5–50 mm", () => {
+    expect(dragMargin(paper, paper.margins, "left", 7.4).left).toBe(22);
+    expect(dragMargin(paper, paper.margins, "top", -40).top).toBe(5);
+    expect(dragMargin(paper, paper.margins, "bottom", 100).bottom).toBe(50);
+  });
 });

@@ -27,8 +27,14 @@ export type DesignerProps = {
 export type DesignerApi = {
   src: string;
   edit: (src: string) => void; // one undo step
+  report: string; // report.json as the designer has it (page margins)
+  editReport: (reportJson: string) => void; // one undo step
   readOnly: boolean;
 };
+
+/** What the designer edits: template.html, and report.json for the page margins (SPEC v1.7 รอบแก้ข้อ 6). */
+type Doc = { html: string; report: string };
+const sameDoc = (a: Doc, b: Doc) => a.html === b.html && a.report === b.report;
 
 /** Ctrl/Cmd shortcuts are the page's unless the user is typing somewhere. */
 const typing = (e: KeyboardEvent) => {
@@ -43,8 +49,9 @@ const typing = (e: KeyboardEvent) => {
 export function DesignerPage(props: DesignerProps & { children?: (api: DesignerApi) => React.ReactNode }) {
   const { templateId, name, files, archived, params } = props;
   const router = useRouter();
-  const [history, setHistory] = useState<History>(() => startHistory(files["template.html"] ?? ""));
-  const [saved, setSaved] = useState(files["template.html"] ?? "");
+  const first: Doc = { html: files["template.html"] ?? "", report: files["report.json"] ?? "{}" };
+  const [history, setHistory] = useState<History<Doc>>(() => startHistory(first));
+  const [saved, setSaved] = useState<Doc>(first);
   const [revision, setRevision] = useState(props.revision);
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState(false);
@@ -54,27 +61,42 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
   const [sampleOn, setSampleOn] = useState(false);
   const [zoom, setZoom] = useState(1);
 
-  const src = history.now;
-  const dirty = src !== saved;
+  const src = history.now.html;
+  const report = history.now.report;
+  const dirty = !sameDoc(history.now, saved);
   const readOnly = archived || conflict;
   const blocks = useMemo(() => readBlocks(src), [src]);
+  const shown = useMemo(() => ({ ...files, "report.json": report }), [files, report]);
 
-  const edit = useCallback((next: string) => setHistory((h) => record(h, next)), []);
+  const edit = useCallback((next: string) => setHistory((h) => record(h, { ...h.now, html: next }, sameDoc)), []);
+  const editReport = useCallback((next: string) => setHistory((h) => record(h, { ...h.now, report: next }, sameDoc)), []);
 
+  /** Writes the files that changed (template.html, then report.json), each with the revision the last one gave. */
   async function save(): Promise<boolean> {
     if (!dirty) return true;
     setSaving(true);
     setError(null);
-    const out = await saveFile(templateId, "template.html", src, revision);
-    setSaving(false);
-    if (out.ok) {
-      setRevision(out.data.revision);
-      setSaved(src);
-      return true;
+    const now = history.now;
+    let rev = revision;
+    const writes: [string, keyof Doc][] = [
+      ["template.html", "html"],
+      ["report.json", "report"],
+    ];
+    for (const [name, key] of writes) {
+      if (now[key] === saved[key]) continue;
+      const out = await saveFile(templateId, name, now[key], rev);
+      if (!out.ok) {
+        setSaving(false);
+        if (out.problem.status === 412) setConflict(true);
+        else setError(problemMessage(out.problem));
+        return false;
+      }
+      rev = out.data.revision;
+      setRevision(rev);
+      setSaved((s) => ({ ...s, [key]: now[key] }));
     }
-    if (out.problem.status === 412) setConflict(true);
-    else setError(problemMessage(out.problem));
-    return false;
+    setSaving(false);
+    return true;
   }
 
   async function previewPdf() {
@@ -127,7 +149,7 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const api: DesignerApi = { src, edit, readOnly };
+  const api: DesignerApi = { src, edit, report, editReport, readOnly };
 
   return (
     <div className={styles.designer}>
@@ -188,8 +210,9 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
             src={src}
             blocks={blocks}
             edit={edit}
+            onReport={editReport}
             readOnly={readOnly}
-            files={files}
+            files={shown}
             templateId={templateId}
             assets={props.assets}
             sample={sampleOn ? sample : null}

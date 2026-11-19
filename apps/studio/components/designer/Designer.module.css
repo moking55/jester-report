@@ -409,3 +409,115 @@
   width: 100%;
   box-sizing: border-box;
 }
+
+/* rulers around the paper (v1.7 รอบแก้ข้อ 6): 7mm bands on the top and the left */
+.rulers {
+  position: relative;
+  margin: 0 auto;
+  padding: 7mm 0 0 7mm;
+}
+
+.ruler {
+  position: absolute;
+  background-color: var(--color-surface);
+  background-image:
+    repeating-linear-gradient(var(--ruler-dir), #8a93a3 0 1px, transparent 1px 10mm),
+    repeating-linear-gradient(var(--ruler-dir), #b9c0cc 0 1px, transparent 1px 1mm);
+  background-repeat: no-repeat;
+  border: 1px solid var(--color-border);
+  box-sizing: border-box;
+  font: 9px system-ui;
+  color: var(--color-textMuted);
+  user-select: none;
+}
+
+.rulerH {
+  --ruler-dir: to right;
+  top: 0;
+  left: 7mm;
+  height: 6mm;
+  background-size: 100% 40%, 100% 22%;
+  background-position: bottom, bottom;
+}
+
+.rulerV {
+  --ruler-dir: to bottom;
+  top: 7mm;
+  left: 0;
+  width: 6mm;
+  background-size: 40% 100%, 22% 100%;
+  background-position: right, right;
+}
+
+.rulerShade {
+  position: absolute;
+  inset: 0;
+  background: rgba(120, 130, 150, 0.22);
+  pointer-events: none;
+}
+
+.rulerH .rulerShade {
+  inset: 0 auto 0 auto;
+}
+
+.rulerV .rulerShade {
+  inset: auto 0 auto 0;
+}
+
+.rulerLabel {
+  position: absolute;
+  transform: translate(2px, 1px);
+  pointer-events: none;
+}
+
+.marker {
+  position: absolute;
+  z-index: 2;
+  background: var(--color-primary, #2f6fe0);
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.markerH {
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  margin-left: -3.5px;
+  clip-path: polygon(0 0, 100% 0, 100% 55%, 50% 100%, 0 55%);
+}
+
+.markerV {
+  left: 0;
+  right: 0;
+  height: 7px;
+  margin-top: -3.5px;
+  cursor: ns-resize;
+  clip-path: polygon(0 0, 55% 0, 100% 50%, 55% 100%, 0 100%);
+}
+
+.markerOn,
+.marker:focus-visible {
+  background: var(--color-danger, #d33);
+}
+
+.rulerPage {
+  position: relative;
+}
+
+.marginGuide {
+  position: absolute;
+  z-index: 5;
+  outline: 1px dashed var(--color-danger, #d33);
+  pointer-events: none;
+}
+
+.marginGuide span {
+  position: absolute;
+  top: 2px;
+  left: 4px;
+  padding: 0 4px;
+  background: var(--color-danger, #d33);
+  color: #fff;
+  font: 11px system-ui;
+  white-space: nowrap;
+}

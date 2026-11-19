@@ -59,6 +59,28 @@ describe("DesignerPage", () => {
     expect(screen.getByTestId("src").textContent).toBe("<p>b</p>\n");
   });
 
+  it("page margins: report.json is saved only when it changed, after template.html, with the next revision", async () => {
+    const api = setup();
+    api().editReport('{"page": {"marginsMm": {"top": 25, "bottom": 20, "left": 15, "right": 15}}}');
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("ยังไม่บันทึก"));
+    fireEvent.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("บันทึกแล้ว"));
+    expect(saves.map((x) => [x.name, x.revision])).toEqual([["report.json", 3]]);
+    api().edit("<p>c</p>\n");
+    api().editReport("{}");
+    await waitFor(() => expect(screen.getByTestId("src").textContent).toBe("<p>c</p>\n"));
+    fireEvent.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(saves.length).toBe(3));
+    expect(saves.slice(1).map((x) => [x.name, x.revision])).toEqual([
+      ["template.html", 4],
+      ["report.json", 5],
+    ]);
+    // one undo step per edit, across both files
+    fireEvent.click(screen.getByRole("button", { name: "เลิกทำ" }));
+    await waitFor(() => expect(api().report).toContain("marginsMm"));
+    expect(api().src).toBe("<p>c</p>\n");
+  });
+
   it("stops on 412 and offers a reload, never overwrites", async () => {
     status = 412;
     const api = setup();

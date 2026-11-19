@@ -136,7 +136,7 @@
   - Acceptance: "+ คอลัมน์" (≤ 4), "รวมกับคอลัมน์ขวา" (บล็อกต่อท้าย, flex รวม), เหลือ 1 → ยกเลิกแถว
   - Verify: Vitest `doc-edit` (diff เฉพาะแถว); เบราว์เซอร์
   - Files: `lib/doc-edit.ts`, `components/designer/BlockPanels.tsx`, `tests/doc-edit.test.ts`
-- [ ] **T17 ไม้บรรทัด + ขอบกระดาษ**
+- [x] **T17 ไม้บรรทัด + ขอบกระดาษ**
   - Acceptance: ไม้บรรทัดบน/ซ้าย (mm), ลากขอบ 4 ด้าน → `page.marginsMm` ใน report.json (แก้เฉพาะค่านั้น), undo ครอบสองไฟล์, บันทึกเฉพาะไฟล์ที่เปลี่ยน
   - Verify: Vitest (แก้ JSON คงข้อความอื่น, history สองไฟล์, บันทึก); เบราว์เซอร์ + Preview pdf ขอบตรง
   - Files: `components/designer/Ruler.tsx`, `lib/paper.ts`, `components/designer/DesignerPage.tsx`, `components/designer/PaperCanvas.tsx`
