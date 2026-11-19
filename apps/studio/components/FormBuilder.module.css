@@ -1,0 +1,313 @@
+.builder {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 2);
+  padding: calc(var(--sp) * 1) calc(var(--sp) * 3);
+  background: var(--fill-bar);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.toolbar button {
+  border: 1px solid var(--line-primary);
+  border-radius: var(--radius);
+  background: var(--fill-primary);
+  box-shadow: var(--glow-primary);
+  color: var(--color-onPrimary);
+  padding: 4px 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.toolbar .secondary {
+  border-color: var(--line-button);
+  background: var(--fill-button);
+  box-shadow: none;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+.toolbar button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mode,
+.saveState {
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.problems {
+  color: var(--color-warning);
+  font-size: 0.9em;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.alert,
+.warning,
+.info {
+  margin: 0;
+  padding: calc(var(--sp) * 0.8) calc(var(--sp) * 3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.alert {
+  background: var(--tint-danger);
+  color: var(--color-danger);
+}
+
+.warning {
+  background: var(--tint-warning);
+  color: var(--color-warning);
+}
+
+.info {
+  background: var(--tint-success);
+  color: var(--color-success);
+}
+
+.main {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr) 300px;
+}
+
+.palette,
+.panel {
+  overflow: auto;
+  padding: calc(var(--sp) * 1.5);
+  background: var(--fill-pane);
+  border-right: 1px solid var(--color-border);
+}
+
+.panel {
+  border-right: 0;
+  border-left: 1px solid var(--color-border);
+}
+
+.palette {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.palette h3,
+.props h3,
+.section h3 {
+  margin: 0 0 4px;
+  font-size: 1em;
+  color: var(--heading);
+}
+
+.paletteItem {
+  text-align: left;
+  padding: 6px 10px;
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  cursor: grab;
+}
+
+.paletteItem:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}
+
+.canvas {
+  overflow: auto;
+  padding: calc(var(--sp) * 2);
+  display: grid;
+  gap: calc(var(--sp) * 2);
+  align-content: start;
+}
+
+.section {
+  padding: calc(var(--sp) * 1.5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pane);
+  background: var(--color-surface);
+}
+
+/* the same 6-column grid as the issue form, so widths look as they will */
+.fields {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 36px;
+}
+
+.fields > * {
+  grid-column: 1 / -1;
+}
+
+.fields > .half {
+  grid-column: span 3;
+}
+
+.fields > .third {
+  grid-column: span 2;
+}
+
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+}
+
+.columns > * {
+  flex: 1 1 140px;
+}
+
+.card {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--fill-pane);
+}
+
+.card .fields,
+.card .columns {
+  margin-top: 6px;
+}
+
+.selected {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 35%, transparent);
+}
+
+.readOnly {
+  border-style: dashed;
+  opacity: 0.8;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cardTitle {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.kind,
+.cardTitle code {
+  color: var(--color-textMuted);
+  font-size: 0.82em;
+}
+
+.required {
+  color: var(--color-danger);
+}
+
+.remove {
+  border: 0;
+  background: none;
+  color: var(--color-textMuted);
+  font-size: 1.1em;
+  cursor: pointer;
+}
+
+.remove:hover {
+  color: var(--color-danger);
+}
+
+.empty {
+  margin: 0;
+  padding: 6px;
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}
+
+.props {
+  display: grid;
+  gap: 10px;
+}
+
+.props h3 code {
+  color: var(--color-textMuted);
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.prop {
+  display: grid;
+  gap: 3px;
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.prop input,
+.prop textarea,
+.prop select {
+  font: inherit;
+  color: var(--color-text);
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.prop input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.error {
+  color: var(--color-danger);
+  font-size: 0.85em;
+}
+
+.handle {
+  border: 0;
+  background: none;
+  color: var(--color-textMuted);
+  cursor: grab;
+  padding: 0 2px;
+  touch-action: none;
+}
+
+.dropLine {
+  outline: 2px dashed var(--color-primary);
+  outline-offset: 2px;
+}
+
+.dragging {
+  opacity: 0.4;
+}

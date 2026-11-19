@@ -147,8 +147,12 @@ export function changedFiles(b: Builder): { name: string; text: string | null }[
     .map(([name, t]) => ({ name, text: t }));
 }
 
-/** After a save: what was written is the new base. */
-export const markSaved = (b: Builder): Builder => ({ ...b, base: serialize(b) });
+/** After a save: what was written (every file, or only `names` after a save that stopped) is the new base. */
+export function markSaved(b: Builder, names?: string[]): Builder {
+  const now = serialize(b);
+  if (!names) return { ...b, base: now };
+  return { ...b, base: { ...b.base, ...Object.fromEntries(names.map((n) => [n, now[n] ?? null])) } };
+}
 
 // ---- reading the tree -----------------------------------------------------------------------------
 

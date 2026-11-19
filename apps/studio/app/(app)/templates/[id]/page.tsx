@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { FormBuilder } from "@/components/FormBuilder";
 import { Workspace } from "@/components/Workspace";
 import { api, ApiProblem } from "@/lib/api";
 import { FORM_FILE } from "@/lib/form-layout";
@@ -55,8 +56,12 @@ export default async function WorkspacePage({
   const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Bangkok" });
   const archived = Boolean(template.archivedAt);
   const canIssue = template.publishedVersion !== null && !archived;
-  const issue =
-    canIssue && (await searchParams).mode === "issue" ? await issueSource(id, template.publishedVersion!) : null;
+  const mode = (await searchParams).mode;
+  if (mode === "form") {
+    // v1.6: the form builder edits the draft's files; archived → read-only
+    return <FormBuilder templateId={id} name={template.name} revision={draft.revision} files={draft.files} archived={archived} />;
+  }
+  const issue = canIssue && mode === "issue" ? await issueSource(id, template.publishedVersion!) : null;
   // a new key when the archive state or the mode flips: the editors are made read-only (or editable) from scratch
   return (
     <Workspace

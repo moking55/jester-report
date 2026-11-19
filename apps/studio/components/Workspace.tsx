@@ -332,6 +332,12 @@ export function Workspace({
     router.push(`/templates/${state.templateId}?mode=issue`);
   }
 
+  /** To the form builder (v1.6); it reads the saved draft, so unsaved edits would be lost: ask first. */
+  function toForm() {
+    if (unsaved && !window.confirm(`มี ${state.dirty.length} ไฟล์ที่ยังไม่บันทึก ออกจากหน้าแก้ code โดยไม่บันทึก?`)) return;
+    router.push(`/templates/${state.templateId}?mode=form`);
+  }
+
   if (issue) {
     return (
       <div className={styles.workspace}>
@@ -428,6 +434,9 @@ export function Workspace({
         </button>
         <button type="button" className={styles.publish} onClick={() => setPublishing(true)} disabled={locked}>
           Publish
+        </button>
+        <button type="button" className={styles.secondary} onClick={toForm} disabled={state.saving}>
+          ออกแบบฟอร์ม
         </button>
         <button
           type="button"
