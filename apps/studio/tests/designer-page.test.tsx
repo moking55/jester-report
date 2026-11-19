@@ -81,6 +81,28 @@ describe("DesignerPage", () => {
     expect(api().src).toBe("<p>c</p>\n");
   });
 
+  it("an image upload gets a safe name and the next save uses the revision it returned", async () => {
+    const sent: { name: string; revision: string }[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init: { body: FormData }) => {
+        const file = init.body.get("file") as File;
+        sent.push({ name: file.name, revision: String(init.body.get("revision")) });
+        return new Response(JSON.stringify({ revision: 7, asset: { name: file.name } }), { status: 201 });
+      }),
+    );
+    const api = setup();
+    const name = await api().upload(new File(["x"], "โลโก้ บริษัท.PNG", { type: "image/png" }));
+    expect(name).toBe("image.png");
+    expect(sent).toEqual([{ name: "image.png", revision: "3" }]);
+    api().edit("<p>after upload</p>");
+    await waitFor(() => expect(screen.getByTestId("src").textContent).toBe("<p>after upload</p>"));
+    fireEvent.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(saves.length).toBe(1));
+    expect(saves[0]).toMatchObject({ name: "template.html", revision: 7 });
+    vi.unstubAllGlobals();
+  });
+
   it("stops on 412 and offers a reload, never overwrites", async () => {
     status = 412;
     const api = setup();

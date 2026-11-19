@@ -82,6 +82,15 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   await drag(page, palette(page, "image"), list(page, col1));
   await drag(page, palette(page, "text"), list(page, col2));
 
+  // upload a GIF whose name has spaces from the image's panel: it gets a name the api takes and the block uses it
+  await list(page, col1).locator("img").click();
+  const chooser = page.waitForEvent("filechooser");
+  await panel(page).getByRole("button", { name: "อัปโหลดรูป…" }).click();
+  const gif = Buffer.from("R0lGODlhAQABAIAAAExpcf8AACH5BAUAAAAALAAAAAABAAEAAAICTAEAOw==", "base64");
+  await (await chooser).setFiles({ name: "logo new 2.gif", mimeType: "image/gif", buffer: gif });
+  await expect(panel(page)).toContainText('อัปโหลด "logo new 2.gif" เป็น logo-new-2.gif');
+  await expect(list(page, col1).locator("img")).toHaveAttribute("src", /name=logo-new-2\.gif/);
+
   // type in the new text on the paper; "{{" offers the fields, the pick is a chip
   const typed = list(page, col2).locator("p");
   await typed.dblclick();
@@ -206,6 +215,7 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   expect(html).toContain("{% for row in lists.items %}");
   expect(html).toContain('<div class="vip">');
   expect(html).toContain('<table data-jd="grid"');
+  expect(html).toContain('src="logo-new-2.gif"');
   expect(html).toContain("ช่องแรก");
   expect(html).not.toContain('data-jd="summary"');
   await page.getByRole("navigation", { name: "ไฟล์" }).getByRole("button", { name: "report.json", exact: true }).click();

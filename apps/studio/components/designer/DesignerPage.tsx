@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { prepareDraft, saveFile } from "@/lib/actions/draft";
+import { isImageName, safeAssetName } from "@/lib/asset-name";
 import { readBlocks } from "@/lib/doc-blocks";
 import { record, redo, startHistory, undo, type History } from "@/lib/doc-edit";
 import type { Scope } from "@/lib/doc-sample";
@@ -29,6 +30,7 @@ export type DesignerApi = {
   edit: (src: string) => void; // one undo step
   report: string; // report.json as the designer has it (page margins)
   editReport: (reportJson: string) => void; // one undo step
+  upload: (file: File) => Promise<string | null>; // an image into the draft's assets
   readOnly: boolean;
 };
 
@@ -60,6 +62,7 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
   const [sample, setSample] = useState<Scope | null>(null);
   const [sampleOn, setSampleOn] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [assets, setAssets] = useState(props.assets);
 
   const src = history.now.html;
   const report = history.now.report;
@@ -97,6 +100,36 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
     }
     setSaving(false);
     return true;
+  }
+
+  /**
+   * An image into the draft's assets under a name the api takes (SPEC v1.7 รอบแก้ข้อ 9); the draft's new revision
+   * is kept, so the next save does not meet 412. Edits not saved yet stay as they are. Its name, or null.
+   */
+  async function uploadImage(file: File): Promise<string | null> {
+    const name = safeAssetName(file.name, assets);
+    if (!name || !isImageName(name)) {
+      setError(`อัปโหลด ${file.name} ไม่ได้: ใช้รูป png jpg gif svg webp avif หรือ bmp`);
+      return null;
+    }
+    setError(null);
+    const form = new FormData();
+    form.set("file", name === file.name ? file : new File([file], name, { type: file.type }));
+    form.set("revision", String(revision));
+    const response = await fetch(`/assets/${templateId}`, { method: "POST", body: form });
+    if (response.status === 401) {
+      router.push("/login");
+      return null;
+    }
+    const body = (await response.json()) as { revision: number; asset: { name: string } } & Parameters<typeof problemMessage>[0];
+    if (!response.ok) {
+      if (response.status === 412) setConflict(true);
+      else setError(`อัปโหลด ${file.name} ไม่ได้: ${problemMessage(body)}`);
+      return null;
+    }
+    setRevision(body.revision);
+    setAssets((a) => (a.includes(body.asset.name) ? a : [...a, body.asset.name]));
+    return body.asset.name;
   }
 
   async function previewPdf() {
@@ -149,7 +182,7 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const api: DesignerApi = { src, edit, report, editReport, readOnly };
+  const api: DesignerApi = { src, edit, report, editReport, upload: uploadImage, readOnly };
 
   return (
     <div className={styles.designer}>
@@ -214,7 +247,8 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
             readOnly={readOnly}
             files={shown}
             templateId={templateId}
-            assets={props.assets}
+            assets={assets}
+            onUpload={readOnly ? undefined : uploadImage}
             sample={sampleOn ? sample : null}
             zoom={zoom}
           />

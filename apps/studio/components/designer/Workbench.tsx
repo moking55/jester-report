@@ -17,6 +17,7 @@ import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList } from "@/lib/doc-blocks";
 import { insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type Result } from "@/lib/doc-edit";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
+import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 import { paperOf, setMargins } from "@/lib/paper";
 import { followPointer, placeNow, snapshot, type Place, type Snapshot } from "@/lib/drop-place";
 import { fieldRefs, type FieldRef } from "@/lib/field-refs";
@@ -41,6 +42,7 @@ type Props = {
   blocks: BlockList;
   edit: (src: string) => void;
   onReport?: (reportJson: string) => void; // report.json with new page margins (one undo step)
+  onUpload?: (file: File) => Promise<string | null>; // an image into the draft's assets; its name, or null
   readOnly: boolean;
   files: Record<string, string>;
   templateId: string;
@@ -143,7 +145,7 @@ export function newBlockFor(kind: NewBlock["kind"], files: Record<string, string
     case "field":
       return { kind, expr };
     case "image":
-      return { kind, src: assets.find((a) => /\.(png|jpe?g|svg|webp)$/i.test(a)) ?? "logo.png" };
+      return { kind, src: assets.find(isImageName) ?? "logo.png" };
     case "row":
       return { kind, columns: 2 };
     case "table":
@@ -194,7 +196,7 @@ export function listById(blocks: BlockList, id: string): BlockList | null {
   return owner?.lists[Number(index)]?.list ?? null;
 }
 
-export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom, onReport }: Props) {
+export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom, onReport, onUpload }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
@@ -203,6 +205,12 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   const [editing, setEditing] = useState<string | null>(null); // the text block being typed in
   const [coding, setCoding] = useState<number | null>(null); // the start of the block in the Custom Code modal
   const [panes, setPanes] = useState(DEFAULT_PANES);
+  const imagePicker = useRef<HTMLInputElement>(null);
+  const imageAt = useRef<{ list: string; index: number } | null>(null); // where a dropped image goes once uploaded
+  const latest = useRef({ src, blocks });
+  useEffect(() => {
+    latest.current = { src, blocks };
+  });
   const [open, setOpen] = useState<Record<Group, boolean>>({ blocks: true, macros: true, fields: true });
   const area = useRef<HTMLElement | null>(null); // the palette: its parent is the whole work area
   useEffect(() => {
@@ -337,6 +345,11 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     if (id.startsWith("new:")) {
       const kind = id.slice(4) as NewBlock["kind"];
       codeNext.current = kind === "custom";
+      if (kind === "image" && onUpload && !assets.some(isImageName)) {
+        // no image yet: pick one now; it lands where the block was dropped
+        imageAt.current = { list: d.container, index: modelIndex(list, d.index, null) };
+        return imagePicker.current?.click();
+      }
       return apply(insertBlock(src, list, modelIndex(list, d.index, null), newBlockHtml(newBlockFor(kind, files, assets))));
     }
     const block = flat.find((b) => keyOf(b) === id.slice(2));
@@ -535,6 +548,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                 fields={fields}
                 apply={apply}
                 onCode={() => setCoding(current.start)}
+                onUpload={onUpload}
               />
               <TableSizePanel block={current} src={src} readOnly={readOnly} apply={apply} />
               {current.style && <StylePanel src={src} block={current} readOnly={readOnly} onChange={(props) => apply(setStyle(src, current, props))} />}
@@ -543,6 +557,24 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             <p className={styles.hint}>คลิกบล็อกบนกระดาษเพื่อแก้ ลากจากด้านซ้ายเพื่อเพิ่ม</p>
           )}
         </aside>
+        <input
+          ref={imagePicker}
+          type="file"
+          hidden
+          accept={IMAGE_ACCEPT}
+          aria-label="เลือกรูปสำหรับบล็อกรูป"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            const at = imageAt.current;
+            imageAt.current = null;
+            if (!file || !at || !onUpload) return;
+            const name = await onUpload(file);
+            const { src: now, blocks: tree } = latest.current;
+            const target = name ? listById(tree, at.list) : null;
+            if (name && target) apply(insertBlock(now, target, at.index, newBlockHtml({ kind: "image", src: name })));
+          }}
+        />
         {codeBlock && (
           <CustomCodeModal
             code={src.slice(codeBlock.start, codeBlock.end)}

@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+
+import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 
 import type { Block, Cell } from "@/lib/doc-blocks";
 import { checkCode } from "@/lib/doc-check";
@@ -48,6 +50,7 @@ type Props = {
   fields: Suggestion[];
   apply: Apply;
   onCode: () => void; // open the Custom Code modal
+  onUpload?: (file: File) => Promise<string | null>; // an image into the draft's assets; its name, or null
 };
 
 const fail = (error: string): Result<Edited> => ({ ok: false, error });
@@ -257,7 +260,7 @@ export function BlockPanel(props: Props) {
     }
     case "image": {
       const now = d.src ? src.slice(d.src.start, d.src.end) : "";
-      const images = assets.filter((a) => /\.(png|jpe?g|gif|svg|webp)$/i.test(a));
+      const images = assets.filter(isImageName);
       return (
         <div className={styles.props}>
           <label className={styles.prop}>
@@ -271,7 +274,7 @@ export function BlockPanel(props: Props) {
               ))}
             </select>
           </label>
-          {!images.length && <p className={styles.hint}>อัปโหลดรูปในหน้า code (แท็บ assets) ก่อน</p>}
+          {!readOnly && props.onUpload && <ImageUpload onUpload={props.onUpload} onDone={(name) => apply(setAttr(src, block, "src", name))} />}
         </div>
       );
     }
@@ -528,5 +531,38 @@ export function TableSizePanel({ block, src, readOnly, apply }: { block: Block; 
       <p className={styles.hint}>ว่าง = อัตโนมัติ · ลากเส้นแบ่งคอลัมน์ที่แถวแรกบนกระดาษได้</p>
       <Field label="ระยะในเซลล์ (mm, ว่าง = ตาม CSS)" value={padding} readOnly={readOnly} onCommit={(v) => apply(setTableSizes(src, block, { padding: num(v) }))} />
     </div>
+  );
+}
+
+/** "อัปโหลดรูป…": pick an image, upload it into the draft's assets, then use it (SPEC v1.7 รอบแก้ข้อ 9). */
+export function ImageUpload({ onUpload, onDone, label = "อัปโหลดรูป…" }: { onUpload: (file: File) => Promise<string | null>; onDone: (name: string) => void; label?: string }) {
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
+  return (
+    <>
+      <button type="button" disabled={busy} onClick={() => input.current?.click()}>
+        {busy ? "กำลังอัปโหลด…" : label}
+      </button>
+      <input
+        ref={input}
+        type="file"
+        hidden
+        accept={IMAGE_ACCEPT}
+        aria-label="เลือกรูปที่จะอัปโหลด"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file) return;
+          setBusy(true);
+          const name = await onUpload(file);
+          setBusy(false);
+          if (!name) return;
+          setNote(name !== file.name ? `อัปโหลด "${file.name}" เป็น ${name}` : `อัปโหลด ${name} แล้ว`);
+          onDone(name);
+        }}
+      />
+      {note && <p className={styles.hint}>{note}</p>}
+    </>
   );
 }
