@@ -88,6 +88,8 @@ const PAPER_CSS = `
 .jd-handle { position: absolute; left: -7mm; top: 0; width: 5mm; height: 5mm; display: none; place-items: center;
   border: 1px solid #b9cdf0; border-radius: 3px; background: #fff; color: #2f6fe0; font: 12px system-ui; cursor: grab; touch-action: none; padding: 0; }
 .jd-block:hover > .jd-handle, .jd-block.jd-selected > .jd-handle { display: grid; }
+.jd-col-handle { position: absolute; width: 7px; margin-left: -3px; cursor: col-resize; z-index: 3; touch-action: none; }
+.jd-col-handle:hover { background: rgba(47,111,224,.35); }
 .jd-slot, .jd-slot-bad { display: grid; place-items: center; min-height: 8mm; margin: 1mm 0; border: 2px dashed #2f6fe0;
   border-radius: 3px; background: rgba(47,111,224,.08); color: #2f6fe0; font: 600 11px system-ui; }
 .jd-slot-bad { border-color: #d33; background: rgba(221,51,51,.08); color: #d33; }

@@ -8,6 +8,10 @@ import {
   addBranch,
   addColumn,
   addRowColumn,
+  columnWidths,
+  readStyle,
+  setTableSizes,
+  tableCells,
   gridAddColumn,
   gridAddRow,
   gridBorders,
@@ -492,6 +496,37 @@ function ConditionModal({ fields, onPick, onClose }: { fields: Suggestion[]; onP
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Sizes of a list table or a fixed table (SPEC v1.7 รอบแก้ข้อ 8): % of the page, % per column, cell padding in mm. */
+export function TableSizePanel({ block, src, readOnly, apply }: { block: Block; src: string; readOnly: boolean; apply: Apply }) {
+  if (block.node.kind !== "element" || !(block.detail.kind === "table" || block.detail.kind === "grid")) return null;
+  const styleOf = (el: { attrs: { name: string; value: string | null }[] }) => readStyle(el.attrs.find((a) => a.name === "style")?.value ?? "");
+  const width = /^([\d.]+)%$/.exec(styleOf(block.node).find(([k]) => k === "width")?.[1] ?? "")?.[1] ?? "";
+  const cells = tableCells(block);
+  const padding = /^([\d.]+)mm$/.exec((cells ? styleOf(cells.all[0]) : []).find(([k]) => k === "padding")?.[1] ?? "")?.[1] ?? "";
+  const cols = columnWidths(block);
+  const num = (v: string) => (v.trim() === "" ? null : Number(v));
+  return (
+    <div className={styles.props}>
+      <h3>ขนาดตาราง</h3>
+      <Field label="ความกว้างตาราง (% ของหน้า, ว่าง = ตาม CSS)" value={width} readOnly={readOnly} onCommit={(v) => apply(setTableSizes(src, block, { width: num(v) }))} />
+      <div className={styles.row}>
+        {cols.map((w, i) => (
+          <div key={i} className={styles.narrow}>
+            <Field
+              label={`คอลัมน์ ${i + 1} (%)`}
+              value={w === null ? "" : String(w)}
+              readOnly={readOnly}
+              onCommit={(v) => apply(setTableSizes(src, block, { columns: cols.map((c, j) => (j === i ? num(v) : c)) }))}
+            />
+          </div>
+        ))}
+      </div>
+      <p className={styles.hint}>ว่าง = อัตโนมัติ · ลากเส้นแบ่งคอลัมน์ที่แถวแรกบนกระดาษได้</p>
+      <Field label="ระยะในเซลล์ (mm, ว่าง = ตาม CSS)" value={padding} readOnly={readOnly} onCommit={(v) => apply(setTableSizes(src, block, { padding: num(v) }))} />
     </div>
   );
 }

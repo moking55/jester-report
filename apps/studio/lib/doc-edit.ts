@@ -4,7 +4,7 @@
 // Undo is a stack of whole sources: small files, exact bytes back.
 
 import type { Block, BlockList, GridCell } from "./doc-blocks";
-import type { ElementNode, Range } from "./doc-parse";
+import type { ElementNode, Node, Range } from "./doc-parse";
 
 export type Edited = { src: string; at: Range | null };
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -514,6 +514,77 @@ export function gridBorders(src: string, block: Block, on: boolean): Result<Edit
       if (typeof p === "string") return fail(p);
       patches.push(p);
     }
+  return tableEdit(src, block, patches);
+}
+
+// ---- table sizes (SPEC v1.7 รอบแก้ข้อ 8): list tables and fixed tables ---------------------------------
+
+/** The element that starts at `start` inside a node (cells of a list table are found this way). */
+function elementAt(node: Node, start: number): ElementNode | null {
+  if (node.kind === "element" && node.start === start) return node;
+  const kids = node.kind === "element" || node.kind === "root" ? node.children : node.kind === "block" ? node.branches.flatMap((b) => b.children) : [];
+  for (const k of kids) {
+    if (start < k.start || start >= k.end) continue;
+    const hit = elementAt(k, start);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** The cells that set column widths (the first row) and every cell (for padding), as elements. */
+export function tableCells(block: Block): { first: ElementNode[]; all: ElementNode[] } | null {
+  const d = block.detail;
+  const at = (c: { range: Range }) => elementAt(block.node, c.range.start);
+  let first: (ElementNode | null)[];
+  let all: (ElementNode | null)[];
+  if (d.kind === "grid") {
+    first = d.rows[0].cells.map((c) => c.node);
+    all = d.rows.flatMap((r) => r.cells.map((c) => c.node));
+  } else if (d.kind === "table") {
+    first = (d.head ?? d.cells).map(at);
+    all = [...(d.head ?? []), ...d.cells, ...(d.emptyRow ?? []), ...d.footer.flat()].map(at);
+  } else return null;
+  if (first.some((e) => !e) || all.some((e) => !e)) return null;
+  return { first: first as ElementNode[], all: all as ElementNode[] };
+}
+
+/** A column width as written on the first row (a % number), or null when the table sizes it. */
+export function columnWidths(block: Block): (number | null)[] {
+  const cells = tableCells(block);
+  return (cells?.first ?? []).map((el) => {
+    const w = readStyle(el.attrs.find((a) => a.name === "style")?.value ?? "").find(([k]) => k === "width")?.[1] ?? "";
+    const m = /^([\d.]+)%$/.exec(w);
+    return m ? Number(m[1]) : null;
+  });
+}
+
+export type TableSizes = { width?: number | null; columns?: (number | null)[]; padding?: number | null };
+
+/** Table width (% of the page), column widths (% each, null = automatic) and cell padding (mm) as inline style. */
+export function setTableSizes(src: string, block: Block, sizes: TableSizes): Result<Edited> {
+  const cells = tableCells(block);
+  if (!cells || block.node.kind !== "element") return fail("ไม่ใช่ตาราง");
+  const bad = (v: number | null | undefined, max: number) => v !== null && v !== undefined && !(v > 0 && v <= max);
+  if (bad(sizes.width, 100) || sizes.columns?.some((c) => bad(c, 100)) || bad(sizes.padding, 20))
+    return fail("ขนาดไม่ถูกต้อง (ความกว้าง 1–100%, ระยะในเซลล์ 0.1–20 mm)");
+  const pct = (v: number | null) => (v === null ? null : `${+v.toFixed(1)}%`);
+  const patches: Patch[] = [];
+  const add = (el: ElementNode, props: Record<string, string | null>) => {
+    const p = stylePatch(src, el, props);
+    if (typeof p === "string") throw new Error(p);
+    patches.push(p);
+  };
+  try {
+    if (sizes.width !== undefined) add(block.node, { width: pct(sizes.width) });
+    // one patch per element: a first-row cell may get a width and a padding together
+    const own = new Map<ElementNode, Record<string, string | null>>();
+    sizes.columns?.forEach((w, i) => cells.first[i] && own.set(cells.first[i], { width: pct(w) }));
+    if (sizes.padding !== undefined)
+      for (const el of cells.all) own.set(el, { ...(own.get(el) ?? {}), padding: sizes.padding === null ? null : `${sizes.padding}mm` });
+    for (const [el, props] of own) add(el, props);
+  } catch (e) {
+    return fail((e as Error).message);
+  }
   return tableEdit(src, block, patches);
 }
 

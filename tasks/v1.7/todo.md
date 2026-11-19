@@ -145,7 +145,7 @@
     เพิ่ม/ลบแถว, เพิ่ม/ลบ/ย้ายคอลัมน์, หัวตาราง เปิด/ปิด, เส้นตาราง
   - Verify: Vitest `doc-blocks`/`doc-edit` (diff เฉพาะตาราง, round-trip); เบราว์เซอร์ + Preview pdf
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `components/designer/BlockPanels.tsx`, `components/designer/TextEditor.tsx` (แก้ช่วงใดก็ได้ ไม่ใช่แค่บล็อกข้อความ), `Workbench.tsx`
-- [ ] **T20 ปรับขนาดตาราง**
+- [x] **T20 ปรับขนาดตาราง**
   - Acceptance: ความกว้างตาราง (%), ความกว้างคอลัมน์ (%, ว่าง = อัตโนมัติ), padding เซลล์ (mm) ในแผง; ลากเส้นแบ่งคอลัมน์ที่หัวตารางบนผืน; ใช้ได้ทั้งตารางรายการและตารางเปล่า
   - Verify: Vitest (style ที่เขียน, คง property อื่น); เบราว์เซอร์ + Preview pdf ความกว้างตรง
   - Files: `lib/doc-edit.ts`, `components/designer/BlockPanels.tsx`, `components/designer/PaperCanvas.tsx`

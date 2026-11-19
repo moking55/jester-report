@@ -6,6 +6,8 @@ import { blockAt, readBlocks, type Block } from "@/lib/doc-blocks";
 import {
   addBranch,
   addRowColumn,
+  columnWidths,
+  setTableSizes,
   gridAddColumn,
   gridAddRow,
   gridBorders,
@@ -321,7 +323,8 @@ describe("fixed tables (v1.7 รอบแก้ข้อ 7)", () => {
 
   it("rows and columns: add, remove, move; only the table changes", () => {
     let src = value(gridAddRow(NEW, grid(NEW), 0));
-    expect(grid(src).detail.kind === "grid" && grid(src).detail.rows.length).toBe(4);
+    const g0 = grid(src).detail;
+    expect(g0.kind === "grid" && g0.rows.length).toBe(4);
     src = value(gridAddColumn(src, grid(src), 0));
     src = value(gridRemoveRow(src, grid(src), 3));
     const g = grid(src).detail;
@@ -343,5 +346,33 @@ describe("fixed tables (v1.7 รอบแก้ข้อ 7)", () => {
     expect(plain).not.toContain("border: 1px");
     expect(plain).toContain('style="padding: 1mm 2mm"');
     expect(value(gridBorders(plain, grid(plain), true))).toContain('style="padding: 1mm 2mm; border: 1px solid #000"');
+  });
+});
+
+describe("table sizes (v1.7 รอบแก้ข้อ 8)", () => {
+  const value = (r: Result<Edited>) => {
+    if (!r.ok) throw new Error(r.error);
+    return r.value.src;
+  };
+  const first = (src: string) => readBlocks(src).items.find((b) => b.kind === "table" || b.kind === "grid")!;
+
+  it("a list table: width on <table>, column widths on the header cells, padding on every cell", () => {
+    const src = quotation();
+    const out = value(setTableSizes(src, first(src), { width: 90, columns: [10, 40, null, 20, 20], padding: 1.5 }));
+    expect(out).toContain('<table style="width: 90%">');
+    expect(out).toContain('<th style="width: 10%; padding: 1.5mm">รหัส</th>');
+    expect(out).toContain('<th class="n" style="padding: 1.5mm">จำนวน</th>');
+    expect(out).toContain('<td colspan="4" style="padding: 1.5mm">รวม</td>');
+    expect(columnWidths(first(out))).toEqual([10, 40, null, 20, 20]);
+    // automatic again: the widths go, the rest of the style stays
+    const back = value(setTableSizes(out, first(out), { columns: [null, null, null, null, null] }));
+    expect(back).toContain('<th style="padding: 1.5mm">รหัส</th>');
+  });
+
+  it("a fixed table keeps its cell borders", () => {
+    const src = newBlockHtml({ kind: "grid", rows: 2, columns: 2 });
+    const out = value(setTableSizes(src, first(src), { columns: [30, 70] }));
+    expect(out).toContain('<td style="border: 1px solid #000; padding: 1mm 2mm; width: 30%">');
+    expect(setTableSizes(src, first(src), { width: 120 }).ok).toBe(false);
   });
 });

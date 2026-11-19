@@ -12,10 +12,10 @@ import {
   type DragMoveEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList } from "@/lib/doc-blocks";
-import { insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, type Edited, type NewBlock, type Result } from "@/lib/doc-edit";
+import { insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type Result } from "@/lib/doc-edit";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
 import { followPointer, placeNow, snapshot, type Place, type Snapshot } from "@/lib/drop-place";
 import { fieldRefs, type FieldRef } from "@/lib/field-refs";
@@ -24,7 +24,7 @@ import type { Scope } from "@/lib/doc-sample";
 
 import styles from "./Designer.module.css";
 import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCanvas";
-import { BlockPanel } from "./BlockPanels";
+import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
 import { StylePanel } from "./StylePanel";
@@ -388,6 +388,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
       readOnly={readOnly}
       onSelect={setSelected}
       onEdit={block.kind === "text" && !readOnly ? setEditing : block.kind === "custom" ? () => setCoding(block.start) : undefined}
+      onColumns={!readOnly && (block.kind === "table" || block.kind === "grid") ? (cols) => apply(setTableSizes(src, block, { columns: cols })) : undefined}
     >
       {children}
     </Frame>
@@ -520,6 +521,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                 apply={apply}
                 onCode={() => setCoding(current.start)}
               />
+              <TableSizePanel block={current} src={src} readOnly={readOnly} apply={apply} />
               {current.style && <StylePanel src={src} block={current} readOnly={readOnly} onChange={(props) => apply(setStyle(src, current, props))} />}
             </div>
           ) : (
@@ -570,12 +572,14 @@ function Frame({
   readOnly,
   onSelect,
   onEdit,
+  onColumns,
   children,
 }: {
   block: Block;
   readOnly: boolean;
   onSelect: (k: string) => void;
   onEdit?: (k: string) => void;
+  onColumns?: (widths: number[]) => void; // a table's column widths (%) after dragging a line between columns
   children: React.ReactNode;
 }) {
   const key = keyOf(block);
@@ -599,6 +603,85 @@ function Frame({
         </button>
       )}
       {children}
+      {onColumns && selected === key && <ColumnHandles onCommit={onColumns} />}
+    </div>
+  );
+}
+
+/**
+ * Lines between the columns of the selected table's first row: drag one to share the width of the two columns
+ * beside it (shown live), let go to write every column's width as % of the table (SPEC v1.7 รอบแก้ข้อ 8).
+ */
+function ColumnHandles({ onCommit }: { onCommit: (widths: number[]) => void }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState<{ x: number; top: number; height: number }[]>([]);
+  const drag = useRef<{ i: number; x0: number; widths: number[]; total: number; cells: HTMLElement[]; scale: number } | null>(null);
+  const parts = () => {
+    const frame = box.current?.parentElement;
+    const table = frame?.querySelector("table");
+    const row = table?.rows[0];
+    if (!frame || !table || !row) return null;
+    const scale = frame.getBoundingClientRect().width / (frame.offsetWidth || 1); // the paper's zoom
+    return { frame, table, cells: [...row.cells] as HTMLElement[], scale };
+  };
+  useLayoutEffect(() => {
+    const p = parts();
+    if (!p) return;
+    const measure = () => {
+      const f = p.frame.getBoundingClientRect();
+      const t = p.table.getBoundingClientRect();
+      setEdges(
+        p.cells.slice(0, -1).map((c) => ({
+          x: (c.getBoundingClientRect().right - f.left) / p.scale,
+          top: (t.top - f.top) / p.scale,
+          height: t.height / p.scale,
+        })),
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(p.table);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={box} aria-hidden>
+      {edges.map((e, i) => (
+        <div
+          key={i}
+          className="jd-col-handle"
+          style={{ left: e.x, top: e.top, height: e.height }}
+          onClick={(ev) => ev.stopPropagation()}
+          onPointerDown={(ev) => {
+            const p = parts();
+            if (!p) return;
+            ev.preventDefault();
+            ev.stopPropagation();
+            ev.currentTarget.setPointerCapture(ev.pointerId);
+            drag.current = {
+              i,
+              x0: ev.clientX,
+              widths: p.cells.map((c) => c.getBoundingClientRect().width),
+              total: p.table.getBoundingClientRect().width,
+              cells: p.cells,
+              scale: p.scale,
+            };
+          }}
+          onPointerMove={(ev) => {
+            const d = drag.current;
+            if (!d) return;
+            const min = 12 * d.scale;
+            const delta = Math.max(min - d.widths[d.i], Math.min(d.widths[d.i + 1] - min, ev.clientX - d.x0));
+            const w = d.widths.map((v, j) => (j === d.i ? v + delta : j === d.i + 1 ? v - delta : v));
+            w.forEach((v, j) => (d.cells[j].style.width = `${(v / d.total) * 100}%`)); // live, until the source changes
+          }}
+          onPointerUp={(ev) => {
+            const d = drag.current;
+            drag.current = null;
+            if (!d || ev.clientX === d.x0) return;
+            onCommit(d.cells.map((c) => Math.round((c.getBoundingClientRect().width / d.total) * 1000) / 10));
+          }}
+        />
+      ))}
     </div>
   );
 }
