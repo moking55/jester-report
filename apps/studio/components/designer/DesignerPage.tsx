@@ -32,7 +32,7 @@ export type DesignerApi = {
 
 /** Ctrl/Cmd shortcuts are the page's unless the user is typing somewhere. */
 const typing = (e: KeyboardEvent) => {
-  const t = e.target as HTMLElement | null;
+  const t = e.composedPath()[0] as HTMLElement | undefined; // e.target is the paper's host for keys typed inside it
   return !!t && (t.isContentEditable || t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || !!t.closest(".cm-editor"));
 };
 

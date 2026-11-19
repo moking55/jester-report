@@ -31,13 +31,14 @@ type Props = {
   templateId: string;
   sample: Scope | null; // null: show expressions
   frame?: BlockFrame; // wraps each block (selection, drag handle) — T7
+  editor?: (block: Block) => React.ReactNode | null; // the text block being typed in, drawn instead — T8
   list?: ListFrame; // wraps each list's children (drop slots) — T7
 };
 
 const asset = (templateId: string) => (name: string) => `/assets/${templateId}?name=${encodeURIComponent(name)}`;
 
 /** style="…" as a React style object (unknown or invalid declarations dropped). */
-function styleObject(css: string): React.CSSProperties {
+export function styleObject(css: string): React.CSSProperties {
   const out: Record<string, string> = {};
   for (const [k, v] of readStyle(css)) out[k.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())] = v;
   return out as React.CSSProperties;
@@ -66,6 +67,9 @@ const PAPER_CSS = `
 .jd-chip { display: inline-block; padding: 0 4px; border-radius: 4px; font: 0.82em ui-monospace, monospace; line-height: 1.3; }
 .jd-expr { background: #e6f0ff; color: #1f4fa3; }
 .jd-tag { background: #fff0db; color: #8a5300; }
+.jd-editing { outline: 2px solid #f0a020; outline-offset: 2px; cursor: text; }
+.jd-editing .jd-chip { user-select: all; }
+.jd-editing .jd-if { cursor: pointer; }
 .jd-container { position: relative; outline: 1px dashed #9db4d6; outline-offset: 2px; min-height: 8mm; }
 .jd-container-label { display: block; font: 10px system-ui; color: #5b7aa5; margin: 2px 0; }
 .jd-custom { position: relative; outline: 1px dashed #b98; outline-offset: 2px; }
@@ -85,7 +89,7 @@ const PAPER_CSS = `
 .jd-slot-bad { border-color: #d33; background: rgba(221,51,51,.08); color: #d33; }
 `;
 
-export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list }: Props) {
+export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor }: Props) {
   useDocumentFonts();
   const host = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<ShadowRoot | null>(null);
@@ -197,7 +201,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         );
         break;
       default:
-        inner = leaf(b, scope);
+        inner = editor?.(b) ?? leaf(b, scope);
     }
     const key = `${b.path.join(".")}@${b.start}`;
     return frame ? <FrameKey key={key}>{frame({ block: b, children: inner })}</FrameKey> : <FrameKey key={key}>{inner}</FrameKey>;

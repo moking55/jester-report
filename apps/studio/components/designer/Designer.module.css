@@ -219,3 +219,61 @@
   box-shadow: var(--shadow-pane);
   cursor: grabbing;
 }
+
+.fieldItem {
+  padding: 3px 8px;
+  border: 1px dashed var(--line-button);
+  border-radius: var(--radius);
+  color: var(--color-text);
+  font-size: 0.9em;
+  cursor: grab;
+}
+
+.suggest,
+.popover {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-pane);
+}
+
+.suggest {
+  min-width: 220px;
+  max-width: 360px;
+}
+
+.suggest button {
+  text-align: left;
+  padding: 4px 10px;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.suggest button code {
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}
+
+.suggest .active {
+  background: var(--tint-primary, rgba(47, 111, 224, 0.12));
+}
+
+.popover {
+  gap: 8px;
+  padding: 10px;
+  width: 320px;
+}
+
+.popover button {
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  padding: 3px 10px;
+  cursor: pointer;
+}

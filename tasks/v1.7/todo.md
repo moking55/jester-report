@@ -68,11 +68,14 @@
   - Files: `components/designer/Workbench.tsx` (palette + ผืน + แผง), `components/designer/StylePanel.tsx`, `lib/drop-place.ts`, `components/BuilderCanvas.tsx`
   - ตรวจแล้ว (19 พ.ย., `next dev` + api บน VM): ลาก palette → ผืน (รวมที่ว่างใต้บล็อกสุดท้าย = ต่อท้าย), ย้ายขึ้นบน, ย้ายเข้าคอลัมน์ของ row,
     ย้ายเข้าสาขาเงื่อนไข, ช่อง "วางที่นี่" ใน Shadow DOM, row ลากเข้าตัวเองไม่ได้, เลือก + จัดแนว/สไตล์, Delete + Ctrl+Z; builder test เดิมผ่าน
-- [ ] **T8 แก้ข้อความบนผืน + ชิป**
+- [x] **T8 แก้ข้อความบนผืน + ชิป**
   - Acceptance: ดับเบิลคลิกข้อความ → พิมพ์บนผืน; ชิปช่องข้อมูล (`contenteditable=false`) ลบทั้งก้อน, เพิ่มด้วยลากจากแท็บ "ช่องข้อมูล" หรือพิมพ์ `{{`;
     ชิปเงื่อนไขในข้อความ → popover แก้เงื่อนไข/ข้อความสาขา; ออกจากโหมดพิมพ์ = หนึ่งขั้น undo
   - Verify: Vitest ของ token list ↔ HTML; เบราว์เซอร์
-  - Files: `components/designer/TextEditor.tsx`, `components/designer/InlineIf.tsx`, `lib/doc-text.ts`, `tests/doc-text.test.ts`
+  - Files: `components/designer/TextEditor.tsx`, `lib/doc-text.ts`, `tests/doc-text.test.ts`
+  - ตรวจแล้ว (19 พ.ย.): ดับเบิลคลิก → พิมพ์ไทยบนผืน, `{{` → รายการช่องข้อมูล (ลูกศร/Enter), ลากช่องข้อมูลจาก palette ลงกลางข้อความ/บนชิป (วางหลังชิป),
+    พิมพ์ `{% if %}` → ชิป "ถ้า …" → popover แก้สาขา (คง `{%-`), Enter จบ = undo/redo ขั้นเดียว, Delete/Ctrl+Z ขณะพิมพ์ไม่โดนระดับหน้า, ระดับ p/h1–h3;
+    ไม่แก้ = ไบต์เดิมทุกบล็อกข้อความใน 5 starter + fixture (Vitest); Ctrl+S ขณะพิมพ์ไม่บันทึก (ออกจากโหมดพิมพ์ก่อน)
 - [ ] **T9 แผงของบล็อกพิเศษ + Custom Code modal**
   - Acceptance: ตาราง (คอลัมน์ ฯลฯ), สรุปยอด, รูป (asset), QR/barcode, เงื่อนไข (modal เงื่อนไข), วนซ้ำ (list/ตัวแปร), ตั้งค่าตัวแปร; Custom Code modal: CodeMirror +
     autocomplete + snippet + ตรวจด้วย `doc-check` ก่อนปิด (ผิด = ปิดไม่ได้ + บอกบรรทัด)

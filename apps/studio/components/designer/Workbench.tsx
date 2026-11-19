@@ -14,8 +14,9 @@ import {
 } from "@dnd-kit/core";
 import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 
-import { allBlocks, blockAt, type Block, type BlockKind, type BlockList } from "@/lib/doc-blocks";
-import { insertBlock, moveBlock, newBlockHtml, removeBlock, setStyle, type Edited, type NewBlock, type Result } from "@/lib/doc-edit";
+import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList } from "@/lib/doc-blocks";
+import { insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, type Edited, type NewBlock, type Result } from "@/lib/doc-edit";
+import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
 import { followPointer, placeNow, snapshot, type Place, type Snapshot } from "@/lib/drop-place";
 import { fieldRefs, type FieldRef } from "@/lib/field-refs";
 import type { Scope } from "@/lib/doc-sample";
@@ -23,6 +24,7 @@ import type { Scope } from "@/lib/doc-sample";
 import styles from "./Designer.module.css";
 import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCanvas";
 import { StylePanel } from "./StylePanel";
+import { keepEditing, TextEditor, type Suggestion } from "./TextEditor";
 
 // The Document Designer's work area (SPEC-studio v1.7): palette, the paper with selection, drag handles and the
 // "วางที่นี่" slot, and the properties panel. Drops are placed against where things were when the drag began
@@ -123,6 +125,16 @@ export function newBlockFor(kind: NewBlock["kind"], files: Record<string, string
   }
 }
 
+/** Fields to put in text: every value field's expression (tables are blocks of their own). */
+export function suggestions(files: Record<string, string>): Suggestion[] {
+  const refs = fieldRefs(files);
+  if (!refs.ok) return [];
+  const flat = (rs: FieldRef[]): FieldRef[] => rs.flatMap((r) => [r, ...flat(r.children)]);
+  return flat([...refs.value.params, ...refs.value.data])
+    .filter((r) => r.expression.startsWith("{{") && !r.children.length)
+    .map((r) => ({ label: r.label || r.key, expression: r.expression }));
+}
+
 /**
  * The model index for a drop at `shown` among the drawn blocks of `list` (blocks that draw nothing are skipped on
  * the paper but still hold places in the file); `moving` is left out, as moveBlock counts without it.
@@ -148,6 +160,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   const [drop, setDrop] = useState<Drop | null>(null);
   const [pointerDrag, setPointerDrag] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null); // the text block being typed in
   const reselect = useRef<number | null>(null); // the start of the block to select after the next parse
   const shot = useRef<Snapshot | null>(null);
   const at = useRef<{ x: number; y: number } | null>(null);
@@ -161,6 +174,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   );
 
   const flat = useMemo(() => allBlocks(blocks), [blocks]);
+  const fields = useMemo(() => suggestions(files), [files]);
   const current = flat.find((b) => keyOf(b) === selected) ?? null;
 
   // after an edit: select the block that starts where the edit said it is now
@@ -281,7 +295,23 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     return () => window.removeEventListener("keydown", key);
   });
 
-  const frame: BlockFrame = ({ block, children }) => <Frame block={block} readOnly={readOnly} onSelect={setSelected}>{children}</Frame>;
+  /** Leaving the text editor: one undo step, refused if the text no longer reads as a text block. */
+  function typed(block: Block, inner: string | null) {
+    setEditing(null);
+    if (inner === null || block.detail.kind !== "text") return;
+    const out = replaceIn(src, block, block.detail.inner, inner);
+    const still = allBlocks(readBlocks(out.src)).some((b) => b.start === block.start && b.kind === "text");
+    if (!still) return setMessage("ข้อความที่พิมพ์ทำให้บล็อกนี้ไม่ใช่ข้อความแล้ว (เช่นมี {% … %} ไม่ครบคู่) จึงไม่ได้ใช้ — แก้เป็น Custom Code ได้ในหน้า code");
+    apply(out);
+  }
+
+  const frame: BlockFrame = ({ block, children }) => (
+    <Frame block={block} readOnly={readOnly} onSelect={setSelected} onEdit={block.kind === "text" && !readOnly ? setEditing : undefined}>
+      {children}
+    </Frame>
+  );
+  const editor = (b: Block) =>
+    editing === keyOf(b) && b.kind === "text" ? <TextEditor key={b.start} block={b} src={src} fields={fields} onDone={(inner) => typed(b, inner)} /> : null;
   const list: ListFrame = ({ id, children }) => <ListBox id={id}>{children}</ListBox>;
 
   const label = active
@@ -300,6 +330,20 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             {PALETTE.map((p) => (
               <PaletteItem key={p.kind} kind={p.kind} label={p.label} />
             ))}
+            <h3>ช่องข้อมูล</h3>
+            <p className={styles.hint}>ดับเบิลคลิกข้อความ แล้วลากลงในข้อความ หรือพิมพ์ {"{{"}</p>
+            {fields.map((f) => (
+              <span
+                key={f.expression}
+                className={styles.fieldItem}
+                draggable
+                title={f.expression}
+                onMouseDown={() => (keepEditing.on = true)} // pressing a field does not end typing
+                onDragStart={(e) => e.dataTransfer.setData("text/plain", f.expression)}
+              >
+                {f.label}
+              </span>
+            ))}
           </aside>
         )}
         <div ref={scroller} className={styles.paperScroll} onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
@@ -309,7 +353,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             </p>
           )}
           <div style={{ zoom }}>
-            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} />
+            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} />
           </div>
         </div>
         <aside className={styles.panel} aria-label="คุณสมบัติของบล็อก">
@@ -329,6 +373,22 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                   </button>
                 </div>
               )}
+              {current.kind === "text" && current.node.kind === "element" && (
+                <label className={styles.prop}>
+                  ระดับ
+                  <select value={current.node.name} disabled={readOnly} onChange={(e) => apply(setTextTag(src, current, e.target.value))}>
+                    {TEXT_LEVELS.map(([v, l]) => (
+                      <option key={v} value={v}>
+                        {l}
+                      </option>
+                    ))}
+                    {!TEXT_LEVELS.some(([v]) => v === (current.node.kind === "element" ? current.node.name : "")) && (
+                      <option value={current.node.name}>{current.node.name}</option>
+                    )}
+                  </select>
+                </label>
+              )}
+              {current.kind === "text" && !readOnly && <p className={styles.hint}>ดับเบิลคลิกบนกระดาษเพื่อพิมพ์ · Enter จบ · Shift+Enter ขึ้นบรรทัด</p>}
               {Panel && <Panel block={current} apply={apply} />}
               {current.style && <StylePanel src={src} block={current} readOnly={readOnly} onChange={(props) => apply(setStyle(src, current, props))} />}
             </div>
@@ -352,7 +412,19 @@ function PaletteItem({ kind, label }: { kind: string; label: string }) {
 }
 
 /** One block on the paper: selectable, with a drag handle; lifted out of the flow while a pointer drags it. */
-function Frame({ block, readOnly, onSelect, children }: { block: Block; readOnly: boolean; onSelect: (k: string) => void; children: React.ReactNode }) {
+function Frame({
+  block,
+  readOnly,
+  onSelect,
+  onEdit,
+  children,
+}: {
+  block: Block;
+  readOnly: boolean;
+  onSelect: (k: string) => void;
+  onEdit?: (k: string) => void;
+  children: React.ReactNode;
+}) {
   const key = keyOf(block);
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging } = useDraggable({ id: `b:${key}`, disabled: readOnly });
   const { selected, pointer } = useContext(DragCtx);
@@ -366,6 +438,7 @@ function Frame({ block, readOnly, onSelect, children }: { block: Block; readOnly
         e.stopPropagation();
         onSelect(key);
       }}
+      onDoubleClick={onEdit && (() => onEdit(key))}
     >
       {!readOnly && (
         <button ref={setActivatorNodeRef} type="button" className="jd-handle" aria-label={`ลาก ${KIND_NAME[block.kind]}`} {...attributes} {...listeners}>
