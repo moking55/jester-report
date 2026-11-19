@@ -128,7 +128,7 @@ api ถือ `form.json` เป็นไฟล์ข้อความทึบ
 | --- | --- | --- |
 | G1 `lib/doc-parse.ts`: parser HTML+Jinja ที่จำตำแหน่งในข้อความต้นฉบับ → ต้นไม้บล็อก; เขียนกลับเฉพาะส่วนที่แก้ (ส่วนอื่นคงทุกตัวอักษร) | `studio` | — |
 | G2 ผืน A4 จำลอง: ขนาด/ขอบ/แนวตาม `report.json`, ฟอนต์ TH Sarabun New ที่ Studio เสิร์ฟ, `report.css` + CSS ของ binder, เส้นตัดหน้า, โซน header/footer | `studio` | G1 |
-| G3 หน้า Document Designer: palette, ลากวาง (`@dnd-kit` + ช่อง "วางที่นี่"), แก้ข้อความบนผืน + ชิปช่องข้อมูล, แผงคุณสมบัติ (`style=`), Custom Code modal, undo/redo, บันทึก, "Preview pdf" modal | `studio` | G1, G2 |
+| G3 หน้า Document Designer: palette, ลากวาง (`@dnd-kit` + ช่อง "วางที่นี่"), แก้ข้อความบนผืน + ชิปช่องข้อมูล/เงื่อนไข, บล็อกเงื่อนไข/วนซ้ำ/ตั้งค่าตัวแปร, แผงคุณสมบัติ (`style=`), Custom Code modal กันพลาด, undo/redo, บันทึก, "Preview pdf" modal | `studio` | G1, G2 |
 | G4 starter ทั้ง 5 ตัวเขียน `template.html` ใหม่ให้ designer อ่านออก — PDF เหมือนเดิม | `template-store` | G1 |
 
 Build order: G1 → G2 → G3, G4 (G4 คู่ขนานกับ G3 ได้หลัง G1) · ปล่อยเป็น `v1.7.0` · spec: [SPEC-studio.md](SPEC-studio.md) หัวข้อ v1.7,

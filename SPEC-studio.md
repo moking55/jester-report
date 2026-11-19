@@ -658,7 +658,7 @@ designer ลากวางตัวเอกสาร (MVP ถัดไป) · 
 
 # v1.7: Document Designer (G1–G3)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.7 (interview 19 พ.ย. 2026)
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** (Open Questions ปิดแล้วใน interview รอบสอง · ปล่อยรวมเป็น v1.7 ก้อนเดียว) · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.7 (interview 19 พ.ย. 2026)
 
 ## Objective
 
@@ -689,7 +689,7 @@ dev จัดหน้าเอกสาร (`template.html`) ด้วยกา
 - **ซ้าย:** palette (บล็อก) และแท็บ "ช่องข้อมูล" (ต้นไม้เดียวกับแท็บใน workspace, ลากช่องลงผืนหรือลงข้อความได้)
 - **กลาง:** ผืนกระดาษ (ดู "ผืน A4") เลื่อนได้, zoom 50–150% (ค่าเริ่มต้นพอดีความกว้าง)
 - **ขวา:** แผงคุณสมบัติของบล็อกที่เลือก
-- **Preview pdf:** `previewDraft` ด้วย `template.html` ที่ยังไม่บันทึก **ไม่ได้** (preview ใช้ draft ที่บันทึกแล้ว) → ปุ่มนี้บันทึกก่อนถ้ามีการแก้ (ถามว่า "บันทึกแล้วดู PDF?")
+- **Preview pdf:** `previewDraft` ใช้ draft ที่บันทึกแล้ว → มีการแก้ที่ยังไม่บันทึก: ถาม "บันทึกแล้วดู PDF?" (ผู้ใช้ตัดสิน: ไม่มี endpoint ใหม่)
   แล้วเปิด PDF ใน modal ขนาดเกือบเต็มจอ (iframe แบบเดียวกับ PDF Preview เดิม)
 - archive แล้ว → อ่านอย่างเดียว (ไม่มี palette, ไม่มีบันทึก)
 
@@ -721,11 +721,18 @@ dev จัดหน้าเอกสาร (`template.html`) ด้วยกา
 | ช่องว่าง | `<div data-jd="space" style="height:…mm"></div>` | ความสูง |
 | ขึ้นหน้าใหม่ | `<div data-jd="page-break" style="break-after:page"></div>` | — |
 | **เงื่อนไข** | `{% if c %}…{% elif c2 %}…{% else %}…{% endif %}` ที่ครอบบล็อกทั้งก้อน (ไม่อยู่กลางข้อความ) | เงื่อนไขแต่ละสาขา (modal: เลือกช่อง + ตัวดำเนินการ หรือพิมพ์เอง), เพิ่ม/ลบสาขา; **แต่ละสาขาลากบล็อกใส่ได้** |
-| **Custom Code** | อะไรก็ได้ที่ไม่ตรงข้างบน (รวม `{% macro %}`, `{% set %}`, loop ซ้อน, `{% if %}` กลางข้อความ, ตารางแบ่งกลุ่ม) และบล็อกเปล่าที่ลากจาก palette | ดับเบิลคลิก → modal code editor (CodeMirror, HTML + Jinja) |
+| **วนซ้ำ** | `{% for v in X %}…{% else %}…{% endfor %}` ที่ครอบบล็อกทั้งก้อน (X = `lists.<name>` หรือ list ลูกของตัวแปร loop ที่ครอบอยู่ เช่น `order.details`) | list และชื่อตัวแปร, ส่วน "ไม่มีรายการ"; **ลากบล็อกใส่ได้**; บล็อกข้างใน (ตาราง, ข้อความ) ใช้ตัวแปร loop ได้ |
+| **ตั้งค่าตัวแปร** | `{% set name = expr %}` บรรทัดเดียว | ชื่อ (กติกา `Name`) และ expression; ตัวแปรขึ้นในแท็บ "ช่องข้อมูล" ของบล็อกที่อยู่ถัดลงมา |
+| **Custom Code** | อะไรก็ได้ที่ไม่ตรงข้างบน (รวม `{% macro %}`, loop ซ้อนแบบแบ่งกลุ่ม, `{% set %}` หลายบรรทัด) และบล็อกเปล่าที่ลากจาก palette | ดับเบิลคลิก → modal code editor (ดู "Custom Code กันพลาด") |
 
 - `data-jd="…"` คือเครื่องหมายของ designer บน element ที่จำเป็นต้องแยกแยะ (แถว/คอลัมน์/สรุป/ช่องว่าง/ขึ้นหน้า) — ไม่มีผลต่อ PDF
 - `<link rel="stylesheet" href="report.css">` บนสุดของไฟล์: ไม่ใช่บล็อก คงไว้เสมอ (designer เพิ่มให้ถ้ารายงานมี `report.css` แต่ template ไม่มี link)
+- **ชิปเงื่อนไขในข้อความ:** `{% if c %}ข้อความ{% endif %}` (และ `{% if c %}…{% else %}…{% endif %}`) ที่อยู่กลางบล็อกข้อความเป็นชิป "ถ้า …" บนผืน
+  คลิกเพื่อแก้เงื่อนไขและข้อความแต่ละสาขาใน popover; ข้อความข้างในมีชิปช่องข้อมูลได้แต่ไม่มีบล็อก
 - **Custom Code บนผืน:** แสดงผล HTML ข้างในจริง (Jinja เป็นชิป / ค่าตัวอย่างตามโหมด) ในกรอบเส้นประมีป้าย "Custom Code"; ลากย้ายได้; ข้างในไม่ใช่บล็อก
+- **Custom Code กันพลาด (modal):** CodeMirror (HTML + Jinja) พร้อม autocomplete ช่องข้อมูลและ `fmt` (ตัวเดียวกับ editor), snippet (if, for, set);
+  **ตรวจไวยากรณ์ก่อนปิด** ด้วย parser ตัวเดียวกัน — tag เปิด/ปิดครบคู่ (`if`/`for`/`macro`/`raw`…), `{{ }}` `{% %}` `{# #}` ปิดครบ, ชื่อ tag ที่ Jinja มี,
+  HTML ที่แท็กเปิด/ปิดไม่ครบ → บอกบรรทัดและปิด modal ไม่ได้จนกว่าจะแก้หรือ "ยกเลิก"; ชื่อตัวแปร/filter ที่ผิดยังตรวจด้วย `validateDraft` หลังบันทึก
 - **เงื่อนไขบนผืน:** โหมด expression แสดงทุกสาขาพร้อมป้าย "ถ้า …" / "ไม่เช่นนั้น"; โหมดข้อมูลตัวอย่างแสดงเฉพาะสาขาที่ตรงกับตัวอย่าง (ประเมินเงื่อนไขที่ประเมินได้ — ดู "ข้อมูลตัวอย่าง")
 
 ### คุณสมบัติสไตล์ (เขียนลง `style=`)
@@ -740,7 +747,8 @@ dev จัดหน้าเอกสาร (`template.html`) ด้วยกา
 - **ข้อความ:** ดับเบิลคลิกเพื่อพิมพ์บนผืน; ชิปช่องข้อมูลลบได้ทั้งก้อนแต่แก้ทีละตัวอักษรไม่ได้; เพิ่มชิปด้วยการลากจากแท็บ "ช่องข้อมูล" หรือพิมพ์ `{{` แล้วเลือก
   (autocomplete เดียวกับ editor)
 - **ลบ:** Delete หรือปุ่ม × บนบล็อกที่เลือก
-- **undo/redo:** Ctrl+Z / Ctrl+Shift+Z หลายขั้น (ทุกการแก้ = หนึ่งขั้น; พิมพ์ข้อความต่อเนื่อง = หนึ่งขั้น) ล้างเมื่อบันทึกสำเร็จหรือโหลดใหม่
+- **undo/redo:** Ctrl+Z / Ctrl+Shift+Z หลายขั้น (ทุกการแก้ = หนึ่งขั้น; พิมพ์ข้อความต่อเนื่อง = หนึ่งขั้น) **ไม่ล้างเมื่อบันทึก** (ย้อนข้ามการบันทึกได้
+  แล้วบันทึกอีกครั้งเพื่อให้ไฟล์กลับ); ล้างเมื่อโหลดใหม่หรือออกจากหน้า
 
 ## ข้อมูลตัวอย่าง
 
@@ -773,7 +781,8 @@ STUDIO_E2E_URL=http://localhost:3002 STUDIO_E2E_API_URL=http://localhost:8002 np
 ```
 apps/studio/
   lib/doc-parse.ts          → ใหม่: tokenizer + ต้นไม้ HTML/Jinja ที่จำ offset ต้นฉบับ; รู้จักบล็อกตามตาราง; เขียนกลับแบบแทนเฉพาะช่วง — pure
-  lib/doc-edit.ts           → ใหม่: แก้ต้นไม้ (เพิ่ม/ย้าย/ลบ/สไตล์/ข้อความ/ตาราง/เงื่อนไข) + undo stack — pure
+  lib/doc-edit.ts           → ใหม่: แก้ต้นไม้ (เพิ่ม/ย้าย/ลบ/สไตล์/ข้อความ/ตาราง/เงื่อนไข/วนซ้ำ/ตัวแปร) + undo stack — pure
+  lib/doc-check.ts          → ใหม่: ตรวจไวยากรณ์ Custom Code (tag ครบคู่, delimiter ปิดครบ) ด้วย tokenizer ของ doc-parse
   lib/doc-sample.ts         → ใหม่: ประเมิน expression/เงื่อนไขชุดเล็กกับ view model ตัวอย่าง
   components/designer/      → ใหม่: DesignerPage, PaperCanvas (Shadow DOM + เส้นตัดหน้า), Palette, PropsPanel, CustomCodeModal, PdfModal
   app/(app)/templates/[id]/designer/page.tsx → ใหม่
@@ -802,7 +811,9 @@ export function replaceBlock(source: string, block: Block, html: string): string
 - **ความตรงของผืนกับ PDF (ด้วยมือ + สคริปต์):** starter `quotation` และ `tax-invoice` — จับภาพผืน (โหมดข้อมูลตัวอย่าง) เทียบภาพหน้าแรกของ PDF ด้วยตา + วัดตำแหน่ง
   บล็อกหลัก (ต่างกันไม่เกิน ~2 mm) บันทึกผลใน `tasks/`
 - **E2E `designer.spec.ts`:** blank → Document Designer → ลากแถว 2 คอลัมน์, โลโก้, ข้อความที่มีชิป, ตารางผูก list, สรุปยอด, เงื่อนไขที่มีบล็อกข้างใน, Custom Code (แก้ใน modal)
+  → วนซ้ำที่มีตารางของตัวแปร loop → Custom Code ที่พิมพ์ `{% if %}` ไม่ปิด = ปิด modal ไม่ได้ + บอกบรรทัด → แก้แล้วปิดได้
   → undo/redo → บันทึก → "Preview pdf" เปิด modal ได้ PDF → กลับหน้า code เห็น HTML ใหม่; แก้ HTML มือ (comment) แล้วเปิด designer แก้บล็อกอื่น → comment ยังอยู่
+- **Vitest `doc-check`:** tag ไม่ครบคู่/ซ้อนผิด, `{{` ไม่ปิด, tag ไม่รู้จัก, HTML ไม่ปิด → error พร้อมบรรทัด; starter ทุกตัวผ่าน
 
 ## Boundaries v1.7
 
@@ -815,18 +826,19 @@ export function replaceBlock(source: string, block: Block, html: string): string
 1. starter ทั้ง 5 ตัว: round-trip ไม่เปลี่ยนแม้แต่ตัวอักษร; เปิดใน designer แล้วบล็อกส่วนใหญ่แก้ได้ (Custom Code เฉพาะส่วนที่ตกลงใน SPEC-template-store v1.7)
 2. ใบเสนอราคาใหม่ทั้งหน้าจาก `blank` ทำได้โดยไม่เปิด editor HTML; PDF ตรงกับผืน (ตำแหน่งบล็อกหลักต่างไม่เกิน ~2 mm)
 3. แก้บล็อกหนึ่งแล้ว diff ใน Versions แสดงเฉพาะบล็อกนั้น
-4. Custom Code แก้ได้ใน modal; เงื่อนไขลากบล็อกใส่สาขาได้
+4. Custom Code แก้ได้ใน modal และปิดไม่ได้เมื่อไวยากรณ์ผิด; เงื่อนไขและวนซ้ำลากบล็อกใส่ได้; `purchase-order` แก้ได้ทั้งหน้า
 5. lint, typecheck, test, build, E2E ทุก spec ผ่าน
 
 ## Open Questions v1.7
 
-1. **parser:** เขียน tokenizer + tree เอง (แนะนำ: ไม่มี dependency, ควบคุม offset และพฤติกรรมกับ Jinja ได้เต็มที่; parse5 ทำ foster-parenting กับ `{% for %}` ในตารางเหมือน browser)
-   หรือเพิ่ม library?
-2. **loop ครอบหลายบล็อก** (`purchase-order`: `{% for order in lists.orders %}<section>…</section>{% endfor %}`): เพิ่มบล็อก **"วนซ้ำ"** (กล่องที่ลากบล็อกใส่ได้ แบบเดียวกับเงื่อนไข)
-   ในรอบนี้ (แนะนำ: ไม่อย่างนั้น starter นี้เป็น Custom Code เกือบทั้งหน้า) หรือรอบหน้า?
-3. **Preview pdf ตอนมีการแก้ที่ยังไม่บันทึก:** บันทึกก่อนแล้วดู (แนะนำ: ไม่มี endpoint ใหม่) หรือเพิ่ม endpoint preview ที่รับ `template.html` ชั่วคราว?
+ไม่มี — ตัดสินใน interview รอบสอง 19 พ.ย. 2026:
+1. parser HTML+Jinja เขียนเอง (ไม่เพิ่ม dependency)
+2. บล็อก "วนซ้ำ" ทำในรอบนี้ (+ ตั้งค่าตัวแปร, ชิปเงื่อนไขในข้อความ เพื่อลดงานที่ต้องเป็น Custom Code)
+3. Preview pdf: บันทึกก่อนแล้วดู (ไม่มี endpoint ใหม่); undo ไม่ล้างเมื่อบันทึก
+4. block-coding เต็มรูปแบบ (แบบ Blockly) ไม่ทำ: ต้นเหตุคือกลัวพิมพ์ Jinja ผิด → Custom Code กันพลาดแทน
+5. ปล่อยรวมเป็น v1.7 ก้อนเดียว (ไม่แบ่ง v1.8)
 
 ## Not Doing v1.7
 
 กระดาษนอกจาก A4 · วางตามพิกัด · แก้ header/footer ใน designer (แสดงอย่างเดียว) · group-by ในตาราง (Custom Code) · class หรือแก้ `report.css` ·
-ประเมิน Jinja ครบชุดใน browser · หัวหน้าทีมใช้ designer · หลายคนแก้พร้อมกัน
+ประเมิน Jinja ครบชุดใน browser · block-coding เต็มรูปแบบ (Blockly) · endpoint preview ชั่วคราว · หัวหน้าทีมใช้ designer · หลายคนแก้พร้อมกัน
