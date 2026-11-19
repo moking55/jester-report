@@ -114,7 +114,7 @@ async def test_limits_roll_back(store, monkeypatch):
     monkeypatch.setattr(module, "MAX_DRAFT_BYTES", 400)
     assert await code_of(store.put_file("t1", "a.css", "x" * 400, 1, "bob")) == "PAYLOAD_TOO_LARGE"
     monkeypatch.setattr(module, "MAX_DRAFT_BYTES", 20 * 1024 * 1024)
-    monkeypatch.setattr(module, "MAX_FILES", 4)  # blank has 4 files already
+    monkeypatch.setattr(module, "MAX_FILES", 6)  # blank has 6 files already
     assert await code_of(store.put_file("t1", "a.css", "x", 1, "bob")) == "PAYLOAD_TOO_LARGE"
     monkeypatch.setattr(module, "MAX_ASSET_BYTES", 10)
     assert await code_of(store.add_asset("t1", "logo.png", PNG, 1, "bob")) == "PAYLOAD_TOO_LARGE"

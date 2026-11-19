@@ -17,7 +17,7 @@ Module id: `template-store` ใน [CAPABILITY_MAP.md](CAPABILITY_MAP.md) · ข
    - ไม่รับ woff2: ฟอนต์ไทยสำหรับเอกสารแจกเป็น ttf/otf อยู่แล้ว และไม่ต้องเพิ่ม `brotli`; ตัด `woff2` ออกจาก `AssetName` และ content type ของ `uploadDraftAsset` ใน contract
 9. **SVG รับได้ (ผู้ใช้ยืนยัน):** ตรวจแค่ว่า bytes เป็น SVG จริง ไม่ sanitize — ความเสี่ยงกันไว้แล้วที่ engine (ปิด JS, บล็อก URL) และ binder (allow-list resource)
 10. **RustFS เป็นค่าเริ่มต้น (ผู้ใช้ยืนยัน):** ตรวจ license และความพร้อมใช้ตอนทำ compose แล้วเขียนสถานะไว้ใน README ของ infra; เปลี่ยนค่าเริ่มต้น (MinIO/SeaweedFS) เฉพาะเมื่อ license ไม่ใช่ open source หรือ test `storage` ไม่ผ่าน — โค้ดใช้แค่ S3 API จึงเปลี่ยนด้วย config
-11. **Starter:** `createTemplate(starter=…)` คัดลอก fixture อ้างอิง 3 แบบ (`quotation`, `grouped-table` = sales-grouped, `master-detail` = purchase-order) และ `blank` = report.json + template.html + data.schema.json + sample.json ขั้นต่ำที่ผ่าน `load_definition`; starter ที่มี `logo.png` ต้องมี asset ตัวอย่างมาด้วย
+11. **Starter:** `createTemplate(starter=…)` คัดลอก fixture อ้างอิง 3 แบบ (`quotation`, `grouped-table` = sales-grouped, `master-detail` = purchase-order) และ `blank` = report.json + template.html + data.schema.json + sample.json ขั้นต่ำที่ผ่าน `load_definition` + header.html + footer.html (เพิ่ม v1.6: หัวกระดาษตัวอย่างและเลขหน้า "หน้า x/y" แบบเดียวกับ starter อื่น — ผู้ใช้ขอ 19 พ.ย. 2026); starter ที่มี `logo.png` ต้องมี asset ตัวอย่างมาด้วย
 
 ## Objective
 
