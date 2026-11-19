@@ -78,7 +78,7 @@
 
 ## Phase ตรวจ
 
-- [ ] **T15 ผืน vs PDF หลายขนาด**
+- [x] **T15 ผืน vs PDF หลายขนาด**
   - Acceptance: สคริปต์ T11 ของ v1.7 ขยายเป็น A5, Letter, custom, ม้วน 80 (≤ 2 mm) และแบบอิสระ A5 (≤ 0.5 mm)
   - Verify: `tasks/v1.8/fidelity/results.md`
 - [ ] **T16 E2E `layout.spec.ts` + ทุก spec**

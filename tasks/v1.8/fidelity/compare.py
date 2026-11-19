@@ -5,12 +5,19 @@ python tasks/v1.8/fidelity/compare.py
 
 import io
 import json
+import unicodedata
 from pathlib import Path
 
 from pypdf import PdfReader
 
 HERE = Path(__file__).parent
 PT_TO_MM = 25.4 / 72
+
+
+def norm(text: str) -> str:
+    """Thai text as the PDF yields it varies in the marks (the font's private glyph forms, ำ as ํ + า): compare bases only."""
+    kept = [c for c in text.replace("ำ", "า") if not unicodedata.category(c).startswith("M") and not 0xF700 <= ord(c) <= 0xF71F]
+    return "".join(kept)
 
 
 def runs(pdf: Path):
@@ -47,8 +54,7 @@ for paper_file in sorted(HERE.glob("*.paper.json")):
     ]
     worst = 0.0
     for anchor, p in data["anchors"].items():
-        key = anchor.replace("ำ", "ํา").replace("ผู้", "ผู")  # how pypdf reads Thai marks from the PDF
-        hit = next(((t, x, y) for t, x, y in pdf if t.strip().startswith((anchor, key))), None)
+        hit = next(((t, x, y) for t, x, y in pdf if norm(t.strip()).startswith(norm(anchor))), None)
         if not hit:
             lines.append(f"| {anchor} | {p['x']}, {p['y']} | ไม่พบใน PDF | | |")
             worst = 999.0
