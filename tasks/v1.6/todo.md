@@ -88,7 +88,10 @@
   - **ต่างจาก spec:** แป้นพิมพ์ลากได้เฉพาะสลับในระดับเดียวกัน — `closestCenter` กับลูกศรขึ้นจะตกเข้ากลุ่มข้างบนเสมอ;
     การย้ายข้ามกลุ่ม/เข้าตารางด้วยแป้นพิมพ์ใช้ช่อง "อยู่ใน" ในแผงคุณสมบัติแทน (เลือกได้เฉพาะปลายทางที่ `canMove` อนุญาต)
   - เมาส์/สัมผัสใช้ที่วางชั้นในสุดใต้ pointer (`pointerWithin` + พื้นที่เล็กสุด) แทน `closestCenter`
-  - `DndContext` ใช้ `id` จาก `useId()` แก้ hydration mismatch ของ `aria-describedby`
+  - `DndContext` ใช้ `id` จาก `useId()`: attribute ของปุ่มลากและ palette จาก server ตรงกับ browser แล้ว (เทียบ 25 element);
+    ยังมี hydration mismatch ของ attribute อื่นใน `next dev` ซึ่งเกิดในหน้า `/documents` ด้วย — มีมาก่อน v1.6 ยังไม่ได้หาต้นเหตุ
+  - **ยังไม่ได้ตรวจ:** ลากด้วยจอสัมผัส (`TouchSensor`) — ไม่ได้ emulate touch
+  - ข้อสังเกต: `<select>` ในแผงคุณสมบัติได้ชื่อจาก accessibility tree เป็นค่าที่เลือก (เช่น "เต็มแถว") แทนป้าย "ความกว้าง" — ควรผูก `id`/`htmlFor`
   - **performance ยังไม่ผ่านเป้าเต็ม:** 150 ช่อง, production build, 120 จังหวะ pointer: median 3 ms, p90 48 ms, 9 จังหวะ > 50 ms (max 97 ms) —
     วัดตอน pane ของเบราว์เซอร์ถูกซ่อน (ตัวเลขอาจคลาด) และวัดเวลา React ต่อจังหวะ ไม่ใช่ long task จาก Performance panel;
     ลดแล้วหนึ่งรอบ (แยกหัวการ์ดเป็น `memo`: p90 53 → 48 ms) — ต้นเหตุคือทุก `useSortable` render ใหม่เมื่อจุดวางเปลี่ยน (การออกแบบของ `@dnd-kit`)
