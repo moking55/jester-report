@@ -1,6 +1,6 @@
 # Tasks v1.6: Form builder
 
-แผน: [plan.md](plan.md) · สถานะ: **รออนุมัติ**
+แผน: [plan.md](plan.md) · สถานะ: **อนุมัติ 19 พ.ย. 2026 · กำลังทำ**
 
 กติกา: commit ทุก task, ไม่ push ระหว่างทาง; ผู้ใช้ทบทวนที่ checkpoint; อนุมัติแล้ว → version 1.6.0, tag `v1.6.0`, push `master` + tag;
 ไม่สร้าง GitHub Release; VM เป็นเครื่องทดสอบล้วน
@@ -11,7 +11,7 @@
 
 ## Phase E1: model (`lib/`, pure)
 
-- [ ] **T1 `lib/form-layout.ts`: อ่าน/เขียน `form.json`**
+- [x] **T1 `lib/form-layout.ts`: อ่าน/เขียน `form.json`**
   - Acceptance: `readLayout(text?)` คืน `{ fields, warnings }` — ไม่มีไฟล์/parse ไม่ได้/`formVersion` ≠ 1/ค่าไม่รู้จัก → ข้ามพร้อมคำเตือน;
     `writeLayout(layout, known)` ตัด pointer ที่ไม่อยู่ใน `known`, ไม่เขียน `width: "full"` หรือ entry ว่าง, ไม่มี entry เลย → ไม่มีไฟล์
   - Verify: Vitest `tests/form-layout.test.ts`

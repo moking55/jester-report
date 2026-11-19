@@ -1,6 +1,6 @@
 # แผน v1.6: Form builder
 
-สถานะ: **รออนุมัติ** · task list: [todo.md](todo.md)
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · task list: [todo.md](todo.md)
 ที่มา: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) หัวข้อ v1.6 และหัวข้อ v1.6 ของ `SPEC-studio.md` (อนุมัติ 19 พ.ย. 2026) · ฐาน: tag `v1.5.0` + `2d5b253` (ปุ่มการ์ด catalog)
 
 ## Overview
