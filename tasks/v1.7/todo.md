@@ -118,6 +118,30 @@
     ผ่านกับ `next dev` + api บน VM (17.8 วินาที); ไฟล์ชื่อ `self-built-document.spec.ts` ให้เรียงหลัง full-flow (ต้องการ catalog ว่าง)
     และ lifecycle; E2E ทั้ง 7 spec ผ่านบน stack สด `jester-e2e` image 1.7.0-rc (2.5 นาที, ไม่ retry)
 
+## Phase G5: รอบแก้หลังผู้ใช้ทดลอง (SPEC-studio "รอบแก้หลังผู้ใช้ทดลอง")
+
+- [ ] **T13 ชิปไม่ดันหน้าเพี้ยน**
+  - Acceptance: ชิปบรรทัดเดียว ไม่กว้างเกินช่อง (… + tooltip), ฟอนต์เอกสารขนาดเล็ก, ไม่มี `{{ }}`; quotation โหมด expression ตารางกว้างไม่เกินกระดาษ
+  - Verify: Vitest renderSource; เบราว์เซอร์ (quotation, tax-invoice); วัด T11 ซ้ำ (โหมดตัวอย่างไม่เปลี่ยน)
+  - Files: `lib/doc-render.ts`, `components/designer/PaperCanvas.tsx`, `lib/doc-text.ts` (ป้ายชิปในโหมดพิมพ์)
+- [ ] **T14 แผงปรับขนาดได้ + กลุ่มพับได้**
+  - Acceptance: ลากเส้นแบ่งซ้าย/ขวาได้ (จำค่า); palette 3 กลุ่ม พับ/กางได้ (จำค่า)
+  - Verify: Vitest component; เบราว์เซอร์
+  - Files: `components/designer/Workbench.tsx`, `Designer.module.css`, `lib/panes.ts` (ถ้าใช้ร่วม)
+- [ ] **T15 ลากกลับแผงซ้าย = ลบ**
+  - Acceptance: ลากบล็อกไปปล่อยบนแผงซ้าย → ลบ (Custom Code ถาม), แผงแสดง "ปล่อยเพื่อลบ" ระหว่างลาก, undo คืนได้
+  - Verify: Vitest (drop target); เบราว์เซอร์; E2E เพิ่มขั้นนี้
+  - Files: `components/designer/Workbench.tsx`
+- [ ] **T16 แถว: เพิ่ม/รวมคอลัมน์**
+  - Acceptance: "+ คอลัมน์" (≤ 4), "รวมกับคอลัมน์ขวา" (บล็อกต่อท้าย, flex รวม), เหลือ 1 → ยกเลิกแถว
+  - Verify: Vitest `doc-edit` (diff เฉพาะแถว); เบราว์เซอร์
+  - Files: `lib/doc-edit.ts`, `components/designer/BlockPanels.tsx`, `tests/doc-edit.test.ts`
+- [ ] **T17 ไม้บรรทัด + ขอบกระดาษ**
+  - Acceptance: ไม้บรรทัดบน/ซ้าย (mm), ลากขอบ 4 ด้าน → `page.marginsMm` ใน report.json (แก้เฉพาะค่านั้น), undo ครอบสองไฟล์, บันทึกเฉพาะไฟล์ที่เปลี่ยน
+  - Verify: Vitest (แก้ JSON คงข้อความอื่น, history สองไฟล์, บันทึก); เบราว์เซอร์ + Preview pdf ขอบตรง
+  - Files: `components/designer/Ruler.tsx`, `lib/paper.ts`, `components/designer/DesignerPage.tsx`, `components/designer/PaperCanvas.tsx`
+- [ ] **T18 ตรวจรวม:** studio 4 คำสั่ง, E2E ทุก spec บน stack สด (เพิ่มขั้นลาก-ลบ, เพิ่ม/รวมคอลัมน์, ขอบ), วัด T11 ซ้ำ
+
 ## Checkpoint: ปล่อย v1.7.0
 
 - [ ] studio 4 คำสั่ง + pytest + E2E ผ่านทั้งหมด
