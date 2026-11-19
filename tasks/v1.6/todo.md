@@ -1,6 +1,6 @@
 # Tasks v1.6: Form builder
 
-แผน: [plan.md](plan.md) · สถานะ: **อนุมัติ 19 พ.ย. 2026 · กำลังทำ**
+แผน: [plan.md](plan.md) · สถานะ: **อนุมัติ 19 พ.ย. 2026 · T1–T10 เสร็จ รอ checkpoint ของผู้ใช้**
 
 กติกา: commit ทุก task, ไม่ push ระหว่างทาง; ผู้ใช้ทบทวนที่ checkpoint; อนุมัติแล้ว → version 1.6.0, tag `v1.6.0`, push `master` + tag;
 ไม่สร้าง GitHub Release; VM เป็นเครื่องทดสอบล้วน
@@ -67,7 +67,7 @@
     dialog ยืนยันพร้อมรายชื่อไฟล์; ลบ array ที่ list ชี้ → ข้อความบอกชื่อ list
   - Verify: studio 4 คำสั่ง; เบราว์เซอร์กับ starter `quotation` (เปลี่ยนชื่อ `customer` → เห็นคำเตือน template.html)
   - Files: `components/FormBuilder.tsx`, `components/IssueForm.tsx` (โหมด preview)
-- [ ] **T10 E2E `form-builder.spec.ts`**
+- [x] **T10 E2E `form-builder.spec.ts`**
   - Acceptance: ตาม Testing Strategy v1.6 ของ SPEC-studio (blank → ลาก 9 ชนิด + 2 parameters → แป้นพิมพ์ → บันทึก → Problems ว่าง →
     แก้ JSON มือ → builder เห็น → publish → ออกเอกสารด้วยฟอร์มตาม `form.json` → PDF)
   - Verify: E2E ทุก spec ผ่านบน `jester-e2e` (ไม่ใช้ retry)
@@ -94,8 +94,15 @@
     ลดแล้วหนึ่งรอบ (แยกหัวการ์ดเป็น `memo`: p90 53 → 48 ms) — ต้นเหตุคือทุก `useSortable` render ใหม่เมื่อจุดวางเปลี่ยน (การออกแบบของ `@dnd-kit`)
 - builder เก็บ state ด้วย `useState` (ไม่ใช่ `useImmer`): เอกสารมี token `JSON.rawJSON` ที่ freeze แล้ว และ model เป็น immutable อยู่แล้ว
 
+- T10 (19 พ.ย.): E2E 6/6 ผ่านบน stack ใหม่ `jester-e2e` (studio `1.6.0-rc` จาก HEAD, api `1.5.0-rc` เดิม — รอบนี้ไม่แก้ api), ไม่ใช้ retry;
+  studio: lint, typecheck, test 144, build ผ่าน
+  - ต่างจากแผน: ชื่อ `self-built-form.spec.ts` (ไม่ใช่ `form-builder.spec.ts`) ให้เรียงหลัง full-flow ที่ต้องการ catalog ว่าง;
+    `E2E_FORM_ID` ใช้รัน spec ซ้ำบน stack ที่มีรายงานแล้ว
+  - ลำดับช่องหลังลากด้วยเมาส์ตรวจเป็นเซต (จุดวางขึ้นกับตำแหน่ง pointer จริง); ลำดับที่ใช้ตรวจฟอร์มออกเอกสารอ่านจาก builder หลังลาก
+  - เลื่อนปลายทางไปกลางจอก่อนลาก: ใกล้ขอบจอ auto-scroll ของ `@dnd-kit` เลื่อนผืนระหว่างลาก (คนจริงเจอได้เหมือนกัน — เป็นพฤติกรรมปกติของ library)
+
 ## Checkpoint: ปล่อย v1.6.0
 
-- [ ] studio 4 คำสั่ง + E2E ผ่านทั้งหมด
+- [x] studio 4 คำสั่ง + E2E ผ่านทั้งหมด
 - [ ] ผู้ใช้ลองสร้างฟอร์มจาก `blank` เองโดยไม่เปิด JSON แล้วออก PDF ได้
 - [ ] อนุมัติ → version 1.6.0 (api, studio, compose tag), tag `v1.6.0`, push, deploy บน VM
