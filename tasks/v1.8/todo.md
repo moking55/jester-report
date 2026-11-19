@@ -22,7 +22,7 @@
   - Acceptance: PageSetup จาก `page`; CSS ฐานแบบอิสระ + ซ่อน guide; ไม่ส่ง header/footer ในม้วน/อิสระ (+ warning); `<img>` ใน header/footer เป็น data URI (≤ 1 MB)
   - Verify: pytest binder + live: แบบอิสระ A5 ข้อความอยู่ตามพิกัด ±0.5 mm; header มีรูปโลโก้ใน PDF
   - Files: `binder/bind.py`, `binder/document.py`, tests
-- [ ] **T5 data-prep: ซ้อน 3 ชั้น**
+- [x] **T5 data-prep: ซ้อน 3 ชั้น**
   - Acceptance: list ลูก/หลานเตรียมครบทุกชั้น, totals ต่อแถวแม่, ลำดับหลาน → ลูก → แม่; test เดิมผ่านทั้งหมด
   - Verify: pytest `tests/data_prep` (ใบสั่งซื้อ 3 ชั้น, หลานว่าง, groupBy ในลูก)
   - Files: `data_prep/prepare.py`, `data_prep/lists.py`, tests
