@@ -35,7 +35,7 @@ export type WorkspaceState = {
   error: string | null;
   problems: ValidationProblem[];
   checked: "never" | "valid" | "invalid"; // the last automatic check of the saved draft, for the Problems tab
-  tab: "problems" | "prepared" | "provenance" | "versions";
+  tab: "problems" | "fields" | "prepared" | "provenance" | "versions";
   paramsText: string; // the params box shared by Preview and Prepared data
   prepared: PreparedData | null;
   run: Run | null;

@@ -40,6 +40,7 @@ import {
 import { AssetPreview } from "./AssetPreview";
 import { DiffDialog } from "./DiffDialog";
 import { Editor, type EditorHandle } from "./Editor";
+import { FieldsTab } from "./FieldsTab";
 import { FilePanel } from "./FilePanel";
 import { IssueForm, type IssuedPdf } from "./IssueForm";
 import { JsonTree } from "./JsonTree";
@@ -55,6 +56,7 @@ const SIZES_KEY = "jester.workspace.panes";
 
 const TABS = [
   ["problems", "Problems"],
+  ["fields", "ช่องข้อมูล"],
   ["prepared", "Prepared data"],
   ["provenance", "Provenance"],
   ["versions", "Versions"],
@@ -633,6 +635,9 @@ export function Workspace({
               ) : (
                 <p className={styles.hint}>กด &quot;คำนวณใหม่&quot; เพื่อดูข้อมูลที่ template จะได้รับ (ใช้ sample data)</p>
               ))}
+            {state.tab === "fields" && (
+              <FieldsTab read={() => Object.fromEntries(typed().files.map((f) => [f.name, f.content]))} />
+            )}
             {state.tab === "provenance" && <RunDetails run={state.run} />}
             {state.tab === "versions" && (
               <VersionsPanel

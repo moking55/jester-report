@@ -37,12 +37,12 @@
 
 ## Phase E3: ฟอร์มออกเอกสาร + แท็บ "ช่องข้อมูล"
 
-- [ ] **T5 ฟอร์มออกเอกสารอ่าน `form.json`**
+- [x] **T5 ฟอร์มออกเอกสารอ่าน `form.json`**
   - Acceptance: `formSpec(report, schema, formJson?)` ใส่ `widget`/`width` ให้ `Field`; `IssueForm` เป็น grid 6 คอลัมน์, `textarea`, กลุ่ม radio,
     `money` แสดงหลักพันเมื่อออกจากช่องแต่ค่าที่ส่งเป็นข้อความเดิม; หน้า workspace โหลด `form.json` ของ version ที่ publish (ไม่มี → เหมือน v1.4)
   - Verify: Vitest `tests/form.test.ts` (เพิ่ม); เบราว์เซอร์กับ api บน VM: เพิ่ม `form.json` มือใน draft → publish → ฟอร์มเปลี่ยนตาม
   - Files: `lib/form.ts`, `components/IssueForm.tsx` (+ css), `app/(app)/templates/[id]/page.tsx`, `tests/form.test.ts`
-- [ ] **T6 แท็บ "ช่องข้อมูล" ในโหมด code**
+- [x] **T6 แท็บ "ช่องข้อมูล" ในโหมด code**
   - Acceptance: แท็บข้าง Problems; ต้นไม้ช่องจากไฟล์ใน editor (รวมที่ยังไม่บันทึก), ปุ่ม "คัดลอก", ป้ายเหลือง "ไม่ถูกใช้", คำอธิบายข้อจำกัดการตรวจแบบข้อความ
   - Verify: studio 4 คำสั่ง; เบราว์เซอร์: คัดลอกแล้ววางใน `template.html` → Preview แสดงค่า
   - Files: `components/FieldsTab.tsx`, `components/Workspace.tsx`, `lib/workspace.ts`
@@ -81,6 +81,7 @@
   - ย้ายระหว่าง "ข้อมูลเอกสาร" กับ "ข้อมูล" ไม่ได้ (spec ไม่ได้ระบุ; จะต้องแปลงชนิดและทำ `data.x` → `params.x` เสีย) — สร้างช่องใหม่แทน
   - ย้ายข้ามกลุ่ม: ค่าใน sample ย้ายตาม (สร้าง object ปลายทางถ้ายังไม่มี); ข้ามขอบตาราง: ค่าเดิมหาย ช่องบังคับได้ค่าตัวอย่างใหม่
   - key `__proto__`/`constructor`/`prototype` ถูกปฏิเสธ (ผ่าน regex `Name` แต่อันตรายใน JS)
+- **ค้างตรวจในเบราว์เซอร์** (19 พ.ย. เครือข่ายเป็น hotspot เข้า VM ไม่ได้): T5 ฟอร์มตาม `form.json` มือ, T6 แท็บ "ช่องข้อมูล" — ทำพร้อม T7–T9
 - builder เก็บ state ด้วย `useState` (ไม่ใช่ `useImmer`): เอกสารมี token `JSON.rawJSON` ที่ freeze แล้ว และ model เป็น immutable อยู่แล้ว
 
 ## Checkpoint: ปล่อย v1.6.0

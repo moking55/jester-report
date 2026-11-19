@@ -1,0 +1,59 @@
+.tab {
+  display: grid;
+  gap: calc(var(--sp) * 1);
+}
+
+.tab ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tab h4 {
+  margin: calc(var(--sp) * 0.5) 0;
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--sp) * 1);
+  padding: 2px 0;
+}
+
+.label {
+  min-width: 10em;
+}
+
+.expr {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-primary);
+}
+
+.unused {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--tint-warning);
+  color: var(--color-warning);
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.tab button {
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  padding: 1px 8px;
+  cursor: pointer;
+}
