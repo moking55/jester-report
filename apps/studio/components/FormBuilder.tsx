@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 
 import { deleteFile, saveFile, validateDraft } from "@/lib/actions/draft";
 import { saveSteps } from "@/lib/builder-save";
+import { references } from "@/lib/field-refs";
 import { canEditExactly } from "@/lib/json-exact";
 import { problemMessage } from "@/lib/messages";
 import {
@@ -20,6 +21,7 @@ import {
   PARAM_KINDS,
   removeField,
   renameField,
+  serialize,
   setProps,
   type Builder,
   type BuilderField,
@@ -32,6 +34,7 @@ import {
 import type { TextFile } from "@/lib/workspace";
 
 import { BuilderCanvas, BuilderDnd, PaletteItem } from "./BuilderCanvas";
+import { IssueForm } from "./IssueForm";
 import styles from "./FormBuilder.module.css";
 import { PropsPanel, type Place } from "./PropsPanel";
 
@@ -63,6 +66,7 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
   const [saving, setSaving] = useState(false);
   const [conflict, setConflict] = useState(false);
   const [problems, setProblems] = useState<number | null>(null);
+  const [panel, setPanel] = useState<"props" | "preview">("props");
 
   // stable field objects between renders, so cards that did not change are not drawn again
   const tree = useMemo(() => (builder ? fieldTree(builder) : { params: [], data: [] }), [builder]);
@@ -120,8 +124,28 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
     apply(setProps(builder!, selected, patch), setBuilder);
   }
 
+  /** The draft as the builder would save it: templates as loaded, the builder's files as edited. */
+  const draftNow = (): Record<string, string> => {
+    const out: Record<string, string> = { ...texts };
+    for (const [file, text] of Object.entries(serialize(builder!))) {
+      if (text === null) delete out[file];
+      else out[file] = text;
+    }
+    return out;
+  };
+
+  /** Ask before a rename or remove when a template or report.json may still use the field (SPEC v1.6). */
+  function confirmUsed(path: FieldPath, what: string): boolean {
+    const used = references(draftNow(), path);
+    if (!used.length) return true;
+    return window.confirm(
+      `เทมเพลตอาจยังใช้ช่องนี้: ${used.join(", ")}
+${what}แล้ว builder จะไม่แก้ไฟล์เหล่านั้นให้ ต้องแก้เองในหน้าแก้ code — ทำต่อ?`,
+    );
+  }
+
   function rename(key: string) {
-    if (!selected) return;
+    if (!selected || !confirmUsed(selected, "เปลี่ยนชื่อ")) return;
     apply(renameField(builder!, selected, key), ({ builder: b, path }) => {
       setBuilder(b);
       setSelected(path);
@@ -130,7 +154,12 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
 
   function remove(path: FieldPath) {
     const field = findField(builder!, path);
-    if (!field || !window.confirm(`ลบช่อง "${field.props.label ?? field.key}"?`)) return;
+    if (!field) return;
+    const used = references(draftNow(), path);
+    const question = used.length
+      ? `ลบช่อง "${field.props.label ?? field.key}"? เทมเพลตอาจยังใช้ช่องนี้: ${used.join(", ")} — builder จะไม่แก้ไฟล์เหล่านั้นให้`
+      : `ลบช่อง "${field.props.label ?? field.key}"?`;
+    if (!window.confirm(question)) return;
     apply(removeField(builder!, path), (b) => {
       setBuilder(b);
       if (samePath(selected, path)) setSelected(null);
@@ -257,8 +286,18 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
             onRemove={remove}
           />
         </BuilderDnd>
-        <aside className={styles.panel} aria-label="คุณสมบัติของช่อง">
-          {current ? (
+        <aside className={styles.panel} aria-label={panel === "props" ? "คุณสมบัติของช่อง" : "ตัวอย่างฟอร์ม"}>
+          <div role="tablist" className={styles.panelTabs}>
+            <button type="button" role="tab" aria-selected={panel === "props"} onClick={() => setPanel("props")}>
+              คุณสมบัติ
+            </button>
+            <button type="button" role="tab" aria-selected={panel === "preview"} onClick={() => setPanel("preview")}>
+              ตัวอย่างฟอร์ม
+            </button>
+          </div>
+          {panel === "preview" ? (
+            <Preview builder={builder} templateId={templateId} />
+          ) : current ? (
             <PropsPanel
               key={current.pointer}
               field={current}
@@ -298,6 +337,26 @@ function places(b: Builder, tree: { params: BuilderField[]; data: BuilderField[]
   const here = field.path.keys.slice(0, -1).join("/");
   return out.filter(
     (pl) => pl.parentKeys.join("/") === here || canMove(b, field.path, { section, parentKeys: pl.parentKeys, index: 0 }) === null,
+  );
+}
+
+/** The real issue form, built from what is not saved yet; it checks but never sends. */
+function Preview({ builder, templateId }: { builder: Builder; templateId: string }) {
+  const files = serialize(builder);
+  const firstSample = Object.keys(builder.samples)[0];
+  const source = {
+    version: 0,
+    reportJson: files["report.json"]!,
+    schemaJson: files[builder.schemaName]!,
+    sampleJson: firstSample ? (files[firstSample] ?? undefined) : undefined,
+    formJson: files["form.json"] ?? undefined,
+  };
+  // a new form whenever the fields change, so values never point at fields that are gone
+  const key = `${source.reportJson.length}-${source.schemaJson.length}-${source.formJson?.length ?? 0}`;
+  return (
+    <div className={styles.preview}>
+      <IssueForm key={key} templateId={templateId} source={source} onPdf={() => undefined} preview />
+    </div>
   );
 }
 

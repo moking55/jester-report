@@ -63,3 +63,42 @@ describe("FormBuilder", () => {
     expect(document.querySelector('[data-pointer="/data/items/qty"]')).toBeTruthy();
   });
 });
+
+describe("FormBuilder preview and confirms (T9)", () => {
+  it("previews the real issue form from unsaved edits; it checks and never sends", () => {
+    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("blank")} archived={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "ข้อความหลายบรรทัด" }));
+    fireEvent.click(screen.getByRole("tab", { name: "ตัวอย่างฟอร์ม" }));
+    const form = screen.getByRole("form", { name: "ฟอร์มออกเอกสาร" });
+    expect(form.textContent).toContain("ตัวอย่างจากที่ยังไม่บันทึก");
+    expect(form.querySelector('[data-pointer="/data/field1"] textarea')).toBeTruthy(); // widget from the unsaved form.json
+    expect(screen.queryByRole("button", { name: "ออก PDF" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "ตรวจฟอร์ม" }));
+    expect(saved).toEqual([]);
+  });
+
+  it("asks before renaming a field a template uses, and does nothing when the answer is no", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("quotation")} archived={false} />);
+    fireEvent.click(screen.getByRole("button", { name: /^ลูกค้า/ }));
+    const key = screen.getByLabelText("key") as HTMLInputElement;
+    fireEvent.change(key, { target: { value: "client" } });
+    fireEvent.blur(key);
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("template.html"));
+    expect(document.querySelector('[data-pointer="/data/customer"]')).toBeTruthy();
+    confirm.mockReturnValue(true);
+    fireEvent.change(screen.getByLabelText("key"), { target: { value: "client" } });
+    fireEvent.blur(screen.getByLabelText("key"));
+    expect(document.querySelector('[data-pointer="/data/client"]')).toBeTruthy();
+    confirm.mockRestore();
+  });
+
+  it("names the list when removing a table report.json uses", () => {
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("quotation")} archived={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "ลบ รายการ" }));
+    expect(screen.getByRole("alert").textContent).toContain("lists.items");
+    expect(document.querySelector('[data-pointer="/data/items"]')).toBeTruthy();
+    confirm.mockRestore();
+  });
+});

@@ -62,7 +62,7 @@
     schema 150 ช่องลากไม่มี long task > 50ms
   - Verify: เบราว์เซอร์ (เมาส์ + แป้นพิมพ์ + emulate สัมผัส); Performance panel บันทึกผลด้านล่าง; studio 4 คำสั่ง
   - Files: `components/FormBuilder.tsx`, `components/BuilderCanvas.tsx` (ใหม่ ถ้า FormBuilder ยาวเกิน), css
-- [ ] **T9 ตัวอย่างฟอร์ม + ยืนยันเปลี่ยนชื่อ/ลบ**
+- [x] **T9 ตัวอย่างฟอร์ม + ยืนยันเปลี่ยนชื่อ/ลบ**
   - Acceptance: แผงขวาสลับเป็น "ตัวอย่างฟอร์ม" = `IssueForm` จากค่าที่ยังไม่บันทึก (ไม่มีปุ่มออก PDF); เปลี่ยนชื่อ/ลบที่ `references` พบ →
     dialog ยืนยันพร้อมรายชื่อไฟล์; ลบ array ที่ list ชี้ → ข้อความบอกชื่อ list
   - Verify: studio 4 คำสั่ง; เบราว์เซอร์กับ starter `quotation` (เปลี่ยนชื่อ `customer` → เห็นคำเตือน template.html)

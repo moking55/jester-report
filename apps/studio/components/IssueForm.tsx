@@ -32,6 +32,7 @@ type Props = {
   source: IssueSource;
   onPdf: (pdf: IssuedPdf) => void;
   onBody?: (body: string) => void; // the request the form would send now (the developer dialog's curl)
+  preview?: boolean; // v1.6 builder preview: the form as it would look, nothing is sent
 };
 
 /** Set the value at `path` (keys and row numbers) inside an immutable value tree. */
@@ -71,7 +72,7 @@ function MoneyInput(props: React.InputHTMLAttributes<HTMLInputElement> & { value
   );
 }
 
-export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
+export function IssueForm({ templateId, source, onPdf, onBody, preview = false }: Props) {
   const spec = useMemo(() => formSpec(source.reportJson, source.schemaJson, source.formJson), [source]);
   const [values, setValues] = useState<FormValues>(() => emptyValues(spec));
   const [filename, setFilename] = useState("");
@@ -100,6 +101,7 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
   async function issue() {
     const found = validate(spec, values);
     setErrors(found);
+    if (preview) return focusFirst(found); // the builder's preview checks, never sends
     setGeneral([]);
     setKept(false);
     if (Object.keys(found).length) return focusFirst(found);
@@ -294,7 +296,7 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
       }}
     >
       <div className={styles.bar}>
-        <span>version {source.version}</span>
+        <span>{preview ? "ตัวอย่างจากที่ยังไม่บันทึก" : `version ${source.version}`}</span>
         <span className={styles.spacer} />
         <button
           type="button"
@@ -320,7 +322,7 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
           ล้างฟอร์ม
         </button>
         <button type="submit" className={styles.primary} disabled={busy}>
-          {busy ? "กำลังออก PDF…" : "ออก PDF"}
+          {preview ? "ตรวจฟอร์ม" : busy ? "กำลังออก PDF…" : "ออก PDF"}
         </button>
       </div>
       {kept && (
