@@ -42,6 +42,7 @@ import { DiffDialog } from "./DiffDialog";
 import { Editor, type EditorHandle } from "./Editor";
 import { FieldsTab } from "./FieldsTab";
 import { FilePanel } from "./FilePanel";
+import { FormBuilder, FormPreview } from "./FormBuilder";
 import { IssueForm, type IssuedPdf } from "./IssueForm";
 import { JsonTree } from "./JsonTree";
 import { ProblemList } from "./ProblemList";
@@ -69,6 +70,7 @@ export function Workspace({
   archived = false,
   canIssue = false,
   issue = null,
+  openFile,
 }: {
   draft: Draft;
   name: string;
@@ -76,10 +78,18 @@ export function Workspace({
   archived?: boolean;
   canIssue?: boolean; // a published, active template: the "ออกเอกสาร" button shows
   issue?: IssueSource | null; // set: the issue mode (form + PDF), no code view
+  openFile?: string; // a file to show first (an old ?mode=form link opens the data schema)
 }) {
-  const [state, update] = useImmer(() =>
-    initialState(draft, defaultParams(draft.files.find((f) => f.name === "report.json")?.content, today)),
-  );
+  const [state, update] = useImmer(() => {
+    const s = initialState(draft, defaultParams(draft.files.find((f) => f.name === "report.json")?.content, today));
+    return openFile && draft.files.some((f) => f.name === openFile) ? { ...s, active: openFile } : s;
+  });
+  // v1.6: the data schema opens in the form builder; "แก้ไข JSON" shows it as text. formDraft feeds Form Preview.
+  const [schemaAsJson, setSchemaAsJson] = useState(false);
+  const [builderSession, setBuilderSession] = useState(0); // a new builder (read from the editor) on every switch back
+  const [formDraft, setFormDraft] = useState<Record<string, string> | null>(null);
+  const addingForm = useRef(false);
+  const latestNew = useRef<Record<string, string>>({}); // a builder file being created: its newest text
   const editor = useRef<EditorHandle>(null);
   const previewForm = useRef<HTMLFormElement>(null);
   const router = useRouter();
@@ -211,6 +221,46 @@ export function Workspace({
     assets: state.assets,
   });
 
+  const typedFiles = () => Object.fromEntries(typed().files.map((f) => [f.name, f.content]));
+  const schemaName = (() => {
+    try {
+      // report.json as saved: the schema's name rarely changes, and the editor's text is not render state
+      const text = state.files.find((f) => f.name === "report.json")?.content;
+      return (JSON.parse(text ?? "{}") as { data?: { schema?: string } }).data?.schema ?? "data.schema.json";
+    } catch {
+      return "data.schema.json";
+    }
+  })();
+  const showBuilder = !issue && state.active === schemaName && !schemaAsJson;
+
+  /** The builder's edits go into the editor as unsaved text; a form.json the draft lacks is created first. */
+  function builderChanged(next: Record<string, string | null>) {
+    const names = new Set(state.files.map((f) => f.name));
+    for (const [file, text] of Object.entries(next)) {
+      if (names.has(file)) {
+        editor.current?.setContent(file, text ?? `${JSON.stringify({ formVersion: 1, fields: {} }, null, 2)}
+`);
+      } else if (text !== null) {
+        latestNew.current[file] = text;
+        if (addingForm.current) continue;
+        addingForm.current = true;
+        addFile(file, text, false).finally(() => {
+          addingForm.current = false;
+          // edits made while the file was being created: put the newest text in as unsaved
+          editor.current?.setContent(file, latestNew.current[file]);
+        });
+      }
+    }
+    setFormDraft({ ...typedFiles(), ...Object.fromEntries(Object.entries(next).filter(([, t]) => t !== null)) } as Record<string, string>);
+  }
+
+  function toggleSchemaView() {
+    if (!schemaAsJson) return setSchemaAsJson(true);
+    setSchemaAsJson(false);
+    setBuilderSession((n) => n + 1);
+    setFormDraft(typedFiles());
+  }
+
   const reset = (version: number) =>
     exclusive(async () => {
       const result = await resetDraft(state.templateId, version, state.revision);
@@ -278,11 +328,13 @@ export function Workspace({
     editor.current?.goto(file, line, column);
   }
 
-  const addFile = (file: string, content = "") =>
+  const addFile = (file: string, content = "", open = true) =>
     exclusive(async () => {
       const result = await saveFile(state.templateId, file, content, state.revision);
       update(
-        result.ok ? fileAdded(file, result.data.revision, content) : failed(result.problem, problemMessage(result.problem)),
+        result.ok
+          ? fileAdded(file, result.data.revision, content, open)
+          : failed(result.problem, problemMessage(result.problem)),
       );
       return result.ok;
     });
@@ -330,12 +382,6 @@ export function Workspace({
   function toIssue() {
     if (unsaved && !window.confirm(`มี ${state.dirty.length} ไฟล์ที่ยังไม่บันทึก ออกจากหน้าแก้ code โดยไม่บันทึก?`)) return;
     router.push(`/templates/${state.templateId}?mode=issue`);
-  }
-
-  /** To the form builder (v1.6); it reads the saved draft, so unsaved edits would be lost: ask first. */
-  function toForm() {
-    if (unsaved && !window.confirm(`มี ${state.dirty.length} ไฟล์ที่ยังไม่บันทึก ออกจากหน้าแก้ code โดยไม่บันทึก?`)) return;
-    router.push(`/templates/${state.templateId}?mode=form`);
   }
 
   if (issue) {
@@ -435,9 +481,6 @@ export function Workspace({
         <button type="button" className={styles.publish} onClick={() => setPublishing(true)} disabled={locked}>
           Publish
         </button>
-        <button type="button" className={styles.secondary} onClick={toForm} disabled={state.saving}>
-          ออกแบบฟอร์ม
-        </button>
         <button
           type="button"
           onClick={toIssue}
@@ -524,7 +567,23 @@ export function Workspace({
             {state.dirty.includes(state.active) && <span className={styles.hint}>● ยังไม่บันทึก</span>}
             <span className={styles.spacer} />
             <span className={styles.hint}>Ctrl+S บันทึก</span>
+            {state.active === schemaName && (
+              <button type="button" className={styles.paneButton} onClick={toggleSchemaView}>
+                {schemaAsJson ? "แก้ไขแบบฟอร์ม" : "แก้ไข JSON"}
+              </button>
+            )}
           </div>
+          {showBuilder && assetPreview === null && (
+            <div className={styles.builderCell}>
+              <BuilderHost
+                key={`${state.generation}-${builderSession}`}
+                read={typedFiles}
+                readOnly={locked}
+                onOpen={setFormDraft}
+                onChange={builderChanged}
+              />
+            </div>
+          )}
           <Editor
             ref={editor}
             files={state.files}
@@ -545,8 +604,14 @@ export function Workspace({
           onReset={() => resize(() => ({ preview: DEFAULT_SIZES.preview }))}
         />
         <section className={styles.preview} aria-label="Preview">
-          <div className={styles.paneTitle}>PDF Preview</div>
+          <div className={styles.paneTitle}>{showBuilder ? "Form Preview" : "PDF Preview"}</div>
+          {showBuilder && formDraft && (
+            <div className={styles.formPreview}>
+              <FormPreview files={formDraft} templateId={state.templateId} />
+            </div>
+          )}
           <form
+            hidden={showBuilder}
             ref={previewForm}
             method="post"
             action={`/preview/${state.templateId}`}
@@ -567,7 +632,7 @@ export function Workspace({
               }}
             />
           </form>
-          {!previewed && (
+          {!previewed && !showBuilder && (
             <div className={styles.previewEmpty}>
               {/* eslint-disable-next-line @next/next/no-img-element -- a static decoration from public/ */}
               <img src="/jester-mascot.webp" alt="" width={86} height={160} />
@@ -577,6 +642,7 @@ export function Workspace({
           <iframe
             name="pdf-preview"
             title="PDF preview"
+            hidden={showBuilder}
             className={styles.pdf}
             onLoad={(e) => {
               // the first load is about:blank; later loads are a preview, which records a run
@@ -658,4 +724,21 @@ export function Workspace({
       </div>
     </div>
   );
+}
+
+/** Reads the editor's files once, when the builder opens, so typing elsewhere does not reset it. */
+function BuilderHost({
+  read,
+  readOnly,
+  onOpen,
+  onChange,
+}: {
+  read: () => Record<string, string>;
+  readOnly: boolean;
+  onOpen: (files: Record<string, string>) => void;
+  onChange: (files: Record<string, string | null>) => void;
+}) {
+  const [files] = useState(read);
+  useEffect(() => onOpen(files), [files, onOpen]);
+  return <FormBuilder files={files} readOnly={readOnly} onChange={onChange} />;
 }

@@ -1,5 +1,5 @@
-// v1.6 (tasks/v1.6/todo.md T10): a developer builds a report's form by dragging fields, never opening a JSON file;
-// a hand edit of the schema shows in the builder; the lead's issue form follows form.json and gives a PDF.
+// v1.6 (tasks/v1.6/todo.md T10): a developer opens the data schema and builds the form by dragging fields in the code view;
+// "แก้ไข JSON" and back keeps a hand edit; one save writes all; the lead's issue form follows form.json and gives a PDF.
 // Runs on the same fresh stack after checkpoint-a (the E2E user) and after full-flow (which wants an empty
 // catalog), so the file name sorts after both; makes its own template from the blank starter.
 import { expect, test, type Locator, type Page } from "@playwright/test";
@@ -43,7 +43,9 @@ async function settled(page: Page) {
 }
 
 const palette = (page: Page, kind: string) => page.locator(`[data-kind="${kind}"]`);
-const card = (page: Page, pointer: string) => page.locator(`[data-pointer="${pointer}"]`);
+// the builder's cards (Form Preview beside it uses data-pointer too)
+const card = (page: Page, pointer: string) =>
+  page.getByRole("region", { name: "Editor" }).locator(`[data-pointer="${pointer}"]`);
 const box = (page: Page, id: string) => page.locator(`[data-container="${id}"]`);
 const order = (page: Page, id: string) =>
   box(page, id).evaluate((el) => [...el.children].map((c) => (c as HTMLElement).dataset.pointer).filter(Boolean));
@@ -63,9 +65,11 @@ test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
   await create.getByRole("button", { name: "สร้างรายงาน" }).click();
   await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
 
-  await page.getByRole("button", { name: "ออกแบบฟอร์ม" }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${ID}\\?mode=form$`));
+  // the data schema opens in the form builder, Form Preview beside it
+  const files = page.getByRole("navigation", { name: "ไฟล์" });
+  await files.getByRole("button", { name: "data.schema.json", exact: true }).click();
   await expect(card(page, "/data/title")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("region", { name: "Preview" })).toContainText("Form Preview");
 
   // the nine kinds into the data, each dropped on the starter's title (so it lands before it)
   const kinds = ["text", "textarea", "number", "money", "date", "choice", "checkbox", "group", "table"];
@@ -89,10 +93,15 @@ test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
 
   // the keyboard moves the first field down one place: Space, ArrowDown, Space
   const before = await order(page, "c:data");
-  await card(page, before[0]!).getByRole("button", { name: /^ลาก / }).focus();
-  await page.keyboard.press("Space");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Space");
+  const handle = card(page, before[0]!).getByRole("button", { name: /^ลาก / }).first();
+  await handle.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await settled(page);
+  await handle.focus();
+  // a beat between keys, as a person gives: @dnd-kit measures after the lift before it can move
+  for (const key of ["Space", "ArrowDown", "Space"]) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(300);
+  }
   await expect.poll(() => order(page, "c:data")).toEqual([before[1], before[0], ...before.slice(2)]);
   await settled(page);
   const dataOrder = await order(page, "c:data");
@@ -106,23 +115,23 @@ test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
   await select(page, "/data/field6");
   await page.locator("label", { hasText: /^แสดงเป็น/ }).locator("select").selectOption("radio");
 
-  await page.getByRole("button", { name: "บันทึก", exact: true }).click();
-  await expect(page.getByText("ไม่มี problem")).toBeVisible({ timeout: 30_000 });
+  // Form Preview follows the unsaved edits
+  await expect(page.getByRole("region", { name: "Preview" }).getByText("ชื่อผู้ติดต่อ")).toBeVisible();
 
-  // a hand edit of the schema shows in the builder
-  await page.getByRole("button", { name: "กลับไปแก้ code" }).click();
-  await expect(page.getByRole("navigation", { name: "ไฟล์" })).toBeVisible({ timeout: 30_000 });
-  await page.getByRole("navigation", { name: "ไฟล์" }).getByRole("button", { name: "data.schema.json", exact: true }).click();
+  // a hand edit of the schema shows in the builder ("แก้ไข JSON" and back), then one save writes everything
+  await page.getByRole("button", { name: "แก้ไข JSON" }).click();
   const schema = JSON.parse(await editorText(page));
+  expect(schema.properties.field1.title).toBe("ชื่อผู้ติดต่อ"); // the builder's edit is in the text
   schema.properties.field3.title = "จำนวนที่แก้มือ";
   await setEditorText(page, `${JSON.stringify(schema, null, 2)}\n`);
+  await page.getByRole("button", { name: "แก้ไขแบบฟอร์ม" }).click();
+  await expect(card(page, "/data/field3")).toContainText("จำนวนที่แก้มือ");
   await page.getByRole("button", { name: "บันทึก (Ctrl+S)" }).click();
-  await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible();
-  await page.getByRole("button", { name: "ออกแบบฟอร์ม" }).click();
-  await expect(card(page, "/data/field3")).toContainText("จำนวนที่แก้มือ", { timeout: 30_000 });
+  await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible({ timeout: 30_000 });
+  await expect(files.getByRole("button", { name: "form.json", exact: true })).toBeVisible(); // created by the builder
+  await expect(page.getByRole("tab", { name: "Problems" })).toHaveText("Problems"); // no count: nothing wrong
 
   // publish, then the lead's form follows form.json
-  await page.getByRole("button", { name: "กลับไปแก้ code" }).click();
   await page.getByRole("button", { name: "Publish" }).click();
   const publish = page.getByRole("dialog", { name: "Publish" });
   await publish.getByRole("button", { name: "Publish" }).click();

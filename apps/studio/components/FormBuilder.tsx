@@ -1,13 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
-import { deleteFile, saveFile, validateDraft } from "@/lib/actions/draft";
-import { saveSteps } from "@/lib/builder-save";
 import { references } from "@/lib/field-refs";
+import { FORM_FILE } from "@/lib/form-layout";
 import { canEditExactly } from "@/lib/json-exact";
-import { problemMessage } from "@/lib/messages";
 import {
   addField,
   canMove,
@@ -15,7 +12,6 @@ import {
   DATA_KINDS,
   fieldTree,
   findField,
-  markSaved,
   moveField,
   openBuilder,
   PARAM_KINDS,
@@ -31,124 +27,107 @@ import {
   type Section,
   type Target,
 } from "@/lib/schema-edit";
-import type { TextFile } from "@/lib/workspace";
+import type { IssueSource } from "@/lib/workspace";
 
 import { BuilderCanvas, BuilderDnd, PaletteItem } from "./BuilderCanvas";
-import { IssueForm } from "./IssueForm";
 import styles from "./FormBuilder.module.css";
+import { IssueForm } from "./IssueForm";
 import { PropsPanel, type Place } from "./PropsPanel";
 
 type Props = {
-  templateId: string;
-  name: string;
-  revision: number;
-  files: TextFile[];
-  archived: boolean;
+  /** The draft's text files as the editor holds them when the builder opens. */
+  files: Record<string, string>;
+  readOnly: boolean;
+  /** After every edit: the builder's files that differ from when it opened (form.json null: no layout to keep). */
+  onChange: (files: Record<string, string | null>) => void;
 };
 
-const samePath = (a: FieldPath | null, b: FieldPath | null) =>
-  !!a && !!b && a.section === b.section && a.keys.join("/") === b.keys.join("/");
-
-/** "ออกแบบฟอร์ม" (SPEC-studio v1.6): edit parameters and the data schema by dragging fields; files stay the truth. */
-export function FormBuilder({ templateId, name, revision: startRevision, files, archived }: Props) {
-  const router = useRouter();
-  const texts = useMemo(() => Object.fromEntries(files.map((f) => [f.name, f.content])), [files]);
-  const opened = useMemo(() => openBuilder(texts), [texts]);
+/**
+ * The form builder (SPEC-studio v1.6), shown in place of the editor for the data schema. Every edit goes into
+ * the editor's files (unsaved); the workspace's own save writes them. "แก้ไข JSON" shows the same files as text.
+ */
+export function FormBuilder({ files, readOnly: archived, onChange }: Props) {
+  const opened = useMemo(() => openBuilder(files), [files]);
   const exact = useMemo(() => canEditExactly(), []);
   const readOnly = archived || !exact || !opened.ok;
 
   const [builder, setBuilder] = useState<Builder | null>(opened.ok ? opened.value : null);
-  const [lastSaved, setLastSaved] = useState<Builder | null>(opened.ok ? opened.value : null); // "ยกเลิกการแก้" goes back here
-  const [revision, setRevision] = useState(startRevision);
   const [selected, setSelected] = useState<FieldPath | null>(null);
   const [section, setSection] = useState<Section>("data"); // where the palette's Enter adds
-  const [message, setMessage] = useState<{ kind: "error" | "info"; text: string } | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [conflict, setConflict] = useState(false);
-  const [problems, setProblems] = useState<number | null>(null);
-  const [panel, setPanel] = useState<"props" | "preview">("props");
-
+  const [message, setMessage] = useState<string | null>(null);
+  const touched = useRef(new Set<string>()); // files handed to the editor once keep being handed (an undo-to-start too)
   // stable field objects between renders, so cards that did not change are not drawn again
   const tree = useMemo(() => (builder ? fieldTree(builder) : { params: [], data: [] }), [builder]);
 
   if (!builder) {
     return (
       <div className={styles.builder}>
-        <Toolbar name={name} templateId={templateId} onBack={() => router.push(`/templates/${templateId}`)} />
         <p role="alert" className={styles.alert}>
-          เปิด builder ไม่ได้: {opened.ok ? "" : opened.error} — แก้ไฟล์ในหน้าแก้ code ก่อน
+          เปิดตัวสร้างฟอร์มไม่ได้: {opened.ok ? "" : opened.error} — กด &quot;แก้ไข JSON&quot; เพื่อแก้ไฟล์
         </p>
       </div>
     );
   }
 
-  const changes = changedFiles(builder);
-  const dirty = changes.length > 0;
   const current = selected ? findField(builder, selected) : null;
 
-  /** Apply a model edit; a refusal shows its Thai reason and changes nothing. */
-  function apply<T>(result: { ok: true; value: T } | { ok: false; error: string }, next: (v: T) => void) {
-    if (result.ok) {
-      next(result.value);
-      setMessage(null);
-    } else setMessage({ kind: "error", text: result.error });
+  /** Keep a model edit and hand the files to the editor; a refusal shows its Thai reason and changes nothing. */
+  function apply<T>(result: { ok: true; value: T } | { ok: false; error: string }, next: (v: T) => Builder) {
+    if (!result.ok) return setMessage(result.error);
+    const b = next(result.value);
+    setBuilder(b);
+    setMessage(null);
+    // only files whose values changed since the builder opened: a hand-formatted file stays as it is
+    for (const f of changedFiles(b)) touched.current.add(f.name);
+    const now = serialize(b);
+    onChange(Object.fromEntries([...touched.current].map((name) => [name, now[name] ?? null])));
   }
 
-  function add(kind: Kind, target: { section: Section; parentKeys: string[]; index: number }) {
+  function add(kind: Kind, target: Target) {
     apply(addField(builder!, target.section, target.parentKeys, target.index, kind), ({ builder: b, path }) => {
-      setBuilder(b);
       setSelected(path);
       setSection(target.section);
+      return b;
     });
   }
 
   /** The palette's Enter or click: the end of the selected group/table, or of the section in use. */
   function addHere(kind: Kind) {
-    const parent =
-      current && (current.kind === "group" || current.kind === "table") ? current.path : null;
-    const target = parent
-      ? { section: parent.section, parentKeys: parent.keys, index: current!.children.length }
-      : { section, parentKeys: [], index: tree[section].length };
-    add(kind, target);
+    const parent = current && (current.kind === "group" || current.kind === "table") ? current : null;
+    add(
+      kind,
+      parent
+        ? { section: parent.path.section, parentKeys: parent.path.keys, index: parent.children.length }
+        : { section, parentKeys: [], index: tree[section].length },
+    );
   }
 
   function move(from: FieldPath, to: Target) {
     apply(moveField(builder!, from, to), ({ builder: b, path }) => {
-      setBuilder(b);
       setSelected(path);
+      return b;
     });
   }
 
-  function edit(patch: FieldProps) {
-    if (!selected) return;
-    apply(setProps(builder!, selected, patch), setBuilder);
-  }
-
-  /** The draft as the builder would save it: templates as loaded, the builder's files as edited. */
-  const draftNow = (): Record<string, string> => {
-    const out: Record<string, string> = { ...texts };
-    for (const [file, text] of Object.entries(serialize(builder!))) {
-      if (text === null) delete out[file];
-      else out[file] = text;
-    }
+  /** The draft as it is now: the templates as opened, the builder's files as edited. */
+  const draftNow = () => {
+    const out = { ...files };
+    for (const [file, text] of Object.entries(serialize(builder!))) if (text !== null) out[file] = text;
     return out;
   };
 
-  /** Ask before a rename or remove when a template or report.json may still use the field (SPEC v1.6). */
-  function confirmUsed(path: FieldPath, what: string): boolean {
-    const used = references(draftNow(), path);
-    if (!used.length) return true;
-    return window.confirm(
-      `เทมเพลตอาจยังใช้ช่องนี้: ${used.join(", ")}
-${what}แล้ว builder จะไม่แก้ไฟล์เหล่านั้นให้ ต้องแก้เองในหน้าแก้ code — ทำต่อ?`,
-    );
-  }
-
   function rename(key: string) {
-    if (!selected || !confirmUsed(selected, "เปลี่ยนชื่อ")) return;
+    if (!selected) return;
+    const used = references(draftNow(), selected);
+    if (
+      used.length &&
+      !window.confirm(`เทมเพลตอาจยังใช้ช่องนี้: ${used.join(", ")}\nเปลี่ยนชื่อแล้วตัวสร้างฟอร์มจะไม่แก้ไฟล์เหล่านั้นให้ ต้องแก้เอง — ทำต่อ?`)
+    ) {
+      return;
+    }
     apply(renameField(builder!, selected, key), ({ builder: b, path }) => {
-      setBuilder(b);
       setSelected(path);
+      return b;
     });
   }
 
@@ -156,112 +135,39 @@ ${what}แล้ว builder จะไม่แก้ไฟล์เหล่า�
     const field = findField(builder!, path);
     if (!field) return;
     const used = references(draftNow(), path);
+    const name = field.props.label ?? field.key;
     const question = used.length
-      ? `ลบช่อง "${field.props.label ?? field.key}"? เทมเพลตอาจยังใช้ช่องนี้: ${used.join(", ")} — builder จะไม่แก้ไฟล์เหล่านั้นให้`
-      : `ลบช่อง "${field.props.label ?? field.key}"?`;
+      ? `ลบช่อง "${name}"? เทมเพลตอาจยังใช้ช่องนี้: ${used.join(", ")} — ตัวสร้างฟอร์มจะไม่แก้ไฟล์เหล่านั้นให้`
+      : `ลบช่อง "${name}"?`;
     if (!window.confirm(question)) return;
     apply(removeField(builder!, path), (b) => {
-      setBuilder(b);
-      if (samePath(selected, path)) setSelected(null);
+      if (selected && selected.section === path.section && selected.keys.join("/") === path.keys.join("/")) setSelected(null);
+      return b;
     });
-  }
-
-  async function save() {
-    setSaving(true);
-    setMessage(null);
-    const out = await saveSteps(changes, revision, {
-      put: (file, text, rev) => saveFile(templateId, file, text, rev),
-      remove: (file, rev) => deleteFile(templateId, file, rev),
-    });
-    setRevision(out.revision);
-    const written = markSaved(builder!, out.saved);
-    setBuilder(written);
-    if (out.ok) {
-      setLastSaved(written);
-      setMessage({ kind: "info", text: `บันทึกแล้ว ${out.saved.length} ไฟล์` });
-      const checked = await validateDraft(templateId);
-      setProblems(checked.ok ? checked.data.problems.length : null);
-    } else {
-      // part old, part new on the server: "ยกเลิกการแก้" has no clean point to go back to, only a reload
-      if (out.saved.length) setLastSaved(null);
-      if (out.conflict) setConflict(true);
-      else {
-        const done = out.saved.length ? `บันทึกแล้ว: ${out.saved.join(", ")} · ` : "";
-        const why = out.problem ? problemMessage(out.problem) : "ส่งไม่สำเร็จ";
-        setMessage({ kind: "error", text: `${done}ยังไม่บันทึก: ${out.pending.join(", ")} (${why}) — กดบันทึกอีกครั้งได้` });
-      }
-    }
-    setSaving(false);
-  }
-
-  function leave() {
-    if (dirty && !window.confirm("มีการแก้ในฟอร์มที่ยังไม่บันทึก ออกโดยไม่บันทึก?")) return;
-    router.push(`/templates/${templateId}`);
-  }
-
-  function discard() {
-    if (!lastSaved || !window.confirm("ยกเลิกการแก้ทั้งหมดตั้งแต่บันทึกครั้งล่าสุด?")) return;
-    setBuilder(lastSaved);
-    setSelected(null);
-    setMessage(null);
   }
 
   return (
     <div className={styles.builder}>
-      <Toolbar name={name} templateId={templateId} onBack={leave}>
-        {problems !== null && (
-          <span className={problems ? styles.problems : styles.saveState}>
-            {problems ? `มี ${problems} problem — ดูในหน้าแก้ code` : "ไม่มี problem"}
-          </span>
-        )}
-        <span role="status" className={styles.saveState}>
-          {saving ? "กำลังบันทึก…" : dirty ? `ยังไม่บันทึก ${changes.length} ไฟล์` : "บันทึกแล้ว"}
-        </span>
-        <button type="button" className={styles.secondary} onClick={discard} disabled={!dirty || saving || readOnly || !lastSaved}>
-          ยกเลิกการแก้
-        </button>
-        <button type="button" onClick={save} disabled={!dirty || saving || readOnly || conflict}>
-          บันทึก
-        </button>
-      </Toolbar>
       {archived && <p className={styles.alert}>รายงานนี้ถูก archive แล้ว ดูฟอร์มได้อย่างเดียว</p>}
       {!exact && <p className={styles.alert}>browser นี้อ่านตัวเลขแบบตรงทุกหลักไม่ได้ จึงแก้ฟอร์มไม่ได้ — ใช้ Chrome/Edge รุ่นใหม่</p>}
-      {conflict && (
-        <p role="alert" className={styles.alert}>
-          มีคนแก้ draft นี้ก่อน การแก้ในฟอร์มยังไม่ถูกบันทึกทั้งหมด{" "}
-          <button type="button" onClick={() => window.location.reload()}>
-            โหลดใหม่
-          </button>{" "}
-          (การแก้ที่ยังไม่บันทึกจะหาย)
-        </p>
-      )}
       {builder.warnings.map((w) => (
         <p key={w} className={styles.warning}>
           {w}
         </p>
       ))}
       {message && (
-        <p role={message.kind === "error" ? "alert" : "status"} className={message.kind === "error" ? styles.alert : styles.info}>
-          {message.text}
+        <p role="alert" className={styles.alert}>
+          {message}
         </p>
       )}
       <div className={styles.main}>
-        <BuilderDnd
-          builder={builder}
-          tree={tree}
-          readOnly={readOnly}
-          onMove={move}
-          onAdd={(kind, to) => add(kind, to)}
-          onMessage={(text) => setMessage(text ? { kind: "error", text } : null)}
-        >
+        <BuilderDnd builder={builder} tree={tree} readOnly={readOnly} onMove={move} onAdd={add} onMessage={setMessage}>
           {readOnly ? (
             <div />
           ) : (
             <aside className={styles.palette} aria-label="ชนิดช่อง">
               <h3>เพิ่มช่อง</h3>
-              <p className={styles.hint}>
-                ลากลงฟอร์ม หรือกด Enter เพื่อเพิ่มท้าย{section === "params" ? " ข้อมูลเอกสาร" : " ข้อมูล"}
-              </p>
+              <p className={styles.hint}>ลากลงฟอร์ม หรือกด Enter เพื่อเพิ่มท้าย{section === "params" ? "ข้อมูลเอกสาร" : "ข้อมูล"}</p>
               {DATA_KINDS.map((kind) => (
                 <PaletteItem
                   key={kind}
@@ -286,18 +192,8 @@ ${what}แล้ว builder จะไม่แก้ไฟล์เหล่า�
             onRemove={remove}
           />
         </BuilderDnd>
-        <aside className={styles.panel} aria-label={panel === "props" ? "คุณสมบัติของช่อง" : "ตัวอย่างฟอร์ม"}>
-          <div role="tablist" className={styles.panelTabs}>
-            <button type="button" role="tab" aria-selected={panel === "props"} onClick={() => setPanel("props")}>
-              คุณสมบัติ
-            </button>
-            <button type="button" role="tab" aria-selected={panel === "preview"} onClick={() => setPanel("preview")}>
-              ตัวอย่างฟอร์ม
-            </button>
-          </div>
-          {panel === "preview" ? (
-            <Preview builder={builder} templateId={templateId} />
-          ) : current ? (
+        <aside className={styles.panel} aria-label="คุณสมบัติของช่อง">
+          {current ? (
             <PropsPanel
               key={current.pointer}
               field={current}
@@ -310,7 +206,9 @@ ${what}แล้ว builder จะไม่แก้ไฟล์เหล่า�
                   : tree[current.path.section].length;
                 move(current.path, { section: current.path.section, parentKeys, index: count });
               }}
-              onEdit={edit}
+              onEdit={(patch: FieldProps) => {
+                if (selected) apply(setProps(builder, selected, patch), (b) => b);
+              }}
               onRename={rename}
             />
           ) : (
@@ -320,6 +218,34 @@ ${what}แล้ว builder จะไม่แก้ไฟล์เหล่า�
       </div>
     </div>
   );
+}
+
+/** The issue form as the lead will see it, from the files as they are now; it checks and never sends. */
+export function FormPreview({ files, templateId }: { files: Record<string, string>; templateId: string }) {
+  let source: IssueSource | null = null;
+  try {
+    const report = JSON.parse(files["report.json"] ?? "") as { data?: { schema?: string; samples?: string[] } };
+    const schemaJson = report.data?.schema ? files[report.data.schema] : undefined;
+    const sample = report.data?.samples?.[0];
+    if (schemaJson) {
+      JSON.parse(schemaJson);
+      source = {
+        version: 0,
+        reportJson: files["report.json"],
+        schemaJson,
+        sampleJson: sample ? files[sample] : undefined,
+        formJson: files[FORM_FILE],
+      };
+    }
+  } catch {
+    source = null;
+  }
+  if (!source) {
+    return <p className={styles.hint}>แสดงตัวอย่างฟอร์มไม่ได้: report.json หรือ schema ยังไม่ใช่ JSON ที่ถูกต้อง</p>;
+  }
+  // a new form whenever the fields change, so values never point at fields that are gone
+  const key = `${source.reportJson.length}-${source.schemaJson.length}-${source.formJson?.length ?? 0}`;
+  return <IssueForm key={key} templateId={templateId} source={source} onPdf={() => undefined} preview />;
 }
 
 /** The section root and every group/table the field may move into (its current place included). */
@@ -340,53 +266,8 @@ function places(b: Builder, tree: { params: BuilderField[]; data: BuilderField[]
   );
 }
 
-/** The real issue form, built from what is not saved yet; it checks but never sends. */
-function Preview({ builder, templateId }: { builder: Builder; templateId: string }) {
-  const files = serialize(builder);
-  const firstSample = Object.keys(builder.samples)[0];
-  const source = {
-    version: 0,
-    reportJson: files["report.json"]!,
-    schemaJson: files[builder.schemaName]!,
-    sampleJson: firstSample ? (files[firstSample] ?? undefined) : undefined,
-    formJson: files["form.json"] ?? undefined,
-  };
-  // a new form whenever the fields change, so values never point at fields that are gone
-  const key = `${source.reportJson.length}-${source.schemaJson.length}-${source.formJson?.length ?? 0}`;
-  return (
-    <div className={styles.preview}>
-      <IssueForm key={key} templateId={templateId} source={source} onPdf={() => undefined} preview />
-    </div>
-  );
-}
-
 function siblingKeys(tree: { params: BuilderField[]; data: BuilderField[] }, field: BuilderField): string[] {
   let list = tree[field.path.section];
   for (const key of field.path.keys.slice(0, -1)) list = list.find((f) => f.key === key)?.children ?? [];
   return list.map((f) => f.key).filter((k) => k !== field.key);
-}
-
-function Toolbar({
-  name,
-  templateId,
-  onBack,
-  children,
-}: {
-  name: string;
-  templateId: string;
-  onBack: () => void;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div className={styles.toolbar}>
-      <b>{name}</b>
-      <code>{templateId}</code>
-      <span className={styles.mode}>ออกแบบฟอร์ม</span>
-      <span className={styles.spacer} />
-      {children}
-      <button type="button" className={styles.secondary} onClick={onBack}>
-        กลับไปแก้ code
-      </button>
-    </div>
-  );
 }

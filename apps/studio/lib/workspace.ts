@@ -101,11 +101,12 @@ export const reloaded = (draft: Draft) => (s: WorkspaceState) => {
   return { ...next, tab: s.tab, run: s.run, generation: s.generation + 1 };
 };
 
-export const fileAdded = (name: string, revision: number, content = "") => (s: WorkspaceState) => {
+/** A new file is saved; `open` shows it (the file panel's "+ เพิ่มไฟล์"), the form builder's form.json stays behind. */
+export const fileAdded = (name: string, revision: number, content = "", open = true) => (s: WorkspaceState) => {
   s.revision = revision;
   s.error = null;
   if (!s.files.some((f) => f.name === name)) s.files.push({ name, content, sha256: "" });
-  s.active = name;
+  if (open) s.active = name;
 };
 
 export const fileRemoved = (name: string, revision: number) => (s: WorkspaceState) => {

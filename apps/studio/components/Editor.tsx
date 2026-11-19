@@ -22,6 +22,8 @@ export type EditorHandle = {
   markSaved: (name: string, content: string) => boolean;
   /** Shows a line of a file; the caller also sets `active` to that file. */
   goto: (name: string, line: number, column?: number) => void;
+  /** Replaces a file's text as if typed (v1.6: the form builder's edits); it becomes unsaved, undo works. */
+  setContent: (name: string, content: string) => void;
 };
 
 type Props = {
@@ -140,6 +142,20 @@ export function Editor({ files, active, generation, problems, onDirty, onSave, r
 
   useImperativeHandle(ref, () => ({
     content: textOf,
+    setContent: (name, content) => {
+      const onScreen = name === shown.current && view.current;
+      const state = onScreen ? view.current!.state : states.current.get(name);
+      if (!state || state.doc.toString() === content) return;
+      const change = { changes: { from: 0, to: state.doc.length, insert: content } };
+      if (onScreen) view.current!.dispatch(change); // the update listener marks it unsaved
+      else {
+        states.current.set(name, state.update(change).state);
+        if (!dirty.current.has(name)) {
+          dirty.current.add(name);
+          callbacks.current.onDirty(name, true);
+        }
+      }
+    },
     markSaved: (name, content) => {
       const now = textOf(name);
       const clean = now === content;

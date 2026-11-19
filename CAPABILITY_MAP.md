@@ -108,7 +108,7 @@ Build order: D1 → D2 → D3 · ปล่อยเป็น `v1.5.0` · ลำ�
 | งาน | module | ขึ้นกับ |
 | --- | --- | --- |
 | E1 `lib/schema-edit.ts`: อ่าน/เขียน schema + parameters + `form.json` + sample แบบ pure (เพิ่ม, แก้, ย้าย, เปลี่ยนชื่อ, ลบช่อง; เก็บ keyword ที่ไม่รู้จักไว้) | `studio` | — |
-| E2 โหมด "ออกแบบฟอร์ม" ใน workspace: palette, ผืนลากวาง, แผงคุณสมบัติ, ตัวอย่างฟอร์ม, บันทึกลง draft | `studio` | E1 |
+| E2 ตัวสร้างฟอร์มในช่อง code เมื่อเปิด `data.schema.json` (ปุ่ม "แก้ไข JSON" สลับ), Form Preview ในช่องขวา, บันทึกด้วยปุ่มเดิม | `studio` | E1 |
 | E3 ฟอร์มออกเอกสารอ่าน `form.json` (ชนิด input, ความกว้าง) + แท็บ "ช่องข้อมูล" ใน workspace (copy expression, เตือนช่องที่เทมเพลตไม่ได้ใช้) | `studio` | E1 |
 
 Build order: E1 → E2, E3 · ปล่อยเป็น `v1.6.0` · spec: [SPEC-studio.md](SPEC-studio.md) หัวข้อ v1.6

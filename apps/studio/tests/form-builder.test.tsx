@@ -1,91 +1,59 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-const saved: { name: string; text: string; revision: number }[] = [];
-vi.mock("@/lib/actions/draft", () => ({
-  saveFile: vi.fn(async (_id: string, name: string, text: string, revision: number) => {
-    saved.push({ name, text, revision });
-    return { ok: true, data: { revision: revision + 1 } };
-  }),
-  deleteFile: vi.fn(async (_id: string, _name: string, revision: number) => ({ ok: true, data: { revision: revision + 1 } })),
-  validateDraft: vi.fn(async () => ({ ok: true, data: { problems: [] } })),
-}));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }) }));
+import { FormBuilder, FormPreview } from "@/components/FormBuilder";
 
-import { FormBuilder } from "@/components/FormBuilder";
-
-afterEach(() => {
-  cleanup();
-  saved.length = 0;
-});
+afterEach(cleanup);
 
 const STARTERS = join(__dirname, "../../api/src/jester_api/template_store/starters");
-const files = (name: string) =>
-  readdirSync(join(STARTERS, name)).map((f) => ({ name: f, content: readFileSync(join(STARTERS, name, f), "utf8"), sha256: "" }));
+const files = (name: string): Record<string, string> =>
+  Object.fromEntries(readdirSync(join(STARTERS, name)).map((f) => [f, readFileSync(join(STARTERS, name, f), "utf8")]));
 
-describe("FormBuilder", () => {
-  it("adds a field from the palette, edits its label, saves only the changed files in order", async () => {
-    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={4} files={files("blank")} archived={false} />);
-    expect(screen.getByRole("button", { name: "บันทึก" })).toHaveProperty("disabled", true);
+describe("FormBuilder in the code view", () => {
+  it("hands every edit to the editor as file texts: schema and form.json", () => {
+    const onChange = vi.fn();
+    render(<FormBuilder files={files("blank")} readOnly={false} onChange={onChange} />);
 
     fireEvent.click(screen.getByRole("button", { name: "เงิน" }));
     expect(document.querySelector('[data-pointer="/data/field1"]')).toBeTruthy();
+    let last = onChange.mock.lastCall![0] as Record<string, string | null>;
+    expect(JSON.parse(last["data.schema.json"]!).properties.field1).toEqual({ title: "เงิน", type: "string", format: "decimal" });
+    expect(JSON.parse(last["form.json"]!).fields).toEqual({ "/data/field1": { widget: "money" } });
 
     const label = screen.getByLabelText("ป้าย") as HTMLInputElement; // the new field is selected
     fireEvent.blur(label, { target: { value: "ยอดเงิน" } });
+    last = onChange.mock.lastCall![0];
+    expect(JSON.parse(last["data.schema.json"]!).properties.field1.title).toBe("ยอดเงิน");
     expect(document.querySelector('[data-pointer="/data/field1"]')!.textContent).toContain("ยอดเงิน");
-
-    fireEvent.click(screen.getByRole("button", { name: "บันทึก" }));
-    await waitFor(() => expect(screen.getByText("บันทึกแล้ว 2 ไฟล์")).toBeTruthy());
-    expect(saved.map((s) => [s.name, s.revision])).toEqual([
-      ["data.schema.json", 4],
-      ["form.json", 5],
-    ]);
-    expect(JSON.parse(saved[0].text).properties.field1).toEqual({ title: "ยอดเงิน", type: "string", format: "decimal" });
-    expect(screen.getByText("ไม่มี problem")).toBeTruthy();
   });
 
-  it("shows a refusal in Thai and keeps the field as it was", () => {
-    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("blank")} archived={false} />);
+  it("shows a refusal in Thai and changes nothing", () => {
+    const onChange = vi.fn();
+    render(<FormBuilder files={files("blank")} readOnly={false} onChange={onChange} />);
     fireEvent.click(screen.getByRole("button", { name: /^หัวเรื่อง/ }));
-    const key = screen.getByLabelText("key") as HTMLInputElement;
-    fireEvent.change(key, { target: { value: "1bad" } });
+    fireEvent.change(screen.getByLabelText("key"), { target: { value: "1bad" } });
     expect(screen.getByText(/ต้องขึ้นต้นด้วยตัวอักษรอังกฤษ/)).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("is read-only when archived: no palette, no save", () => {
-    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("quotation")} archived />);
+  it("is read-only when archived: no palette", () => {
+    render(<FormBuilder files={files("quotation")} readOnly onChange={vi.fn()} />);
     expect(screen.queryByRole("complementary", { name: "ชนิดช่อง" })).toBeNull();
-    expect(screen.getByRole("button", { name: "บันทึก" })).toHaveProperty("disabled", true);
     expect(document.querySelector('[data-pointer="/data/items/qty"]')).toBeTruthy();
-  });
-});
-
-describe("FormBuilder preview and confirms (T9)", () => {
-  it("previews the real issue form from unsaved edits; it checks and never sends", () => {
-    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("blank")} archived={false} />);
-    fireEvent.click(screen.getByRole("button", { name: "ข้อความหลายบรรทัด" }));
-    fireEvent.click(screen.getByRole("tab", { name: "ตัวอย่างฟอร์ม" }));
-    const form = screen.getByRole("form", { name: "ฟอร์มออกเอกสาร" });
-    expect(form.textContent).toContain("ตัวอย่างจากที่ยังไม่บันทึก");
-    expect(form.querySelector('[data-pointer="/data/field1"] textarea')).toBeTruthy(); // widget from the unsaved form.json
-    expect(screen.queryByRole("button", { name: "ออก PDF" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "ตรวจฟอร์ม" }));
-    expect(saved).toEqual([]);
   });
 
   it("asks before renaming a field a template uses, and does nothing when the answer is no", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("quotation")} archived={false} />);
+    const onChange = vi.fn();
+    render(<FormBuilder files={files("quotation")} readOnly={false} onChange={onChange} />);
     fireEvent.click(screen.getByRole("button", { name: /^ลูกค้า/ }));
-    const key = screen.getByLabelText("key") as HTMLInputElement;
-    fireEvent.change(key, { target: { value: "client" } });
-    fireEvent.blur(key);
+    fireEvent.change(screen.getByLabelText("key"), { target: { value: "client" } });
+    fireEvent.blur(screen.getByLabelText("key"));
     expect(confirm).toHaveBeenCalledWith(expect.stringContaining("template.html"));
-    expect(document.querySelector('[data-pointer="/data/customer"]')).toBeTruthy();
+    expect(onChange).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
     fireEvent.change(screen.getByLabelText("key"), { target: { value: "client" } });
     fireEvent.blur(screen.getByLabelText("key"));
@@ -95,10 +63,32 @@ describe("FormBuilder preview and confirms (T9)", () => {
 
   it("names the list when removing a table report.json uses", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<FormBuilder templateId="t1" name="ทดสอบ" revision={1} files={files("quotation")} archived={false} />);
+    render(<FormBuilder files={files("quotation")} readOnly={false} onChange={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "ลบ รายการ" }));
     expect(screen.getByRole("alert").textContent).toContain("lists.items");
     expect(document.querySelector('[data-pointer="/data/items"]')).toBeTruthy();
     confirm.mockRestore();
+  });
+});
+
+describe("Form Preview", () => {
+  it("is the real issue form from unsaved files; it checks and never sends", () => {
+    const fetch = vi.spyOn(globalThis, "fetch");
+    const draft = files("blank");
+    draft["form.json"] = JSON.stringify({ formVersion: 1, fields: { "/data/title": { widget: "textarea" } } });
+    render(<FormPreview files={draft} templateId="t1" />);
+    const form = screen.getByRole("form", { name: "ฟอร์มออกเอกสาร" });
+    expect(form.textContent).toContain("ตัวอย่างจากที่ยังไม่บันทึก");
+    expect(form.querySelector('[data-pointer="/data/title"] textarea')).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "ออก PDF" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "ตรวจฟอร์ม" }));
+    expect(screen.getByText("กรุณากรอกช่องนี้")).toBeTruthy();
+    expect(fetch).not.toHaveBeenCalled();
+    fetch.mockRestore();
+  });
+
+  it("says so when the files are not valid JSON", () => {
+    render(<FormPreview files={{ ...files("blank"), "data.schema.json": "{" }} templateId="t1" />);
+    expect(document.body.textContent).toContain("แสดงตัวอย่างฟอร์มไม่ได้");
   });
 });

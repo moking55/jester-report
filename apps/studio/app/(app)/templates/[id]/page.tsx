@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 
-import { FormBuilder } from "@/components/FormBuilder";
 import { Workspace } from "@/components/Workspace";
 import { api, ApiProblem } from "@/lib/api";
 import { FORM_FILE } from "@/lib/form-layout";
@@ -33,6 +32,16 @@ async function issueSource(id: string, version: number): Promise<IssueSource | n
   }
 }
 
+/** The data schema's file name from the draft's report.json. */
+function schemaFile(draft: Draft): string {
+  try {
+    const report = draft.files.find((f) => f.name === "report.json")?.content ?? "{}";
+    return (JSON.parse(report) as { data?: { schema?: string } }).data?.schema ?? "data.schema.json";
+  } catch {
+    return "data.schema.json";
+  }
+}
+
 export default async function WorkspacePage({
   params,
   searchParams,
@@ -57,10 +66,6 @@ export default async function WorkspacePage({
   const archived = Boolean(template.archivedAt);
   const canIssue = template.publishedVersion !== null && !archived;
   const mode = (await searchParams).mode;
-  if (mode === "form") {
-    // v1.6: the form builder edits the draft's files; archived → read-only
-    return <FormBuilder templateId={id} name={template.name} revision={draft.revision} files={draft.files} archived={archived} />;
-  }
   const issue = canIssue && mode === "issue" ? await issueSource(id, template.publishedVersion!) : null;
   // a new key when the archive state or the mode flips: the editors are made read-only (or editable) from scratch
   return (
@@ -72,6 +77,8 @@ export default async function WorkspacePage({
       archived={archived}
       canIssue={canIssue}
       issue={issue}
+      // v1.6: the form builder lives in the code view; an old ?mode=form link opens the data schema there
+      openFile={mode === "form" ? schemaFile(draft) : undefined}
     />
   );
 }
