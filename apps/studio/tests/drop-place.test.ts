@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { placeAt, type Layout } from "@/components/BuilderCanvas";
+import { placeAt, type Layout } from "@/lib/drop-place";
 
 const box = (top: number, bottom: number, left = 0, right = 600) => ({ top, bottom, left, right });
 

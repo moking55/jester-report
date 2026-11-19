@@ -22,6 +22,8 @@ import { SortableContext, sortableKeyboardCoordinates, useSortable } from "@dnd-
 import { CSS as DndCSS } from "@dnd-kit/utilities";
 import { createContext, memo, useContext, useId, useMemo, useRef, useState } from "react";
 
+import { followPointer, placeNow, snapshot, type Snapshot } from "@/lib/drop-place";
+
 import {
   canMove,
   KIND_LABEL,
@@ -73,72 +75,6 @@ const labelOf = (f: BuilderField) => f.props.label ?? f.key;
 export type DropAt = { container: string; index: number; reason: string | null };
 type Drag = { dropAt: DropAt | null; active: string | null; pointer: boolean };
 const DragContext = createContext<Drag>({ dropAt: null, active: null, pointer: false });
-
-type Box = { top: number; bottom: number; left: number; right: number };
-/** The lists and their cards as drawn now, without the slot and the lifted card (they would move the answer). */
-export type Layout = { containers: { id: string; box: Box }[]; children: Map<string, Box[]> };
-const boxOf = (el: Element): Box => {
-  const r = el.getBoundingClientRect();
-  return { top: r.top, bottom: r.bottom, left: r.left, right: r.right };
-};
-const area = (b: Box) => (b.bottom - b.top) * (b.right - b.left);
-
-/** The lists and cards as drawn when the drag began, and the canvas scroll then. */
-type Snapshot = { layout: Layout; canvas: HTMLElement | null; scroll0: number };
-
-/**
- * Measured once, as the drag begins and before the card lifts: the slot then takes the card's room on screen,
- * so near the pointer the form looks as it did and the places match what is seen. Places are worked out against
- * this snapshot (as @dnd-kit does with its own rects), so the slot can never chase itself; only the canvas scroll
- * since then is added back. The dragged card and the lists inside it are left out.
- */
-function snapshot(dragged: string | null): Snapshot {
-  const canvas = document.querySelector<HTMLElement>("[data-builder-canvas]");
-  const card = dragged ? canvas?.querySelector(`[data-pointer="${CSS.escape(dragged)}"]`) : null;
-  const lists = [...document.querySelectorAll<HTMLElement>("[data-builder-canvas] [data-container]")].filter(
-    (el) => !card?.contains(el),
-  );
-  return {
-    canvas,
-    scroll0: canvas?.scrollTop ?? 0,
-    layout: {
-      containers: lists.map((el) => ({ id: el.dataset.container!, box: boxOf(el) })),
-      children: new Map(
-        lists.map((el) => [
-          el.dataset.container!,
-          [...el.querySelectorAll<HTMLElement>(":scope > [data-pointer]")].filter((c) => c !== card).map(boxOf),
-        ]),
-      ),
-    },
-  };
-}
-
-/** The innermost list under the point, and the place among its cards: before or after each by its halves. */
-export function placeAt(layout: Layout, x: number, y: number): { container: string; index: number } | null {
-  const pad = 10; // the gap around a list still counts as that list
-  const hit = layout.containers
-    .filter(({ box }) => x >= box.left - pad && x <= box.right + pad && y >= box.top - pad && y <= box.bottom + pad)
-    .sort((a, b) => area(a.box) - area(b.box))[0];
-  if (!hit) return null;
-  const width = hit.box.right - hit.box.left;
-  let at = 0;
-  for (const box of layout.children.get(hit.id) ?? []) {
-    const wide = box.right - box.left > width * 0.6; // a full-width card: above/below; a narrow one: left/right
-    const after =
-      y >= box.bottom || (y >= box.top && (wide ? y > (box.top + box.bottom) / 2 : x > (box.left + box.right) / 2));
-    if (after) at++;
-  }
-  return { container: hit.id, index: at };
-}
-
-const pointOf = (e: Event | null): { x: number; y: number } | null => {
-  if (!e) return null;
-  if ("touches" in e && (e as TouchEvent).touches.length) {
-    const t = (e as TouchEvent).touches[0];
-    return { x: t.clientX, y: t.clientY };
-  }
-  return "clientX" in e ? { x: (e as MouseEvent).clientX, y: (e as MouseEvent).clientY } : null;
-};
 
 /** Nothing slides aside while dragging: the slot shows the place instead. */
 const noShift = () => null;
@@ -199,11 +135,8 @@ export function BuilderDnd({ builder, tree, readOnly, onMove, onAdd, onMessage, 
   }
 
   function finish() {
-    if (follow.current) {
-      window.removeEventListener("pointermove", follow.current, { capture: true });
-      window.removeEventListener("touchmove", follow.current, { capture: true });
-      follow.current = null;
-    }
+    stopFollow.current?.();
+    stopFollow.current = null;
     setActive(null);
     setDropAt(null);
     drop.current = null;
@@ -231,16 +164,18 @@ export function BuilderDnd({ builder, tree, readOnly, onMove, onAdd, onMessage, 
   };
 
   function onDragStart(e: DragStartEvent) {
-    shot.current = snapshot(String(e.active.id).startsWith("new:") ? null : String(e.active.id)); // before the lift
-    setActive(String(e.active.id));
+    const id = String(e.active.id);
+    const canvas = document.querySelector<HTMLElement>("[data-builder-canvas]");
+    shot.current = snapshot({
+      root: canvas ?? document,
+      scroller: canvas,
+      listAttr: "data-container",
+      itemAttr: "data-pointer",
+      dragged: id.startsWith("new:") ? null : (canvas?.querySelector(`[data-pointer="${CSS.escape(id)}"]`) ?? null),
+    }); // before the lift
+    setActive(id);
     setPointerDrag(!(e.activatorEvent instanceof KeyboardEvent));
-    at.current = pointOf(e.activatorEvent);
-    follow.current = (ev: Event) => {
-      at.current = pointOf(ev) ?? at.current;
-    };
-    // capture: before @dnd-kit's own handler runs onDragMove, and whatever it stops
-    window.addEventListener("pointermove", follow.current, { capture: true });
-    window.addEventListener("touchmove", follow.current, { capture: true });
+    stopFollow.current = followPointer(e.activatorEvent, (p) => (at.current = p));
     drop.current = null;
     setDropAt(null);
     onMessage(null);
@@ -250,14 +185,11 @@ export function BuilderDnd({ builder, tree, readOnly, onMove, onAdd, onMessage, 
 
   // where the pointer is: e.delta of @dnd-kit includes the scroll of the lists it scrolled, so read the events
   const at = useRef<{ x: number; y: number } | null>(null);
-  const follow = useRef<((e: Event) => void) | null>(null);
+  const stopFollow = useRef<(() => void) | null>(null);
 
   function onDragMove(e: DragMoveEvent) {
     if (e.activatorEvent instanceof KeyboardEvent || !at.current) return;
-    const snap = shot.current;
-    if (!snap) return;
-    const scrolled = (snap.canvas?.scrollTop ?? 0) - snap.scroll0;
-    show(String(e.active.id), placeAt(snap.layout, at.current.x, at.current.y + scrolled));
+    if (shot.current) show(String(e.active.id), placeNow(shot.current, at.current.x, at.current.y));
   }
 
   function onDragOver(e: DragOverEvent) {

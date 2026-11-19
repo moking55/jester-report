@@ -61,11 +61,13 @@
     ถามก่อนออก/ปิดแท็บถ้ายังไม่บันทึก; "Preview pdf" (ถามบันทึกถ้ามีการแก้) → modal; undo/redo ปุ่ม + คีย์ลัด (ไม่ล้างเมื่อบันทึก); archive = อ่านอย่างเดียว
   - Verify: Vitest component (save/412/leave); เบราว์เซอร์กับ api บน VM
   - Files: `app/(app)/templates/[id]/designer/page.tsx`, `components/designer/DesignerPage.tsx`, `components/designer/PdfModal.tsx`, `components/Workspace.tsx`
-- [ ] **T7 ลากวาง + เลือก + แผงสไตล์**
+- [x] **T7 ลากวาง + เลือก + แผงสไตล์**
   - Acceptance: palette (ทุกบล็อก + Custom Code เปล่า) → ผืน, ย้ายบล็อก (คอลัมน์, สาขา, วนซ้ำ) ด้วยช่อง "วางที่นี่" + เหตุผลเมื่อวางไม่ได้ (ใช้กลไกร่วมกับ v1.6
     ที่แยกเป็น `lib/drop-place.ts`); เลือก/ลบ; แผงคุณสมบัติสไตล์; ลองลากใน Shadow DOM เป็นอย่างแรก
   - Verify: เบราว์เซอร์ (เมาส์ + แป้นพิมพ์); studio 4 คำสั่ง; FormBuilder ยังผ่าน test เดิม
-  - Files: `components/designer/DesignerCanvas.tsx`, `components/designer/Palette.tsx`, `components/designer/StylePanel.tsx`, `lib/drop-place.ts`, `components/BuilderCanvas.tsx`
+  - Files: `components/designer/Workbench.tsx` (palette + ผืน + แผง), `components/designer/StylePanel.tsx`, `lib/drop-place.ts`, `components/BuilderCanvas.tsx`
+  - ตรวจแล้ว (19 พ.ย., `next dev` + api บน VM): ลาก palette → ผืน (รวมที่ว่างใต้บล็อกสุดท้าย = ต่อท้าย), ย้ายขึ้นบน, ย้ายเข้าคอลัมน์ของ row,
+    ย้ายเข้าสาขาเงื่อนไข, ช่อง "วางที่นี่" ใน Shadow DOM, row ลากเข้าตัวเองไม่ได้, เลือก + จัดแนว/สไตล์, Delete + Ctrl+Z; builder test เดิมผ่าน
 - [ ] **T8 แก้ข้อความบนผืน + ชิป**
   - Acceptance: ดับเบิลคลิกข้อความ → พิมพ์บนผืน; ชิปช่องข้อมูล (`contenteditable=false`) ลบทั้งก้อน, เพิ่มด้วยลากจากแท็บ "ช่องข้อมูล" หรือพิมพ์ `{{`;
     ชิปเงื่อนไขในข้อความ → popover แก้เงื่อนไข/ข้อความสาขา; ออกจากโหมดพิมพ์ = หนึ่งขั้น undo

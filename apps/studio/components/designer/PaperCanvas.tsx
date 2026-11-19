@@ -16,7 +16,13 @@ import { pageBreaks, paperOf, PX_PER_MM } from "@/lib/paper";
 export type Files = Record<string, string>;
 
 export type BlockFrame = (props: { block: Block; children: React.ReactNode }) => React.ReactNode;
-export type ListFrame = (props: { list: BlockList; children: React.ReactNode[] }) => React.ReactNode;
+export type ListFrame = (props: { list: BlockList; id: string; children: React.ReactNode[] }) => React.ReactNode;
+
+/** Blocks drawn on the paper: comments, macros, {% set %} and the stylesheet link keep their place but draw nothing. */
+export const visible = (b: Block) => b.render;
+
+/** A list's id: "root" for the page, `<block path>/<list index>` inside a block. */
+export const listId = (block: Block | null, index: number) => (block ? `${block.path.join(".")}/${index}` : "root");
 
 type Props = {
   src: string; // template.html as it is now
@@ -65,6 +71,18 @@ const PAPER_CSS = `
 .jd-custom { position: relative; outline: 1px dashed #b98; outline-offset: 2px; }
 .jd-custom-label { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #a76; background: #fff; padding: 0 3px; }
 .jd-empty { font: 11px system-ui; color: #9aa; padding: 2mm; }
+.jd-list { min-height: 6mm; }
+.jd-block { position: relative; border-radius: 2px; }
+.jd-block:hover { outline: 1px solid #b9cdf0; }
+.jd-block.jd-selected { outline: 2px solid #2f6fe0; z-index: 1; }
+.jd-block.jd-lifted { position: absolute; visibility: hidden; pointer-events: none; }
+.jd-block.jd-faded { opacity: .35; }
+.jd-handle { position: absolute; left: -7mm; top: 0; width: 5mm; height: 5mm; display: none; place-items: center;
+  border: 1px solid #b9cdf0; border-radius: 3px; background: #fff; color: #2f6fe0; font: 12px system-ui; cursor: grab; touch-action: none; padding: 0; }
+.jd-block:hover > .jd-handle, .jd-block.jd-selected > .jd-handle { display: grid; }
+.jd-slot, .jd-slot-bad { display: grid; place-items: center; min-height: 8mm; margin: 1mm 0; border: 2px dashed #2f6fe0;
+  border-radius: 3px; background: rgba(47,111,224,.08); color: #2f6fe0; font: 600 11px system-ui; }
+.jd-slot-bad { border-color: #d33; background: rgba(221,51,51,.08); color: #d33; }
 `;
 
 export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list }: Props) {
@@ -94,9 +112,9 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
 
   const css = `${PAPER_CSS}${fontFaces(files["report.json"]).split("\n").slice(2).join("\n")}${BASE_CSS}${scopeReportCss(files["report.css"] ?? "")}`;
 
-  const renderList = (l: BlockList, scope: Scope | null): React.ReactNode => {
-    const children = l.items.filter((b) => b.render || b.kind === "custom").map((b) => renderBlock(b, scope));
-    if (list) return list({ list: l, children });
+  const renderList = (l: BlockList, scope: Scope | null, id: string): React.ReactNode => {
+    const children = l.items.filter(visible).map((b) => renderBlock(b, scope));
+    if (list) return list({ list: l, id, children });
     return children.length ? children : <div className="jd-empty">ว่าง</div>;
   };
 
@@ -117,7 +135,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
               const colStyle = col && col.kind === "element" ? styleObject(col.attrs.find((a) => a.name === "style")?.value ?? "") : {};
               return (
                 <div key={l.key} style={colStyle} className="jd-container">
-                  {renderList(l.list, scope)}
+                  {renderList(l.list, scope, listId(b, i))}
                 </div>
               );
             })}
@@ -138,7 +156,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
               only >= -1 && scope && i !== only ? null : (
                 <div key={l.key} className="jd-container">
                   <span className="jd-container-label">{l.label}</span>
-                  {renderList(l.list, scope)}
+                  {renderList(l.list, scope, listId(b, i))}
                 </div>
               ),
             )}
@@ -152,16 +170,16 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         if (scope && d && Array.isArray(items)) {
           inner = items.length
             ? items.map((item, i) => (
-                <div key={i}>{renderList(b.lists[0].list, { ...scope, [d.variable]: item, loop: { index: i + 1, first: i === 0, last: i === items.length - 1 } })}</div>
+                <div key={i}>{renderList(b.lists[0].list, { ...scope, [d.variable]: item, loop: { index: i + 1, first: i === 0, last: i === items.length - 1 } }, listId(b, 0))}</div>
               ))
             : b.lists[1]
-              ? renderList(b.lists[1].list, scope)
+              ? renderList(b.lists[1].list, scope, listId(b, 1))
               : null;
         } else {
-          inner = b.lists.map((l) => (
+          inner = b.lists.map((l, i) => (
             <div key={l.key} className="jd-container">
               <span className="jd-container-label">{l.label}</span>
-              {renderList(l.list, scope)}
+              {renderList(l.list, scope, listId(b, i))}
             </div>
           ));
         }
@@ -212,7 +230,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
             >
               {margin("header.html", true)}
               <div ref={body} className="jd-body jd-doc" style={{ width: `${paper.contentWidthMm}mm` }}>
-                {renderList(blocks, sample)}
+                {renderList(blocks, sample, "root")}
                 {breaks.map((at, i) => (
                   <div key={at} className="jd-break" style={{ top: `${at}px` }}>
                     <span>หน้า {i + 2}</span>

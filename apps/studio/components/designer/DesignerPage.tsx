@@ -11,8 +11,8 @@ import { problemMessage } from "@/lib/messages";
 import { parseParams } from "@/lib/params";
 
 import styles from "./Designer.module.css";
-import { PaperCanvas } from "./PaperCanvas";
 import { PdfModal } from "./PdfModal";
+import { Workbench } from "./Workbench";
 
 export type DesignerProps = {
   templateId: string;
@@ -184,11 +184,17 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
         {props.children ? (
           props.children(api)
         ) : (
-          <div className={styles.paperScroll}>
-            <div style={{ zoom }}>
-              <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sampleOn ? sample : null} />
-            </div>
-          </div>
+          <Workbench
+            src={src}
+            blocks={blocks}
+            edit={edit}
+            readOnly={readOnly}
+            files={files}
+            templateId={templateId}
+            assets={props.assets}
+            sample={sampleOn ? sample : null}
+            zoom={zoom}
+          />
         )}
       </div>
       {pdf && <PdfModal templateId={templateId} params={params} onClose={() => setPdf(false)} />}

@@ -117,3 +117,105 @@
   width: 100%;
   background: #fff;
 }
+
+.palette,
+.panel {
+  overflow: auto;
+  padding: calc(var(--sp) * 1.5);
+  background: var(--fill-pane);
+}
+
+.palette {
+  width: 150px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 1px solid var(--color-border);
+}
+
+.panel {
+  width: 280px;
+  flex: none;
+  border-left: 1px solid var(--color-border);
+}
+
+.palette h3,
+.props h3 {
+  margin: 0 0 4px;
+  font-size: 1em;
+  color: var(--heading);
+}
+
+.paletteItem {
+  text-align: left;
+  padding: 6px 10px;
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  cursor: grab;
+}
+
+.dragging {
+  opacity: 0.4;
+}
+
+.props {
+  display: grid;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.props button {
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.props .danger {
+  color: var(--color-danger);
+}
+
+.prop {
+  display: grid;
+  gap: 3px;
+  color: var(--color-textMuted);
+  font-size: 0.9em;
+}
+
+.prop input,
+.prop select,
+.prop textarea {
+  font: inherit;
+  color: var(--color-text);
+  padding: 4px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.inlineAlert {
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius);
+  background: var(--tint-danger);
+  color: var(--color-danger);
+}
+
+.overlay {
+  padding: 6px 12px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pane);
+  cursor: grabbing;
+}
