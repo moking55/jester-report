@@ -5,6 +5,11 @@ import { describe, expect, it } from "vitest";
 import { blockAt, readBlocks, type Block } from "@/lib/doc-blocks";
 import {
   addBranch,
+  addRowColumn,
+  mergeColumns,
+  setColumnFlex,
+  unwrapRow,
+  type Edited,
   addColumn,
   insertBlock,
   moveBlock,
@@ -215,5 +220,72 @@ describe("undo / redo", () => {
     h = record(h, "<p>z</p>");
     expect(redo(h).now).toBe("<p>z</p>");
     expect(undo(startHistory("x")).now).toBe("x");
+  });
+});
+
+describe("row columns (v1.7 รอบแก้)", () => {
+  const ROW = [
+    "<h1>x</h1>",
+    '<div data-jd="row" style="display: flex; gap: 4mm">',
+    '  <div data-jd="col" style="flex: 1">',
+    "    <p>a</p>",
+    "  </div>",
+    '  <div data-jd="col" style="flex: 2">',
+    "    <p>b</p>",
+    "    <p>c</p>",
+    "  </div>",
+    '  <div data-jd="col"></div>',
+    "</div>",
+    "<p>after</p>",
+    "",
+  ].join("\n");
+  const row = (src: string) => readBlocks(src).items.find((b) => b.kind === "row")!;
+  const value = (r: Result<Edited>) => {
+    if (!r.ok) throw new Error(r.error);
+    return r.value.src;
+  };
+
+  it("adds a column at the end, and no more than 4", () => {
+    const out = value(addRowColumn(ROW, row(ROW)));
+    expect(out).toContain('  <div data-jd="col"></div>\n  <div data-jd="col" style="flex: 1"></div>\n</div>');
+    expect(addRowColumn(out, row(out)).ok).toBe(false);
+  });
+
+  it("merges the right column into the left: blocks follow, shares add up, only the row changes", () => {
+    const out = value(mergeColumns(ROW, row(ROW), 0));
+    expect(out).toBe(
+      [
+        "<h1>x</h1>",
+        '<div data-jd="row" style="display: flex; gap: 4mm">',
+        '  <div data-jd="col" style="flex: 3">',
+        "    <p>a</p>",
+        "    <p>b</p>",
+        "    <p>c</p>",
+        "  </div>",
+        '  <div data-jd="col"></div>',
+        "</div>",
+        "<p>after</p>",
+        "",
+      ].join("\n"),
+    );
+    expect(readBlocks(out).items.find((b) => b.kind === "row")!.lists.length).toBe(2);
+  });
+
+  it("merging into an empty column and a column with no style", () => {
+    const out = value(mergeColumns(ROW, row(ROW), 1));
+    expect(out).toContain('<div data-jd="col" style="flex: 3">\n    <p>b</p>\n    <p>c</p>\n  </div>\n</div>');
+  });
+
+  it("refuses to merge a two-column row; unwrapping it keeps the blocks in place", () => {
+    const two = value(mergeColumns(ROW, row(ROW), 1));
+    expect(mergeColumns(two, row(two), 0).ok).toBe(false);
+    const out = value(unwrapRow(two, row(two)));
+    expect(out).toBe("<h1>x</h1>\n<p>a</p>\n<p>b</p>\n<p>c</p>\n<p>after</p>\n");
+    expect(readBlocks(out).items.map((b) => b.kind)).toEqual(["text", "text", "text", "text", "text"]);
+  });
+
+  it("sets a column's share, adding flex when it is not written", () => {
+    expect(value(setColumnFlex(ROW, row(ROW), 2, 1.5))).toContain('<div data-jd="col" style="flex: 1.5"></div>');
+    expect(value(setColumnFlex(ROW, row(ROW), 1, 4))).toContain('<div data-jd="col" style="flex: 4">');
   });
 });

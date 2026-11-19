@@ -293,6 +293,110 @@ export function moveColumn(src: string, block: Block, col: number, dir: -1 | 1):
   return ok({ src: out, at: { start: block.start, end: block.end + out.length - src.length } });
 }
 
+// ---- rows (SPEC v1.7 รอบแก้ข้อ 4) -------------------------------------------------------------------
+
+type Col = { el: Range & { open: Range; close: Range | null }; inner: Range; style: Range | null; hasStyle: boolean; flex: number };
+
+/** A row's columns: their ranges, inner ranges, style values and flex shares (1 when not written). */
+function columnsOf(src: string, block: Block): Col[] | null {
+  if (block.kind !== "row" || block.node.kind !== "element") return null;
+  return block.node.children.flatMap((c) => {
+    if (c.kind !== "element") return [];
+    const style = c.attrs.find((a) => a.name === "style");
+    const flex = Number(/(?:^|;)\s*flex\s*:\s*([\d.]+)/.exec(style?.value ?? "")?.[1] ?? 1);
+    return [
+      {
+        el: { start: c.start, end: c.end, open: c.open, close: c.close },
+        inner: { start: c.open.end, end: c.close ? c.close.start : c.end },
+        style: style?.valueRange ?? null,
+        hasStyle: !!style,
+        flex: Number.isFinite(flex) && flex > 0 ? flex : 1,
+      },
+    ];
+  });
+}
+
+/** The col's style with its flex share set (kept as written otherwise). */
+function flexPatch(src: string, col: Col, flex: number): Patch {
+  const value = `${+flex.toFixed(2)}`;
+  if (col.style) {
+    const text = src.slice(col.style.start, col.style.end);
+    const m = /((?:^|;)\s*flex\s*:\s*)([\d.]+)/.exec(text);
+    if (m) {
+      const at = col.style.start + m.index + m[1].length;
+      return { start: at, end: at + m[2].length, text: value };
+    }
+    const sep = text.trim() === "" || text.trim().endsWith(";") ? "" : "; ";
+    return { start: col.style.end, end: col.style.end, text: `${sep}flex: ${value}` };
+  }
+  const end = col.el.open.end - 1;
+  return { start: end, end, text: ` style="flex: ${value}"` };
+}
+
+const rowEdit = (src: string, block: Block, patches: Patch[]): Edited => {
+  const out = applyPatches(src, patches);
+  return { src: out, at: { start: block.start, end: block.end + out.length - src.length } };
+};
+
+/** One more column at the end of a row (at most 4), as wide as one share. */
+export function addRowColumn(src: string, block: Block): Result<Edited> {
+  const cols = columnsOf(src, block);
+  if (!cols) return fail("ไม่ใช่แถวแบ่งคอลัมน์");
+  if (cols.length >= 4) return fail("แถวมีได้ไม่เกิน 4 คอลัมน์");
+  const last = cols[cols.length - 1];
+  const indent = indentAt(src, last.el.start);
+  return ok(rowEdit(src, block, [{ start: last.el.end, end: last.el.end, text: `\n${indent}<div data-jd="col" style="flex: 1"></div>` }]));
+}
+
+/** Set a column's share of the row's width. */
+export function setColumnFlex(src: string, block: Block, col: number, flex: number): Result<Edited> {
+  const cols = columnsOf(src, block);
+  if (!cols?.[col]) return fail("ไม่มีคอลัมน์นี้");
+  if (!(flex > 0 && flex <= 12)) return fail("สัดส่วนต้องอยู่ระหว่าง 0.1–12");
+  return ok(rowEdit(src, block, [flexPatch(src, cols[col], flex)]));
+}
+
+/** The blocks of column `col + 1` move to the end of column `col`, their shares add up, the right column goes. */
+export function mergeColumns(src: string, block: Block, col: number): Result<Edited> {
+  const cols = columnsOf(src, block);
+  if (!cols) return fail("ไม่ใช่แถวแบ่งคอลัมน์");
+  const [a, b] = [cols[col], cols[col + 1]];
+  if (!a || !b) return fail("ไม่มีคอลัมน์ทางขวาให้รวม");
+  if (cols.length <= 2) return fail("แถวต้องมีอย่างน้อย 2 คอลัมน์ (ยกเลิกแถวแทน)");
+  const moved = src.slice(b.inner.start, b.inner.end).trim();
+  const patches: Patch[] = [flexPatch(src, a, a.flex + b.flex), { start: a.el.end, end: b.el.end, text: "" }];
+  if (moved) {
+    const own = src.slice(a.inner.start, a.inner.end);
+    const indent = `${indentAt(src, a.el.start)}  `;
+    const body = reindent(moved, indentAt(src, b.inner.start + (src.slice(b.inner.start, b.inner.end).length - src.slice(b.inner.start, b.inner.end).trimStart().length)), indent);
+    const trail = own.length - own.trimEnd().length;
+    const at = a.inner.end - trail;
+    patches.push(
+      own.trim()
+        ? { start: at, end: at, text: `\n${indent}${body}` }
+        : { start: a.inner.start, end: a.inner.end, text: `\n${indent}${body}\n${indentAt(src, a.el.start)}` },
+    );
+  }
+  return ok(rowEdit(src, block, patches));
+}
+
+/** The row goes; the blocks of its columns stay where it was, one after another. */
+export function unwrapRow(src: string, block: Block): Result<Edited> {
+  const cols = columnsOf(src, block);
+  if (!cols) return fail("ไม่ใช่แถวแบ่งคอลัมน์");
+  const indent = indentAt(src, block.start);
+  const parts = cols
+    .map((c) => {
+      const text = src.slice(c.inner.start, c.inner.end);
+      const lead = text.length - text.trimStart().length;
+      return text.trim() ? reindent(text.trim(), indentAt(src, c.inner.start + lead), indent) : "";
+    })
+    .filter(Boolean);
+  const text = parts.join(`\n${indent}`);
+  const out = applyPatches(src, [{ start: block.start, end: block.end, text }]);
+  return ok({ src: out, at: { start: block.start, end: block.start + text.length } });
+}
+
 // ---- new blocks (the designer's own forms, SPEC v1.7 "บล็อก") -----------------------------------
 
 export type NewBlock =

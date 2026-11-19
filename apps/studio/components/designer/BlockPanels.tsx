@@ -4,7 +4,21 @@ import { useState } from "react";
 
 import type { Block, Cell } from "@/lib/doc-blocks";
 import { checkCode } from "@/lib/doc-check";
-import { addBranch, addColumn, moveColumn, removeColumn, replaceIn, setAttr, setTagArgs, type Edited, type Result } from "@/lib/doc-edit";
+import {
+  addBranch,
+  addColumn,
+  addRowColumn,
+  mergeColumns,
+  moveColumn,
+  removeColumn,
+  replaceIn,
+  setAttr,
+  setColumnFlex,
+  setTagArgs,
+  unwrapRow,
+  type Edited,
+  type Result,
+} from "@/lib/doc-edit";
 import type { Range } from "@/lib/doc-parse";
 
 import styles from "./Designer.module.css";
@@ -92,6 +106,43 @@ export function BlockPanel(props: Props) {
   const [cond, setCond] = useState<number | null>(null); // the branch whose test the helper builds
 
   switch (d.kind) {
+    case "row": {
+      const cols = block.node.kind === "element" ? block.node.children.filter((c) => c.kind === "element") : [];
+      const flexOf = (i: number) => {
+        const c = cols[i];
+        const style = c?.kind === "element" ? (c.attrs.find((a) => a.name === "style")?.value ?? "") : "";
+        return /(?:^|;)\s*flex\s*:\s*([\d.]+)/.exec(style)?.[1] ?? "1";
+      };
+      const merge = (i: number) => {
+        if (cols.length > 2) return apply(mergeColumns(src, block, i));
+        if (window.confirm("แถวจะเหลือคอลัมน์เดียว — ยกเลิกแถวและวางบล็อกข้างในไว้แทนที่?")) apply(unwrapRow(src, block));
+      };
+      return (
+        <div className={styles.props}>
+          <p className={styles.hint}>{cols.length} คอลัมน์ · ความกว้างเป็นสัดส่วน (เช่น 1 : 2)</p>
+          {cols.map((_, i) => (
+            <div key={i} className={styles.column}>
+              <Field
+                label={`สัดส่วนคอลัมน์ ${i + 1}`}
+                value={flexOf(i)}
+                readOnly={readOnly}
+                onCommit={(v) => apply(setColumnFlex(src, block, i, Number(v)))}
+              />
+              {!readOnly && i < cols.length - 1 && (
+                <button type="button" onClick={() => merge(i)}>
+                  รวมกับคอลัมน์ขวา
+                </button>
+              )}
+            </div>
+          ))}
+          {!readOnly && (
+            <button type="button" disabled={cols.length >= 4} onClick={() => apply(addRowColumn(src, block))}>
+              + คอลัมน์
+            </button>
+          )}
+        </div>
+      );
+    }
     case "field":
       return (
         <div className={styles.props}>

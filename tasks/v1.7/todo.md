@@ -132,7 +132,7 @@
   - Acceptance: ลากบล็อกไปปล่อยบนแผงซ้าย → ลบ (Custom Code ถาม), แผงแสดง "ปล่อยเพื่อลบ" ระหว่างลาก, undo คืนได้
   - Verify: Vitest (drop target); เบราว์เซอร์; E2E เพิ่มขั้นนี้
   - Files: `components/designer/Workbench.tsx`
-- [ ] **T16 แถว: เพิ่ม/รวมคอลัมน์**
+- [x] **T16 แถว: เพิ่ม/รวมคอลัมน์**
   - Acceptance: "+ คอลัมน์" (≤ 4), "รวมกับคอลัมน์ขวา" (บล็อกต่อท้าย, flex รวม), เหลือ 1 → ยกเลิกแถว
   - Verify: Vitest `doc-edit` (diff เฉพาะแถว); เบราว์เซอร์
   - Files: `lib/doc-edit.ts`, `components/designer/BlockPanels.tsx`, `tests/doc-edit.test.ts`
