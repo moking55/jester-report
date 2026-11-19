@@ -108,6 +108,13 @@ describe("structure", () => {
     expect(isBroken(parse("<img src=a.png><br><hr/>"))).toBe(false); // void elements
   });
 
+  it("reads {# #} and {% %} inside attribute values", () => {
+    const div = parse(fixture("jinja-in-attrs.html")).children[0] as ElementNode;
+    expect(div.broken).toBe(false);
+    expect(div.attrs.map((a) => a.name)).toEqual(["title", "data-a"]);
+    expect(div.children.map((c) => c.kind)).toEqual(["text"]);
+  });
+
   it("knows where an attribute value sits, quotes excluded", () => {
     const src = '<img src="logo.png" alt=x>';
     const img = parse(src).children[0] as ElementNode;

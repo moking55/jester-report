@@ -18,7 +18,7 @@
     `print(tree)` คืนข้อความเดิมทุกตัวอักษร
   - Verify: Vitest round-trip starter ทั้ง 5 (ไฟล์ปัจจุบัน) + ไฟล์ทดสอบ (comment, macro, `{% if %}` กลางข้อความ, แท็กไม่ปิด, `<` ใน `{{ }}`)
   - Files: `lib/doc-parse.ts`, `tests/doc-parse.test.ts`, `tests/fixtures/doc/*.html`
-- [ ] **T2 `doc-parse`: จำแนกบล็อก**
+- [x] **T2 `doc-parse`: จำแนกบล็อก**
   - Acceptance: node → บล็อกตามตารางใน SPEC-studio v1.7 (ข้อความ, ค่าช่อง, รูป, แถว/คอลัมน์, ตาราง list, สรุปยอด, QR/barcode, เส้นคั่น, ช่องว่าง, ขึ้นหน้า,
     เงื่อนไข, วนซ้ำ, ตั้งค่าตัวแปร, ชิปเงื่อนไขในข้อความ, ชิปช่องข้อมูล) — ไม่ตรง = Custom Code ช่วงพอดี; `<link report.css>` เป็นส่วนหัวไม่ใช่บล็อก;
     ตาราง: thead แถวเดียว, `{% for %}` ใน tbody, `{% else %}`, แถวท้าย; วนซ้ำรู้ list ลูกของตัวแปร loop
@@ -38,7 +38,12 @@
 
 ## Checkpoint G1 (ภายใน)
 
-- [ ] ส่งผล baseline ของ starter (บล็อกที่อ่านออก/Custom Code) ให้ผู้ใช้ดูก่อนสร้างหน้าจอ
+- [x] ส่งผล baseline ของ starter ให้ผู้ใช้ดู (แจ้งแล้ว ไม่ได้รออนุมัติ — goal ให้ทำต่อ):
+  `quotation` (head 1, image 1, text 3, table 1) และ `blank` (text 2) อ่านได้ทั้งหน้าโดยไม่ต้องเขียนใหม่ ·
+  `purchase-order` (repeat 1 + section ข้างในเป็น Custom Code 1, text 1) · `sales-grouped` (text 2, ตารางแบ่งกลุ่ม Custom Code 1) ·
+  `tax-invoice` (table 1, Custom Code 4, ไม่แสดงผล 2: comment + macro)
+- ตาม advisor (T2): บล็อกที่รู้จักต้องอยู่ในโมเดลทุกส่วน ไม่อย่างนั้นทั้งก้อนเป็น Custom Code; เก็บช่วงของทุกส่วนที่แก้ได้ (attribute, style, cell, branch tag);
+  style ที่มี Jinja = อ่านอย่างเดียว; comment/macro/set = ไม่แสดงผลแต่ยังอยู่ในลำดับ; แก้ bug T1 `{#` ใน attribute
 
 ## Phase G2: ผืน A4
 

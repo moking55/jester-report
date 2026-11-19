@@ -99,6 +99,9 @@ function jinjaEnd(src: string, at: number, close: string): number {
   return src.length; // never closed: runs to the end (doc-check reports it)
 }
 
+/** The closing pair of the Jinja delimiter opened at `i`. */
+const closerOf = (src: string, i: number) => (src[i + 1] === "{" ? "}}" : src[i + 1] === "%" ? "%}" : "#}");
+
 const isJinja = (src: string, i: number) => src[i] === "{" && (src[i + 1] === "{" || src[i + 1] === "%" || src[i + 1] === "#");
 
 function jinjaToken(src: string, i: number): Token {
@@ -128,7 +131,7 @@ function tagToken(src: string, i: number): Token | null {
     if (src[j] === ">") break;
     if (src.startsWith("/>", j)) break;
     if (isJinja(src, j)) {
-      j = jinjaEnd(src, j, src[j + 1] === "{" ? "}}" : src[j + 1] === "%" ? "%}" : "#}"); // {% if %} inside a tag
+      j = jinjaEnd(src, j, closerOf(src, j)); // {% if %} inside a tag
       continue;
     }
     const an = /^[^\s"'>/=]+/.exec(src.slice(j));
@@ -148,7 +151,7 @@ function tagToken(src: string, i: number): Token | null {
       const q = src[k];
       if (q === '"' || q === "'") {
         let m = k + 1;
-        while (m < src.length && src[m] !== q) m = isJinja(src, m) ? jinjaEnd(src, m, src[m + 1] === "{" ? "}}" : "%}") : m + 1;
+        while (m < src.length && src[m] !== q) m = isJinja(src, m) ? jinjaEnd(src, m, closerOf(src, m)) : m + 1;
         valueRange = { start: k + 1, end: Math.min(m, src.length) };
         j = Math.min(m + 1, src.length);
       } else {
