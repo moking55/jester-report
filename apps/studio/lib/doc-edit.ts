@@ -3,8 +3,8 @@
 // source and the new range of the block it touched (to reselect it after the file is read again).
 // Undo is a stack of whole sources: small files, exact bytes back.
 
-import type { Block, BlockList } from "./doc-blocks";
-import type { Range } from "./doc-parse";
+import type { Block, BlockList, GridCell } from "./doc-blocks";
+import type { ElementNode, Range } from "./doc-parse";
 
 export type Edited = { src: string; at: Range | null };
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
@@ -170,6 +170,27 @@ export function setStyle(src: string, block: Block, props: Record<string, string
   const end = src.slice(open.start, open.end).endsWith("/>") ? open.end - 2 : open.end - 1;
   const lead = src[end - 1] === " " ? "" : " ";
   return ok(replaceIn(src, block, { start: end, end }, `${lead}style="${value}"`));
+}
+
+/** A patch that sets or clears (null) style properties on any element (cells, columns); a string is the reason it cannot. */
+export function stylePatch(src: string, el: ElementNode, props: Record<string, string | null>): Patch | string {
+  const attr = el.attrs.find((a) => a.name === "style");
+  const value0 = attr?.value ?? "";
+  if (value0.includes("{{") || value0.includes("{%")) return "สไตล์นี้มี Jinja อยู่ แก้ได้ใน HTML เท่านั้น";
+  const decls = readStyle(value0);
+  for (const [k, v] of Object.entries(props)) {
+    const i = decls.findIndex(([name]) => name === k);
+    if (v === null || v === "") {
+      if (i >= 0) decls.splice(i, 1);
+    } else if (/[;"<>{}]/.test(v)) return `ค่า ${k} ไม่ถูกต้อง`;
+    else if (i >= 0) decls[i] = [k, v];
+    else decls.push([k, v]);
+  }
+  const value = writeStyle(decls);
+  if (attr?.valueRange) return { ...attr.valueRange, text: value };
+  if (attr) return { ...attr.range, text: value ? `style="${value}"` : "" };
+  const end = src.slice(el.open.start, el.open.end).endsWith("/>") ? el.open.end - 2 : el.open.end - 1;
+  return value ? { start: end, end, text: `${src[end - 1] === " " ? "" : " "}style="${value}"` } : { start: end, end, text: "" };
 }
 
 /** Set an attribute's value on a block's element (img src/width); adds it when missing. */
@@ -397,6 +418,105 @@ export function unwrapRow(src: string, block: Block): Result<Edited> {
   return ok({ src: out, at: { start: block.start, end: block.start + text.length } });
 }
 
+// ---- fixed tables: <table data-jd="grid"> (SPEC v1.7 รอบแก้ข้อ 7) --------------------------------------
+
+export const GRID_CELL_STYLE = "border: 1px solid #000; padding: 1mm 2mm";
+
+const gridOf = (block: Block) => (block.detail.kind === "grid" ? block.detail : null);
+/** A cell's open tag as written, under another tag name; and its close tag. */
+const openAs = (src: string, c: GridCell, name: string) => src.slice(c.node.open.start, c.node.open.end).replace(/^<\w+/, `<${name}`);
+const tableEdit = (src: string, block: Block, patches: Patch[]): Result<Edited> => {
+  const out = applyPatches(src, patches);
+  return ok({ src: out, at: { start: block.start, end: block.end + out.length - src.length } });
+};
+
+/** A row of empty cells after row `after` (-1: at the end), shaped like the body rows. */
+export function gridAddRow(src: string, block: Block, after = -1): Result<Edited> {
+  const g = gridOf(block);
+  if (!g) return fail("ไม่ใช่ตารางเปล่า");
+  const at = after < 0 ? g.rows.length - 1 : Math.min(after, g.rows.length - 1);
+  const model = g.rows[g.head && g.rows.length > 1 ? Math.max(1, at) : at];
+  const cells = model.cells.map((c) => `${openAs(src, c, "td")}&nbsp;</td>`).join("");
+  const end = g.rows[at].range.end;
+  return tableEdit(src, block, [{ start: end, end, text: `\n${indentAt(src, g.rows[at].range.start)}<tr>${cells}</tr>` }]);
+}
+
+export function gridRemoveRow(src: string, block: Block, row: number): Result<Edited> {
+  const g = gridOf(block);
+  if (!g?.rows[row]) return fail("ไม่มีแถวนี้");
+  if (g.rows.length <= 1) return fail("ตารางต้องมีอย่างน้อย 1 แถว");
+  return tableEdit(src, block, [{ ...removal(src, g.rows[row].range), text: "" }]);
+}
+
+/** An empty column after column `after` (-1: at the end), each new cell shaped like its neighbour. */
+export function gridAddColumn(src: string, block: Block, after = -1): Result<Edited> {
+  const g = gridOf(block);
+  if (!g) return fail("ไม่ใช่ตารางเปล่า");
+  const col = after < 0 ? g.rows[0].cells.length - 1 : after;
+  return tableEdit(
+    src,
+    block,
+    g.rows.map((r) => {
+      const c = r.cells[col];
+      return { start: c.range.end, end: c.range.end, text: `${openAs(src, c, c.node.name)}&nbsp;</${c.node.name}>` };
+    }),
+  );
+}
+
+export function gridRemoveColumn(src: string, block: Block, col: number): Result<Edited> {
+  const g = gridOf(block);
+  if (!g || col < 0 || col >= g.rows[0].cells.length) return fail("ไม่มีคอลัมน์นี้");
+  if (g.rows[0].cells.length <= 1) return fail("ตารางต้องมีอย่างน้อย 1 คอลัมน์");
+  return tableEdit(src, block, g.rows.map((r) => ({ ...r.cells[col].range, text: "" })));
+}
+
+export function gridMoveColumn(src: string, block: Block, col: number, dir: -1 | 1): Result<Edited> {
+  const g = gridOf(block);
+  const other = col + dir;
+  if (!g || other < 0 || other >= g.rows[0].cells.length) return fail("ย้ายต่อไม่ได้");
+  const text = (c: GridCell) => src.slice(c.range.start, c.range.end);
+  return tableEdit(
+    src,
+    block,
+    g.rows.flatMap((r) => [
+      { ...r.cells[col].range, text: text(r.cells[other]) },
+      { ...r.cells[other].range, text: text(r.cells[col]) },
+    ]),
+  );
+}
+
+/** The first row as header cells (<th>) or back to <td>. */
+export function gridHeader(src: string, block: Block, on: boolean): Result<Edited> {
+  const g = gridOf(block);
+  if (!g) return fail("ไม่ใช่ตารางเปล่า");
+  if (g.head === on) return ok({ src, at: { start: block.start, end: block.end } });
+  const name = on ? "th" : "td";
+  return tableEdit(
+    src,
+    block,
+    g.rows[0].cells.flatMap((c) => {
+      const old = c.node.name;
+      const patches: Patch[] = [{ start: c.node.open.start + 1, end: c.node.open.start + 1 + old.length, text: name }];
+      if (c.node.close) patches.push({ start: c.node.close.start + 2, end: c.node.close.start + 2 + old.length, text: name });
+      return patches;
+    }),
+  );
+}
+
+/** Lines around every cell, or none. */
+export function gridBorders(src: string, block: Block, on: boolean): Result<Edited> {
+  const g = gridOf(block);
+  if (!g) return fail("ไม่ใช่ตารางเปล่า");
+  const patches: Patch[] = [];
+  for (const r of g.rows)
+    for (const c of r.cells) {
+      const p = stylePatch(src, c.node, { border: on ? "1px solid #000" : null });
+      if (typeof p === "string") return fail(p);
+      patches.push(p);
+    }
+  return tableEdit(src, block, patches);
+}
+
 // ---- new blocks (the designer's own forms, SPEC v1.7 "บล็อก") -----------------------------------
 
 export type NewBlock =
@@ -407,6 +527,7 @@ export type NewBlock =
   | { kind: "row"; columns: 2 | 3 | 4 }
   | { kind: "table"; variable: string; iterable: string; columns: { head: string; expr: string }[] }
   | { kind: "summary"; rows: { label: string; expr: string }[] }
+  | { kind: "grid"; rows: number; columns: number }
   | { kind: "code"; expr: string }
   | { kind: "rule" }
   | { kind: "space" }
@@ -451,6 +572,14 @@ export function newBlockHtml(b: NewBlock): string {
       ].join("\n");
     case "code":
       return `<div>{{ ${b.expr} }}</div>`;
+    case "grid": {
+      const cell = `<td style="${GRID_CELL_STYLE}">&nbsp;</td>`;
+      return [
+        '<table data-jd="grid" style="width: 100%; border-collapse: collapse">',
+        ...Array.from({ length: b.rows }, () => `  <tr>${cell.repeat(b.columns)}</tr>`),
+        "</table>",
+      ].join("\n");
+    }
     case "rule":
       return "<hr>";
     case "space":

@@ -19,6 +19,7 @@ import { insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle,
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
 import { followPointer, placeNow, snapshot, type Place, type Snapshot } from "@/lib/drop-place";
 import { fieldRefs, type FieldRef } from "@/lib/field-refs";
+import type { Range } from "@/lib/doc-parse";
 import type { Scope } from "@/lib/doc-sample";
 
 import styles from "./Designer.module.css";
@@ -56,6 +57,7 @@ export const PALETTE: { kind: NewBlock["kind"]; label: string }[] = [
   { kind: "image", label: "รูป / โลโก้" },
   { kind: "row", label: "แถวแบ่งคอลัมน์" },
   { kind: "table", label: "ตารางรายการ" },
+  { kind: "grid", label: "ตารางเปล่า" },
   { kind: "summary", label: "สรุปยอด" },
   { kind: "code", label: "QR / บาร์โค้ด" },
   { kind: "rule", label: "เส้นคั่น" },
@@ -103,6 +105,7 @@ export const KIND_NAME: Record<BlockKind, string> = {
   image: "รูป",
   row: "แถวแบ่งคอลัมน์",
   table: "ตารางรายการ",
+  grid: "ตารางเปล่า",
   summary: "สรุปยอด",
   code: "QR / บาร์โค้ด",
   rule: "เส้นคั่น",
@@ -144,6 +147,8 @@ export function newBlockFor(kind: NewBlock["kind"], files: Record<string, string
       return { kind, variable: "item", iterable: list, columns: columns.length ? columns : [{ head: "รายการ", expr: "item" }] };
     case "summary":
       return { kind, rows: [{ label: "รวม", expr: "fmt.money(totals.grand)" }] };
+    case "grid":
+      return { kind, rows: 3, columns: 2 };
     case "code":
       return { kind, expr: `fmt.qr(${expr})` };
     case "condition":
@@ -368,11 +373,11 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   });
 
   /** Leaving the text editor: one undo step, refused if the text no longer reads as a text block. */
-  function typed(block: Block, inner: string | null) {
+  function typed(block: Block, range: Range, inner: string | null) {
     setEditing(null);
-    if (inner === null || block.detail.kind !== "text") return;
-    const out = replaceIn(src, block, block.detail.inner, inner);
-    const still = allBlocks(readBlocks(out.src)).some((b) => b.start === block.start && b.kind === "text");
+    if (inner === null) return;
+    const out = replaceIn(src, block, range, inner);
+    const still = allBlocks(readBlocks(out.src)).some((b) => b.start === block.start && b.kind === block.kind);
     if (!still) return setMessage("ข้อความที่พิมพ์ทำให้บล็อกนี้ไม่ใช่ข้อความแล้ว (เช่นมี {% … %} ไม่ครบคู่) จึงไม่ได้ใช้ — แก้เป็น Custom Code ได้ในหน้า code");
     apply(out);
   }
@@ -388,7 +393,15 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     </Frame>
   );
   const editor = (b: Block) =>
-    editing === keyOf(b) && b.kind === "text" ? <TextEditor key={b.start} block={b} src={src} fields={fields} onDone={(inner) => typed(b, inner)} /> : null;
+    editing === keyOf(b) && b.detail.kind === "text" && b.node.kind === "element" ? (
+      <TextEditor key={b.start} el={b.node} inner={b.detail.inner} src={src} fields={fields} onDone={(inner) => typed(b, (b.detail as { inner: Range }).inner, inner)} />
+    ) : null;
+  /** A cell of a fixed table being typed in (key "block#row.col"). */
+  const cellEditor = (b: Block, r: number, c: number) => {
+    if (editing !== `${keyOf(b)}#${r}.${c}` || b.detail.kind !== "grid") return null;
+    const cell = b.detail.rows[r]?.cells[c];
+    return cell ? <TextEditor key={`${b.start}-${r}-${c}`} el={cell.node} inner={cell.inner} src={src} fields={fields} onDone={(inner) => typed(b, cell.inner, inner)} /> : null;
+  };
   const list: ListFrame = ({ id, children }) => <ListBox id={id}>{children}</ListBox>;
 
   const label = active
@@ -453,7 +466,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             </p>
           )}
           <div style={{ zoom }}>
-            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} />
+            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
           </div>
         </div>
         <Resizer

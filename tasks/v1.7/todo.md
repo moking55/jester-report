@@ -140,7 +140,7 @@
   - Acceptance: ไม้บรรทัดบน/ซ้าย (mm), ลากขอบ 4 ด้าน → `page.marginsMm` ใน report.json (แก้เฉพาะค่านั้น), undo ครอบสองไฟล์, บันทึกเฉพาะไฟล์ที่เปลี่ยน
   - Verify: Vitest (แก้ JSON คงข้อความอื่น, history สองไฟล์, บันทึก); เบราว์เซอร์ + Preview pdf ขอบตรง
   - Files: `components/designer/Ruler.tsx`, `lib/paper.ts`, `components/designer/DesignerPage.tsx`, `components/designer/PaperCanvas.tsx`
-- [ ] **T19 ตารางเปล่า**
+- [x] **T19 ตารางเปล่า**
   - Acceptance: palette "ตารางเปล่า" → `<table data-jd="grid">` 3 × 2; อ่านเป็นบล็อก (ไม่เป็น Custom Code); ดับเบิลคลิกเซลล์พิมพ์ได้ (ชิป, `{{`);
     เพิ่ม/ลบแถว, เพิ่ม/ลบ/ย้ายคอลัมน์, หัวตาราง เปิด/ปิด, เส้นตาราง
   - Verify: Vitest `doc-blocks`/`doc-edit` (diff เฉพาะตาราง, round-trip); เบราว์เซอร์ + Preview pdf

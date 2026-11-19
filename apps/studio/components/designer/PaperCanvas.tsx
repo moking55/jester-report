@@ -1,7 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { Block, BlockList } from "@/lib/doc-blocks";
 import { BASE_CSS, fontFaces, renderSource, scopeReportCss, type RenderMode } from "@/lib/doc-render";
@@ -32,6 +32,8 @@ type Props = {
   sample: Scope | null; // null: show expressions
   frame?: BlockFrame; // wraps each block (selection, drag handle) — T7
   editor?: (block: Block) => React.ReactNode | null; // the text block being typed in, drawn instead — T8
+  cellEditor?: (block: Block, row: number, col: number) => React.ReactNode | null; // a fixed table's cell being typed in
+  onCell?: (block: Block, row: number, col: number) => void; // double-click on a fixed table's cell
   list?: ListFrame; // wraps each list's children (drop slots) — T7
 };
 
@@ -91,7 +93,7 @@ const PAPER_CSS = `
 .jd-slot-bad { border-color: #d33; background: rgba(221,51,51,.08); color: #d33; }
 `;
 
-export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor }: Props) {
+export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor, cellEditor, onCell }: Props) {
   useDocumentFonts();
   const host = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<ShadowRoot | null>(null);
@@ -198,6 +200,34 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
       case "table":
         inner = <div style={{ display: "contents" }} dangerouslySetInnerHTML={{ __html: tableHtml(src, b, mode, scope) }} />;
         break;
+      case "grid": {
+        const d = b.detail.kind === "grid" ? b.detail : null;
+        const attrOf = (el: { attrs: { name: string; value: string | null }[] } | null, name: string) =>
+          el?.attrs.find((a) => a.name === name)?.value ?? undefined;
+        inner = d && (
+          <table style={styleObject(attrOf(own, "style") ?? "")} className={attrOf(own, "class")}>
+            <tbody>
+              {d.rows.map((row, r) => (
+                <tr key={r}>
+                  {row.cells.map(
+                    (cell, c) =>
+                      cellEditor?.(b, r, c) ??
+                      createElement(cell.node.name, {
+                        key: c,
+                        style: styleObject(attrOf(cell.node, "style") ?? ""),
+                        className: attrOf(cell.node, "class"),
+                        title: onCell ? "ดับเบิลคลิกเพื่อพิมพ์" : undefined,
+                        onDoubleClick: onCell ? () => onCell(b, r, c) : undefined,
+                        dangerouslySetInnerHTML: { __html: renderSource(src.slice(cell.inner.start, cell.inner.end), mode, scope) },
+                      }),
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        );
+        break;
+      }
       case "custom":
         inner = (
           <div className="jd-custom">

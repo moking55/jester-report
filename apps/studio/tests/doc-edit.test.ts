@@ -6,6 +6,13 @@ import { blockAt, readBlocks, type Block } from "@/lib/doc-blocks";
 import {
   addBranch,
   addRowColumn,
+  gridAddColumn,
+  gridAddRow,
+  gridBorders,
+  gridHeader,
+  gridMoveColumn,
+  gridRemoveColumn,
+  gridRemoveRow,
   mergeColumns,
   setColumnFlex,
   unwrapRow,
@@ -287,5 +294,54 @@ describe("row columns (v1.7 รอบแก้)", () => {
   it("sets a column's share, adding flex when it is not written", () => {
     expect(value(setColumnFlex(ROW, row(ROW), 2, 1.5))).toContain('<div data-jd="col" style="flex: 1.5"></div>');
     expect(value(setColumnFlex(ROW, row(ROW), 1, 4))).toContain('<div data-jd="col" style="flex: 4">');
+  });
+});
+
+describe("fixed tables (v1.7 รอบแก้ข้อ 7)", () => {
+  const value = (r: Result<Edited>) => {
+    if (!r.ok) throw new Error(r.error);
+    return r.value.src;
+  };
+  const grid = (src: string) => readBlocks(src).items.find((b) => b.kind === "grid")!;
+  const NEW = `<p>x</p>\n${newBlockHtml({ kind: "grid", rows: 3, columns: 2 })}\n`;
+
+  it("a new fixed table is a grid block (not Custom Code) of 3 x 2", () => {
+    const b = grid(NEW);
+    expect(b.detail.kind === "grid" && [b.detail.rows.length, b.detail.rows[0].cells.length, b.detail.head]).toEqual([3, 2, false]);
+  });
+
+  it("anything outside the model is Custom Code: colspan, uneven rows, a block in a cell", () => {
+    for (const html of [
+      '<table data-jd="grid"><tr><td colspan="2">a</td></tr></table>',
+      '<table data-jd="grid"><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>',
+      '<table data-jd="grid"><tr><td><div>a</div></td></tr></table>',
+    ])
+      expect(readBlocks(html).items[0].kind).toBe("custom");
+  });
+
+  it("rows and columns: add, remove, move; only the table changes", () => {
+    let src = value(gridAddRow(NEW, grid(NEW), 0));
+    expect(grid(src).detail.kind === "grid" && grid(src).detail.rows.length).toBe(4);
+    src = value(gridAddColumn(src, grid(src), 0));
+    src = value(gridRemoveRow(src, grid(src), 3));
+    const g = grid(src).detail;
+    expect(g.kind === "grid" && [g.rows.length, g.rows[0].cells.length]).toEqual([3, 3]);
+    expect(src.startsWith("<p>x</p>\n<table") && src.endsWith("</table>\n")).toBe(true);
+    const typed = src.replace("&nbsp;", "A");
+    const moved = value(gridMoveColumn(typed, grid(typed), 0, 1));
+    expect(moved.indexOf("A")).toBeGreaterThan(typed.indexOf("A"));
+    expect(value(gridRemoveColumn(moved, grid(moved), 1))).not.toContain("A");
+  });
+
+  it("header row on and off; borders on and off keep other style", () => {
+    const head = value(gridHeader(NEW, grid(NEW), true));
+    const g = grid(head).detail;
+    expect(g.kind === "grid" && g.head).toBe(true);
+    expect(head.split("<th").length - 1).toBe(2);
+    expect(value(gridHeader(head, grid(head), false))).toBe(NEW);
+    const plain = value(gridBorders(NEW, grid(NEW), false));
+    expect(plain).not.toContain("border: 1px");
+    expect(plain).toContain('style="padding: 1mm 2mm"');
+    expect(value(gridBorders(plain, grid(plain), true))).toContain('style="padding: 1mm 2mm; border: 1px solid #000"');
   });
 });

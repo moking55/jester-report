@@ -12,6 +12,7 @@ export type BlockKind =
   | "row" // <div data-jd="row"> of <div data-jd="col">
   | "table" // a list table: thead, {% for %} rows, else row, footer rows
   | "summary" // <table data-jd="summary">: label | {{ value }}
+  | "grid" // <table data-jd="grid">: a fixed table of inline cells (v1.7 รอบแก้ข้อ 7)
   | "code" // <div>{{ fmt.qr(...) }}</div> and promptpay / barcode
   | "rule" // <hr>
   | "space" // <div data-jd="space">
@@ -36,6 +37,7 @@ export type Block = Range & {
 };
 
 export type Cell = { range: Range; inner: Range }; // a <th>/<td>: the whole cell and its content
+export type GridCell = Cell & { node: ElementNode };
 export type Detail =
   | { kind: "text"; tag: string; inner: Range }
   | { kind: "field" | "code"; expr: Range; inner: string }
@@ -50,6 +52,7 @@ export type Detail =
       footer: Cell[][];
     }
   | { kind: "summary"; rows: { label: Cell; value: Cell }[] }
+  | { kind: "grid"; rows: { range: Range; cells: GridCell[] }[]; head: boolean } // head: the first row is <th>
   | { kind: "condition"; branches: { tag: Range; keyword: string; test: string }[] }
   | { kind: "repeat"; tag: Range; variable: string; iterable: string }
   | { kind: "set"; inner: string }
@@ -145,6 +148,28 @@ function tableDetail(src: string, el: ElementNode): Detail | null {
   };
 }
 
+/** A fixed table: rows (directly or in one <tbody>) of the same number of plain <td>/<th> cells; the first row may be <th>. */
+function gridDetail(src: string, el: ElementNode): Detail | null {
+  let rows = solid(src, el.children);
+  if (rows.length === 1 && rows[0].kind === "element" && rows[0].name === "tbody") rows = solid(src, rows[0].children);
+  const out: { range: Range; cells: GridCell[] }[] = [];
+  let head = false;
+  for (const [i, tr] of rows.entries()) {
+    if (tr.kind !== "element" || tr.name !== "tr" || tr.broken) return null;
+    const cells: GridCell[] = [];
+    for (const c of solid(src, tr.children)) {
+      const ok = c.kind === "element" && (c.name === "td" || (i === 0 && c.name === "th"));
+      if (!ok || c.broken || attr(c, "colspan") || attr(c, "rowspan") || !c.children.every((k) => isInline(src, k))) return null;
+      cells.push({ range: { start: c.start, end: c.end }, inner: inner(c), node: c });
+    }
+    if (!cells.length || (out.length && cells.length !== out[0].cells.length)) return null;
+    if (i === 0) head = cells[0].node.name === "th";
+    if (cells.some((c) => (c.node.name === "th") !== (i === 0 && head))) return null;
+    out.push({ range: { start: tr.start, end: tr.end }, cells });
+  }
+  return out.length ? { kind: "grid", rows: out, head } : null;
+}
+
 function summaryDetail(src: string, el: ElementNode): Detail | null {
   let rows = solid(src, el.children);
   if (rows.length === 1 && rows[0].kind === "element" && rows[0].name === "tbody") rows = solid(src, rows[0].children);
@@ -234,7 +259,7 @@ function classify(src: string, n: Node, path: number[]): Classified {
     );
   }
   if (el.name === "table") {
-    const d = tag === "summary" ? summaryDetail(src, el) : tag ? null : tableDetail(src, el);
+    const d = tag === "summary" ? summaryDetail(src, el) : tag === "grid" ? gridDetail(src, el) : tag ? null : tableDetail(src, el);
     return d ? known(d.kind as BlockKind, d) : custom(true);
   }
   if (el.name === "div" && !tag && kids.length === 1 && kids[0].kind === "expr") {

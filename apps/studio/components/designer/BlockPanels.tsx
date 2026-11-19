@@ -8,6 +8,13 @@ import {
   addBranch,
   addColumn,
   addRowColumn,
+  gridAddColumn,
+  gridAddRow,
+  gridBorders,
+  gridHeader,
+  gridMoveColumn,
+  gridRemoveColumn,
+  gridRemoveRow,
   mergeColumns,
   moveColumn,
   removeColumn,
@@ -139,6 +146,57 @@ export function BlockPanel(props: Props) {
             <button type="button" disabled={cols.length >= 4} onClick={() => apply(addRowColumn(src, block))}>
               + คอลัมน์
             </button>
+          )}
+        </div>
+      );
+    }
+    case "grid": {
+      const cols = d.rows[0].cells.length;
+      const bordered = d.rows.every((r) => r.cells.every((c) => /(?:^|;)\s*border\s*:/.test(c.node.attrs.find((a) => a.name === "style")?.value ?? "")));
+      return (
+        <div className={styles.props}>
+          <p className={styles.hint}>
+            {d.rows.length} แถว × {cols} คอลัมน์ · ดับเบิลคลิกเซลล์บนกระดาษเพื่อพิมพ์
+          </p>
+          {!readOnly && (
+            <>
+              <label className={styles.check}>
+                <input type="checkbox" checked={d.head} onChange={(e) => apply(gridHeader(src, block, e.target.checked))} /> แถวแรกเป็นหัวตาราง
+              </label>
+              <label className={styles.check}>
+                <input type="checkbox" checked={bordered} onChange={(e) => apply(gridBorders(src, block, e.target.checked))} /> เส้นตาราง
+              </label>
+              <h3>แถว</h3>
+              {d.rows.map((_, r) => (
+                <div key={r} className={styles.row}>
+                  <span className={styles.hint}>แถว {r + 1}</span>
+                  <button type="button" onClick={() => apply(gridAddRow(src, block, r))}>
+                    + แถวใต้
+                  </button>
+                  <button type="button" className={styles.danger} disabled={d.rows.length <= 1} onClick={() => apply(gridRemoveRow(src, block, r))}>
+                    ลบ
+                  </button>
+                </div>
+              ))}
+              <h3>คอลัมน์</h3>
+              {Array.from({ length: cols }, (_, c) => (
+                <div key={c} className={styles.row}>
+                  <span className={styles.hint}>คอลัมน์ {c + 1}</span>
+                  <button type="button" aria-label="ย้ายซ้าย" disabled={c === 0} onClick={() => apply(gridMoveColumn(src, block, c, -1))}>
+                    ←
+                  </button>
+                  <button type="button" aria-label="ย้ายขวา" disabled={c === cols - 1} onClick={() => apply(gridMoveColumn(src, block, c, 1))}>
+                    →
+                  </button>
+                  <button type="button" onClick={() => apply(gridAddColumn(src, block, c))}>
+                    + ขวา
+                  </button>
+                  <button type="button" className={styles.danger} disabled={cols <= 1} onClick={() => apply(gridRemoveColumn(src, block, c))}>
+                    ลบ
+                  </button>
+                </div>
+              ))}
+            </>
           )}
         </div>
       );

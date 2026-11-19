@@ -3,7 +3,7 @@
 import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import type { Block } from "@/lib/doc-blocks";
+import type { ElementNode, Range } from "@/lib/doc-parse";
 import { domUnits, newChipHtml, readInlineIf, readInner, writeInlineIf, writeInner, type InlineIf } from "@/lib/doc-text";
 
 import styles from "./Designer.module.css";
@@ -16,7 +16,8 @@ import { styleObject } from "./PaperCanvas";
 export type Suggestion = { label: string; expression: string };
 
 type Props = {
-  block: Block;
+  el: ElementNode; // the element typed in: a text block, or a cell of a fixed table
+  inner: Range; // its content in template.html
   src: string;
   fields: Suggestion[];
   onDone: (inner: string | null) => void; // null: nothing changed
@@ -68,9 +69,7 @@ function typedQuery(root: HTMLElement): { node: Text; start: number; query: stri
   return { node: node as Text, start: m.index, query: m[1], rect: sel.getRangeAt(0).getBoundingClientRect() };
 }
 
-export function TextEditor({ block, src, fields, onDone }: Props) {
-  const el = block.node.kind === "element" ? block.node : null;
-  const inner = block.detail.kind === "text" ? block.detail.inner : { start: block.start, end: block.start };
+export function TextEditor({ el, inner, src, fields, onDone }: Props) {
   const start = useMemo(() => readInner(src.slice(inner.start, inner.end)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const ref = useRef<HTMLElement>(null);
   const pop = useRef<HTMLDivElement>(null);
