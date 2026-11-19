@@ -26,7 +26,7 @@ import type { Scope } from "@/lib/doc-sample";
 
 import styles from "./Designer.module.css";
 import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCanvas";
-import { boxRects, useFree } from "./FreeCanvas";
+import { boxRects, FreeBoxPanel, GuidePanel, useFree } from "./FreeCanvas";
 import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { CustomCodeModal } from "./CustomCodeModal";
@@ -144,6 +144,7 @@ export const KIND_NAME: Record<BlockKind, string> = {
   box: "กล่อง",
   rect: "สี่เหลี่ยม",
   line: "เส้น",
+  guide: "ภาพพื้นหลังนำทาง",
   head: "stylesheet",
   custom: "Custom Code",
 };
@@ -230,6 +231,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   const [editing, setEditing] = useState<string | null>(null); // the text block being typed in
   const [coding, setCoding] = useState<number | null>(null); // the start of the block in the Custom Code modal
   const [panes, setPanes] = useState(DEFAULT_PANES);
+  const [guideShown, setGuideShown] = useState(true); // the free sheet's guide picture: shown while designing, never printed
   const imagePicker = useRef<HTMLInputElement>(null);
   const imageAt = useRef<{ list: string; index: number; rect?: Rect } | null>(null); // where a dropped image goes once uploaded (rect: on a free sheet)
   const latest = useRef({ src, blocks });
@@ -562,7 +564,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                 onReport?.(next);
               }}
             >
-            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} part={part} onZone={onZone} renderBox={free ? freeSheet.renderBox : undefined} placed={free ? freeSheet.placed : undefined} overlay={free ? freeSheet.overlay : undefined} onPage={free ? () => setSelected(null) : undefined} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
+            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} part={part} onZone={onZone} guide={guideShown} renderBox={free ? freeSheet.renderBox : undefined} placed={free ? freeSheet.placed : undefined} overlay={free ? freeSheet.overlay : undefined} onPage={free ? () => setSelected(null) : undefined} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
             </Rulers>
           </div>
         </div>
@@ -580,12 +582,16 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
               <h3>{KIND_NAME[current.kind]}</h3>
               {!readOnly && (
                 <div className={styles.row}>
+                  {!free && (
+                    <>
                   <button type="button" onClick={() => step(-1)}>
                     ขึ้น
                   </button>
                   <button type="button" onClick={() => step(1)}>
                     ลง
                   </button>
+                    </>
+                  )}
                   <button type="button" className={styles.danger} onClick={remove}>
                     ลบ (Delete)
                   </button>
@@ -606,6 +612,12 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                   </select>
                 </label>
               )}
+              {free && freeSheet.sheet && (current.kind === "box" || current.kind === "rect" || current.kind === "line") && (
+                <FreeBoxPanel block={current} sheet={freeSheet.sheet} src={src} readOnly={readOnly} apply={apply} />
+              )}
+              {free && current.kind === "box" && innerOf(current) && (
+                <BlockPanel block={innerOf(current)!} src={src} files={files} assets={assets} readOnly={readOnly} fields={fields} apply={apply} onCode={() => setCoding(innerOf(current)!.start)} onUpload={onUpload} />
+              )}
               {current.kind === "text" && !readOnly && <p className={styles.hint}>ดับเบิลคลิกบนกระดาษเพื่อพิมพ์ · Enter จบ · Shift+Enter ขึ้นบรรทัด</p>}
               <BlockPanel
                 block={current}
@@ -620,6 +632,20 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
               />
               <TableSizePanel block={current} src={src} readOnly={readOnly} apply={apply} />
               {current.style && <StylePanel src={src} block={current} readOnly={readOnly} onChange={(props) => apply(setStyle(src, current, props))} />}
+            </div>
+          ) : free && freeSheet.sheet ? (
+            <div className={styles.props}>
+              <p className={styles.hint}>คลิกกล่องเพื่อแก้ ลากจากด้านซ้ายมาวางตรงที่ต้องการ · ลูกศรขยับ 0.5 mm (Shift 5 mm) · Alt ปิดการดูด</p>
+              <GuidePanel
+                sheet={freeSheet.sheet}
+                page={{ w: paper.widthMm, h: paper.heightMm }}
+                src={src}
+                readOnly={readOnly}
+                apply={apply}
+                shown={guideShown}
+                onShown={setGuideShown}
+                onUpload={onUpload}
+              />
             </div>
           ) : (
             <p className={styles.hint}>คลิกบล็อกบนกระดาษเพื่อแก้ ลากจากด้านซ้ายเพื่อเพิ่ม</p>

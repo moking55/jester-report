@@ -24,6 +24,7 @@ export type BlockKind =
   | "box" // <div data-jd="box">: a block placed at a spot of the sheet, in mm
   | "rect" // <div data-jd="rect">: a drawn rectangle at a spot of the sheet
   | "line" // <div data-jd="line">: a drawn line at a spot of the sheet
+  | "guide" // <img data-jd="guide">: a faint picture to trace on a free sheet; never printed
   | "head" // <link rel="stylesheet" href="report.css">: not a block on the page, kept in place
   | "custom"; // anything else
 
@@ -281,6 +282,7 @@ function classify(src: string, n: Node, path: number[]): Classified {
 
   if (el.name === "link" && attr(el, "rel") === "stylesheet") return { ...custom(false), kind: "head" };
   if (el.name === "style" && styleIsHead) return { ...custom(false), kind: "head" };
+  if (el.name === "img" && tag === "guide" && attr(el, "src")) return known("guide", { kind: "none" });
   if (el.name === "img") {
     const a = (name: string) => el.attrs.find((x) => x.name === name)?.valueRange ?? null;
     return attr(el, "src") ? known("image", { kind: "image", src: a("src"), width: a("width") }) : custom(true);

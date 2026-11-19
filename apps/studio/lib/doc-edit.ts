@@ -3,7 +3,7 @@
 // source and the new range of the block it touched (to reselect it after the file is read again).
 // Undo is a stack of whole sources: small files, exact bytes back.
 
-import type { Block, BlockList, GridCell, Rect } from "./doc-blocks";
+import { readBlocks, type Block, type BlockList, type GridCell, type Rect } from "./doc-blocks";
 import type { ElementNode, Node, Range } from "./doc-parse";
 
 export type Edited = { src: string; at: Range | null };
@@ -784,6 +784,34 @@ export function moveBoxOrder(src: string, block: Block, page: Block, to: "front"
   const now = list ? list.items.findIndex((b) => b.start === block.start) : -1;
   if (!list || now < 0) return fail("กล่องนี้ไม่ได้อยู่บนหน้ากระดาษ");
   const last = list.items.length - 1;
-  const index = to === "front" ? last : to === "back" ? 0 : to === "up" ? now + 1 : now - 1;
-  return moveBlock(src, block, list, Math.max(0, Math.min(index, last)));
+  const floor = list.items[0]?.kind === "guide" ? 1 : 0; // the guide picture stays behind every box
+  const index = to === "front" ? last : to === "back" ? floor : to === "up" ? now + 1 : now - 1;
+  return moveBlock(src, block, list, Math.max(floor, Math.min(index, last)));
+}
+
+/** The sheet's own size in template.html (a free layout writes it there too, as the engine's page is that big). */
+export function setPageSize(src: string, page: Block, w: number, h: number): Result<Edited> {
+  return setStyle(src, page, { width: mmText(w), height: mmText(h) });
+}
+
+/** How many boxes reach outside a `w` × `h` mm sheet (a size change leaves them there: they would be cut off). */
+export function boxesOutside(page: Block | undefined, w: number, h: number): number {
+  const eps = 0.05;
+  return (page?.lists[0]?.list.items ?? []).filter((b) => {
+    const r = b.rect;
+    return r && (r.x < -eps || r.y < -eps || r.x + r.w > w + eps || r.y + r.h > h + eps);
+  }).length;
+}
+
+/** Put a picture to trace behind the boxes (replacing the one there); `data-jd="guide"` is never printed. */
+export function setGuide(src: string, page: Block, name: string, w: number, h: number): Result<Edited> {
+  if (page.kind !== "page") return fail("ไม่ใช่หน้ากระดาษแบบอิสระ");
+  if (/["<>]/.test(name)) return fail("ชื่อไฟล์ไม่ถูกต้อง");
+  const list = page.lists[0].list;
+  const html = `<img data-jd="guide" src="${name}" alt="" style="position: absolute; left: 0mm; top: 0mm; width: ${mmText(w)}; height: ${mmText(h)}; opacity: 0.3">`;
+  const old = list.items.find((b) => b.kind === "guide");
+  const base = old ? removeBlock(src, old).src : src;
+  const fresh = readBlocks(base).items.find((b) => b.kind === "page");
+  if (!fresh) return fail("ไม่พบหน้ากระดาษ");
+  return ok({ src: insertBlock(base, fresh.lists[0].list, 0, html).src, at: null }); // nothing to select: the guide is not a box
 }

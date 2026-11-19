@@ -5,9 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { prepareDraft, saveFile } from "@/lib/actions/draft";
 import { isImageName, safeAssetName } from "@/lib/asset-name";
-import { changePage, pageOf, PAPER_MM, sizeLabel, type PageSize, type PageSpec } from "@/lib/paper";
+import { changePage, pageOf, paperOf, PAPER_MM, sizeLabel, type PageSize, type PageSpec } from "@/lib/paper";
 import { readBlocks } from "@/lib/doc-blocks";
-import { record, redo, startHistory, undo, type History } from "@/lib/doc-edit";
+import { boxesOutside, record, redo, setPageSize, startHistory, undo, type History } from "@/lib/doc-edit";
 import type { Scope } from "@/lib/doc-sample";
 import { problemMessage } from "@/lib/messages";
 import { parseParams } from "@/lib/params";
@@ -162,7 +162,15 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
     const next = changePage(report, change);
     if (next === null) return setError("report.json อ่านไม่ได้ หรือเปลี่ยนระหว่างกระดาษแผ่นกับม้วนไม่ได้ — สร้างรายงานใหม่");
     setError(null);
-    editReport(next);
+    if (pageSpec.layout !== "free") return editReport(next);
+    // a free sheet is also written in template.html (the page's width and height): both change in one undo step
+    const sheet = paperOf(next);
+    const page = readBlocks(history.now.html).items.find((b) => b.kind === "page");
+    const resized = page ? setPageSize(history.now.html, page, sheet.widthMm, sheet.heightMm) : null;
+    const html = resized?.ok ? resized.value.src : history.now.html;
+    setHistory((h) => record(h, { ...h.now, html, report: next }, sameDoc));
+    const out = boxesOutside(readBlocks(html).items.find((b) => b.kind === "page"), sheet.widthMm, sheet.heightMm);
+    if (out) setError(`ขนาดใหม่ทำให้ ${out} กล่องอยู่นอกกระดาษ (กรอบแดงประ) — ลากกลับเข้ามา ไม่เช่นนั้นจะถูกตัดตอนพิมพ์`);
   }
 
   async function previewPdf() {

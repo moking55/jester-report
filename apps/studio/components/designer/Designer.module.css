@@ -564,3 +564,9 @@
 .toolbar label {
   white-space: nowrap;
 }
+
+.freeGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 8px;
+}

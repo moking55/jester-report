@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Block, BlockList, Rect } from "@/lib/doc-blocks";
-import { setBoxRect, type Edited, type Result } from "@/lib/doc-edit";
+import { moveBoxOrder, setBoxRect, setGuide, removeBlock, type Edited, type Result } from "@/lib/doc-edit";
+import styles from "./Designer.module.css";
 import { snapMove, snapResize, type Guide, type Handle } from "@/lib/snap";
 
 // The free-layout sheet's interaction (SPEC-studio.md v1.8): boxes are dragged and resized with the pointer, snap to
@@ -132,32 +133,186 @@ export function useFree({ blocks, page, readOnly, selected, current, editing, ke
 
   const renderBox: RenderBox = ({ block, style, className, children }) => {
     const key = keyOf(block);
-    const on = selected === key;
-    const live = drag?.key === key;
+    const r = block.rect;
+    const outside = !!r && (r.x < -0.05 || r.y < -0.05 || r.x + r.w > page.w + 0.05 || r.y + r.h > page.h + 0.05);
     return (
-      <div
-        data-jd-block={key}
-        data-kind={block.kind}
+      <BoxView
+        block={block}
         style={style}
-        className={["jd-fbox", className ?? "", on ? "jd-selected" : "", live ? "jd-moving" : ""].join(" ").trim()}
-        onPointerDown={(e) => begin(e, block, "move")}
-        onClick={(e) => {
-          e.stopPropagation();
-          select(key);
-        }}
-        onDoubleClick={() => !readOnly && edit(block)}
-        onDragStart={(e) => e.preventDefault()}
+        className={[className ?? "", selected === key ? "jd-selected" : "", drag?.key === key ? "jd-moving" : "", outside ? "jd-outside" : ""].join(" ").trim()}
+        on={selected === key}
+        readOnly={readOnly}
+        onPointerDown={(e, mode) => begin(e, block, mode)}
+        onSelect={() => select(key)}
+        onEdit={() => edit(block)}
+        keyName={key}
       >
         {children}
-        {on &&
-          !readOnly &&
-          block.rect &&
-          (block.kind === "line" ? LINE_HANDLES : HANDLES).map((h) => (
-            <span key={h} className={`jd-rh jd-rh-${h}`} data-handle={h} onPointerDown={(e) => begin(e, block, h)} />
-          ))}
-      </div>
+      </BoxView>
     );
   };
 
   return { placed, overlay, renderBox, sheet };
+}
+
+/** One box on the sheet: selectable, moved by dragging, resized by its handles; red when its text overflows it. */
+function BoxView({
+  block,
+  style,
+  className,
+  on,
+  readOnly,
+  keyName,
+  onPointerDown,
+  onSelect,
+  onEdit,
+  children,
+}: {
+  block: Block;
+  style: React.CSSProperties;
+  className: string;
+  on: boolean;
+  readOnly: boolean;
+  keyName: string;
+  onPointerDown: (e: React.PointerEvent, mode: "move" | Handle) => void;
+  onSelect: () => void;
+  onEdit: () => void;
+  children: React.ReactNode;
+}) {
+  const el = useRef<HTMLDivElement>(null);
+  const [over, setOver] = useState(false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- after every render: the text can change anywhere; setOver bails out on the same value
+  useLayoutEffect(() => {
+    // text that runs past the box's height (a box of text, a field): the PDF would draw it over what is below
+    const e = el.current;
+    if (!e || block.kind !== "box") return setOver(false);
+    setOver(e.scrollHeight > e.clientHeight + 1);
+  });
+  return (
+    <div
+      ref={el}
+      data-jd-block={keyName}
+      data-kind={block.kind}
+      style={style}
+      className={`jd-fbox ${className} ${over ? "jd-over" : ""}`.trim()}
+      title={over ? "ข้อความยาวเกินกล่อง: ขยายกล่องหรือลดขนาดตัวอักษร" : undefined}
+      onPointerDown={(e) => onPointerDown(e, "move")}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelect();
+      }}
+      onDoubleClick={() => !readOnly && onEdit()}
+      onDragStart={(e) => e.preventDefault()}
+    >
+      {children}
+      {on &&
+        !readOnly &&
+        block.rect &&
+        (block.kind === "line" ? LINE_HANDLES : HANDLES).map((h) => (
+          <span key={h} className={`jd-rh jd-rh-${h}`} data-handle={h} onPointerDown={(e) => onPointerDown(e, h)} />
+        ))}
+    </div>
+  );
+}
+
+type PanelOpts = { src: string; readOnly: boolean; apply: (r: Result<Edited>) => void };
+
+/** X / Y / width / height of the selected box in mm, and its place in the stack (SPEC v1.8 "แผงแบบอิสระ"). */
+export function FreeBoxPanel({ block, sheet, src, readOnly, apply }: PanelOpts & { block: Block; sheet: Block }) {
+  const r = block.rect;
+  const field = (label: string, k: keyof Rect, off = false) => (
+    <label className={styles.prop} key={k}>
+      {label}
+      <input
+        type="number"
+        step="0.1"
+        min={k === "w" || k === "h" ? 1 : undefined}
+        disabled={readOnly || off || !r}
+        key={`${block.start}-${k}-${r?.[k]}`}
+        defaultValue={r ? r[k] : ""}
+        aria-label={`${label} (mm)`}
+        onBlur={(e) => {
+          const n = Number(e.target.value);
+          if (r && e.target.value !== "" && Number.isFinite(n) && n !== r[k]) apply(setBoxRect(src, block, { [k]: n }));
+        }}
+        onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      />
+    </label>
+  );
+  const order = (to: "front" | "back" | "up" | "down") => apply(moveBoxOrder(src, block, sheet, to));
+  return (
+    <div data-free-panel>
+      <h4>ตำแหน่งและขนาด (mm)</h4>
+      {!r && <p>ตำแหน่งนี้มี Jinja หรือหน่วยอื่น แก้ได้ใน HTML เท่านั้น</p>}
+      <div className={styles.freeGrid}>
+        {field("X", "x")}
+        {field("Y", "y")}
+        {field("กว้าง", "w")}
+        {field("สูง", "h", block.kind === "line")}
+      </div>
+      {!readOnly && (
+        <div className={styles.row}>
+          <button type="button" onClick={() => order("front")}>ยกขึ้นหน้าสุด</button>
+          <button type="button" onClick={() => order("up")}>ขึ้นหนึ่งชั้น</button>
+          <button type="button" onClick={() => order("down")}>ลงหนึ่งชั้น</button>
+          <button type="button" onClick={() => order("back")}>ส่งไปหลังสุด</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The picture to trace on the sheet (SPEC v1.8): shown faintly while designing, never printed. */
+export function GuidePanel({
+  sheet,
+  page,
+  src,
+  readOnly,
+  apply,
+  shown,
+  onShown,
+  onUpload,
+}: PanelOpts & { sheet: Block; page: { w: number; h: number }; shown: boolean; onShown: (on: boolean) => void; onUpload?: (file: File) => Promise<string | null> }) {
+  const input = useRef<HTMLInputElement>(null);
+  const guide = sheet.lists[0]?.list.items.find((b) => b.kind === "guide");
+  return (
+    <div data-guide-panel>
+      <h4>ภาพพื้นหลังนำทาง</h4>
+      <p>วางภาพแบบพิมพ์เดิมไว้ใต้กล่องเพื่อลากตาม — ไม่พิมพ์ลง PDF</p>
+      {!readOnly && onUpload && (
+        <button type="button" onClick={() => input.current?.click()}>
+          {guide ? "เปลี่ยนภาพ" : "อัปโหลดภาพ"}
+        </button>
+      )}
+      {guide && (
+        <>
+          <label>
+            <input type="checkbox" checked={shown} onChange={(e) => onShown(e.target.checked)} /> แสดงภาพ
+          </label>
+          {!readOnly && (
+            <button type="button" onClick={() => apply({ ok: true, value: removeBlock(src, guide) })}>
+              ลบภาพ
+            </button>
+          )}
+        </>
+      )}
+      <input
+        ref={input}
+        type="file"
+        hidden
+        accept="image/png,image/jpeg,image/webp"
+        aria-label="เลือกภาพพื้นหลังนำทาง"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          e.target.value = "";
+          if (!file || !onUpload) return;
+          const name = await onUpload(file);
+          if (name) {
+            apply(setGuide(src, sheet, name, page.w, page.h));
+            onShown(true);
+          }
+        }}
+      />
+    </div>
+  );
 }

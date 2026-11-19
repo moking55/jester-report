@@ -45,6 +45,7 @@ type Props = {
   placed?: (b: Block) => Rect | undefined;
   overlay?: React.ReactNode;
   onPage?: () => void;
+  guide?: boolean; // show the guide picture of a free sheet (never printed)
 };
 
 const asset = (templateId: string) => (name: string) => `/assets/${templateId}?name=${encodeURIComponent(name)}`;
@@ -81,6 +82,10 @@ const PAPER_CSS = `
 .jd-doc { margin: 8px; } /* Chromium's default body margin, which the PDF has too; report.css may change it */
 .jd-break { position: absolute; left: -8mm; right: -8mm; border-top: 1px dashed #d33; pointer-events: none; }
 .jd-break span { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #d33; background: #fff; padding: 0 4px; }
+[data-jd-page] img[data-jd="guide"] { pointer-events: none; user-select: none; }
+.jd-fbox.jd-outside { outline: 2px dashed #d33; }
+.jd-fbox.jd-over { outline: 2px dashed #d33; outline-offset: 0; }
+.jd-fbox.jd-over::after { content: "ข้อความล้นกล่อง"; position: absolute; left: 0; top: 100%; font: 10px system-ui; color: #fff; background: #d33; padding: 0 4px; white-space: nowrap; z-index: 3; }
 .jd-fbox { box-sizing: border-box; cursor: move; touch-action: none; user-select: none; }
 .jd-fbox:hover { outline: 1px solid #b9cdf0; }
 .jd-fbox.jd-selected { outline: 2px solid #2f6fe0; z-index: 1; }
@@ -124,7 +129,7 @@ const PAPER_CSS = `
 .jd-slot-bad { border-color: #d33; background: rgba(221,51,51,.08); color: #d33; }
 `;
 
-export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor, cellEditor, onCell, part = "body", onZone, renderBox, placed, overlay, onPage }: Props) {
+export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor, cellEditor, onCell, part = "body", onZone, renderBox, placed, overlay, onPage, guide = true }: Props) {
   useDocumentFonts();
   const host = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<ShadowRoot | null>(null);
@@ -324,6 +329,8 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         inner = renderBox ? renderBox({ block: b, style, className: cls, children: kids }) : <div style={style} className={cls}>{kids}</div>;
         return <FrameKey key={`${b.path.join(".")}@${b.start}`}>{inner}</FrameKey>;
       }
+      case "guide":
+        return <FrameKey key={`${b.path.join(".")}@${b.start}`}>{guide ? leaf(b, scope) : null}</FrameKey>;
       case "custom":
         inner = (
           <div className="jd-custom">

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { allBlocks, readBlocks, type Rect } from "@/lib/doc-blocks";
-import { addBox, boxSize, moveBoxOrder, removeBlock, setBoxRect, setStyle, type Edited, type Result } from "@/lib/doc-edit";
+import { addBox, boxesOutside, boxSize, moveBoxOrder, removeBlock, setBoxRect, setGuide, setPageSize, setStyle, type Edited, type Result } from "@/lib/doc-edit";
 import { snapMove, snapResize, type SnapOptions } from "@/lib/snap";
 
 const PAGE = '<div data-jd="page" style="position: relative; width: 210mm; height: 148mm">\n</div>\n';
@@ -98,6 +98,41 @@ describe("the free-layout model (v1.8)", () => {
     const out = value(setStyle(src, boxes(src)[1], { border: "1mm solid #f00" }));
     expect(boxes(out)[1].rect).toEqual(R(100, 30, 40, 20));
     expect(out).toContain("border: 1mm solid #f00");
+  });
+});
+
+describe("the sheet's guide picture and size (v1.8)", () => {
+  it("a guide picture goes first, is not a box, and a second one replaces it", () => {
+    let src = sheet();
+    src = value(setGuide(src, page(src), "form.png", 210, 148));
+    expect(boxes(src).map((b) => b.kind)).toEqual(["guide", "box", "rect", "line"]);
+    expect(src).toContain('data-jd="guide" src="form.png"');
+    src = value(setGuide(src, page(src), "other.png", 210, 148));
+    expect(boxes(src).map((b) => b.kind)).toEqual(["guide", "box", "rect", "line"]);
+    expect(src).not.toContain("form.png");
+    expect(src).toContain("other.png");
+  });
+
+  it("a box sent to the back stays in front of the guide", () => {
+    let src = value(setGuide(sheet(), page(sheet()), "form.png", 210, 148));
+    src = value(moveBoxOrder(src, boxes(src)[3], page(src), "back"));
+    expect(boxes(src).map((b) => b.kind)).toEqual(["guide", "line", "box", "rect"]);
+  });
+
+  it("removing the guide leaves the boxes", () => {
+    let src = value(setGuide(sheet(), page(sheet()), "form.png", 210, 148));
+    src = removeBlock(src, boxes(src)[0]).src;
+    expect(boxes(src).map((b) => b.kind)).toEqual(["box", "rect", "line"]);
+    expect(src).not.toContain("guide");
+  });
+
+  it("the sheet's size is written in template.html; boxes past the new edge are counted", () => {
+    const src = sheet(); // text box to x 70 / y 28, rectangle to x 140 / y 50, line to x 90 at y 60
+    expect(boxesOutside(page(src), 210, 148)).toBe(0);
+    const narrow = value(setPageSize(src, page(src), 105, 148));
+    expect(narrow).toContain("width: 105mm; height: 148mm");
+    expect(boxesOutside(page(narrow), 105, 148)).toBe(1); // the rectangle
+    expect(boxesOutside(page(narrow), 105, 40)).toBe(2); // the rectangle and the line
   });
 });
 
