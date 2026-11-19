@@ -879,6 +879,39 @@ export interface components {
             /** @description null = no limit */
             rateLimitPerMinute?: number | null;
         };
+        /** @description report.json `page` (v1.8). Only with the blank starter; a roll or free layout starts without header.html and footer.html. A bad combination is 422 INPUT_INVALID. */
+        PageSpec: {
+            /**
+             * @default A4
+             * @enum {string}
+             */
+            size: "A3" | "A4" | "A5" | "A6" | "B5" | "Letter" | "Legal" | "DL" | "custom" | "roll";
+            /**
+             * @default portrait
+             * @enum {string}
+             */
+            orientation: "portrait" | "landscape";
+            /** @description custom size only */
+            widthMm?: number;
+            /** @description custom size only */
+            heightMm?: number;
+            /**
+             * @description roll size only
+             * @enum {integer}
+             */
+            rollWidthMm?: 58 | 80;
+            /**
+             * @default flow
+             * @enum {string}
+             */
+            layout: "flow" | "free";
+            marginsMm?: {
+                top?: number;
+                bottom?: number;
+                left?: number;
+                right?: number;
+            };
+        };
         TemplateSummary: {
             id: components["schemas"]["TemplateId"];
             name: string;
@@ -1741,6 +1774,7 @@ export interface operations {
                      * @enum {string}
                      */
                     starter?: "blank" | "quotation" | "grouped-table" | "master-detail" | "tax-invoice";
+                    page?: components["schemas"]["PageSpec"];
                 };
             };
         };
@@ -2168,6 +2202,7 @@ export interface operations {
                 content: {
                     "image/png": string;
                     "image/jpeg": string;
+                    "image/gif": string;
                     "image/svg+xml": string;
                     "image/webp": string;
                     "image/avif": string;

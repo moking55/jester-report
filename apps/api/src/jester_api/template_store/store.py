@@ -28,7 +28,7 @@ from .limits import (
     TEMPLATE_ID,
     TEXT_FILE,
 )
-from .starter import Starter, starter_files
+from .starter import Starter, page_files, starter_files
 
 
 @dataclass(frozen=True)
@@ -227,10 +227,14 @@ class TemplateStore:
         return content_sha256(dict(files), dict(assets))
 
     # ---- templates -------------------------------------------------------------------------------------
-    async def create(self, template_id: str, name: str, starter: Starter, by: str) -> TemplateSummary:
+    async def create(
+        self, template_id: str, name: str, starter: Starter, by: str, page: dict[str, Any] | None = None
+    ) -> TemplateSummary:
         _check(TEMPLATE_ID, template_id, "template")
         name = _check_name(name)
-        texts, binaries = starter_files(starter)
+        if page is not None and starter != "blank":
+            raise StoreError("INPUT_INVALID", "page can be set on the blank starter only")
+        texts, binaries = page_files(page) if page is not None else starter_files(starter)
         async with self._db.connection() as conn, conn.transaction():
             try:
                 await conn.execute("INSERT INTO templates (id, name) VALUES (%s, %s)", (template_id, name))

@@ -552,3 +552,9 @@
   font: 11px system-ui;
   white-space: nowrap;
 }
+
+.mm {
+  width: 64px;
+  font: inherit;
+  padding: 2px 4px;
+}

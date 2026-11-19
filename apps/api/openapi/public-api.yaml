@@ -430,6 +430,8 @@ paths:
                   type: string
                   enum: [blank, quotation, grouped-table, master-detail, tax-invoice]
                   default: blank
+                page:
+                  $ref: '#/components/schemas/PageSpec'
       responses:
         '201':
           description: Created
@@ -1535,6 +1537,28 @@ components:
           items: { $ref: '#/components/schemas/TemplateId' }
           description: null = every template
         rateLimitPerMinute: { type: [integer, 'null'], description: null = no limit }
+
+    PageSpec:
+      type: object
+      description: >
+        report.json `page` (v1.8). Only with the blank starter; a roll or free layout starts without
+        header.html and footer.html. A bad combination is 422 INPUT_INVALID.
+      additionalProperties: false
+      properties:
+        size: { type: string, enum: [A3, A4, A5, A6, B5, Letter, Legal, DL, custom, roll], default: A4 }
+        orientation: { type: string, enum: [portrait, landscape], default: portrait }
+        widthMm: { type: number, minimum: 25, maximum: 1000, description: custom size only }
+        heightMm: { type: number, minimum: 25, maximum: 2000, description: custom size only }
+        rollWidthMm: { type: integer, enum: [58, 80], description: roll size only }
+        layout: { type: string, enum: [flow, free], default: flow }
+        marginsMm:
+          type: object
+          additionalProperties: false
+          properties:
+            top: { type: number, minimum: 0, maximum: 50 }
+            bottom: { type: number, minimum: 0, maximum: 50 }
+            left: { type: number, minimum: 0, maximum: 50 }
+            right: { type: number, minimum: 0, maximum: 50 }
 
     TemplateSummary:
       type: object

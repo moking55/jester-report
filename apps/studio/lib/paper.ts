@@ -2,24 +2,58 @@
 // the page breaks fall on a long body. Breaks are an estimate — Chromium's print layout avoids splitting rows and
 // repeats table heads — so "Preview pdf" stays the truth.
 
-export type Paper = {
-  widthMm: number;
-  heightMm: number;
-  margins: { top: number; bottom: number; left: number; right: number };
-  contentWidthMm: number;
-  contentHeightMm: number;
+export type PageSize = "A3" | "A4" | "A5" | "A6" | "B5" | "Letter" | "Legal" | "DL" | "custom" | "roll";
+
+/** The report.json `page` as it is declared (SPEC-report-definition.md v1.8), with the defaults filled in. */
+export type PageSpec = {
+  size: PageSize;
+  orientation: "portrait" | "landscape";
+  widthMm?: number; // custom
+  heightMm?: number; // custom
+  rollWidthMm?: 58 | 80; // roll
+  layout: "flow" | "free";
+  marginsMm?: { top?: number; bottom?: number; left?: number; right?: number };
 };
 
-const A4 = { short: 210, long: 297 };
+export type Paper = {
+  widthMm: number;
+  heightMm: number; // a roll: the base height the api sends (the printed sheet is as tall as its content)
+  margins: { top: number; bottom: number; left: number; right: number }; // as printed: none for a free layout
+  contentWidthMm: number;
+  contentHeightMm: number;
+  size: PageSize;
+  orientation: "portrait" | "landscape";
+  layout: "flow" | "free";
+  roll: boolean;
+};
+
+/** Portrait width × height in mm; the same table as the api's report_definition/page.py. */
+export const PAPER_MM: Record<string, [number, number]> = {
+  A3: [297, 420],
+  A4: [210, 297],
+  A5: [148, 210],
+  A6: [105, 148],
+  B5: [176, 250],
+  Letter: [215.9, 279.4],
+  Legal: [215.9, 355.6],
+  DL: [110, 220],
+};
+export const SIZE_NAMES = [...Object.keys(PAPER_MM), "custom", "roll"] as PageSize[];
+export const ROLL_BASE_HEIGHT_MM = 1000;
+export const CUSTOM_LIMITS = { width: [25, 1000], height: [25, 2000] } as const;
+export const MIN_CONTENT_MM = 20;
+
 const DEFAULT_MARGINS = { top: 20, bottom: 20, left: 15, right: 15 }; // report-definition's Margins defaults
+const ROLL_MARGINS = { top: 3, bottom: 3, left: 2, right: 2 };
 
 const num = (v: unknown, fallback: number) => {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v) : NaN;
   return Number.isFinite(n) && n >= 0 && n <= 50 ? n : fallback;
 };
+const dim = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) && v > 0 ? v : fallback);
 
-/** The paper of a report.json text; anything unreadable falls back to A4 portrait with default margins. */
-export function paperOf(reportJson: string | undefined): Paper {
+/** The `page` of a report.json text; anything unreadable is A4 portrait, flow. */
+export function pageOf(reportJson: string | undefined): PageSpec {
   let page: Record<string, unknown> = {};
   try {
     const r = JSON.parse(reportJson ?? "{}") as { page?: Record<string, unknown> };
@@ -27,23 +61,64 @@ export function paperOf(reportJson: string | undefined): Paper {
   } catch {
     page = {};
   }
-  const landscape = page.orientation === "landscape";
-  const m = (page.marginsMm && typeof page.marginsMm === "object" ? page.marginsMm : {}) as Record<string, unknown>;
-  const margins = {
-    top: num(m.top, DEFAULT_MARGINS.top),
-    bottom: num(m.bottom, DEFAULT_MARGINS.bottom),
-    left: num(m.left, DEFAULT_MARGINS.left),
-    right: num(m.right, DEFAULT_MARGINS.right),
+  const size = SIZE_NAMES.includes(page.size as PageSize) ? (page.size as PageSize) : "A4";
+  return {
+    size,
+    orientation: page.orientation === "landscape" && size !== "roll" ? "landscape" : "portrait",
+    widthMm: typeof page.widthMm === "number" ? page.widthMm : undefined,
+    heightMm: typeof page.heightMm === "number" ? page.heightMm : undefined,
+    rollWidthMm: page.rollWidthMm === 58 ? 58 : page.rollWidthMm === 80 ? 80 : undefined,
+    layout: page.layout === "free" && size !== "roll" ? "free" : "flow",
+    marginsMm: page.marginsMm && typeof page.marginsMm === "object" ? (page.marginsMm as PageSpec["marginsMm"]) : undefined,
   };
-  const widthMm = landscape ? A4.long : A4.short;
-  const heightMm = landscape ? A4.short : A4.long;
+}
+
+/** The paper of a report.json text. */
+export function paperOf(reportJson: string | undefined): Paper {
+  const page = pageOf(reportJson);
+  const roll = page.size === "roll";
+  const [w0, h0] = roll
+    ? [page.rollWidthMm ?? 80, ROLL_BASE_HEIGHT_MM]
+    : page.size === "custom"
+      ? [dim(page.widthMm, 100), dim(page.heightMm, 100)]
+      : PAPER_MM[page.size];
+  const landscape = page.orientation === "landscape";
+  const widthMm = landscape ? h0 : w0;
+  const heightMm = landscape ? w0 : h0;
+  const base = roll && !page.marginsMm ? ROLL_MARGINS : DEFAULT_MARGINS;
+  const m = page.marginsMm ?? {};
+  const margins =
+    page.layout === "free"
+      ? { top: 0, bottom: 0, left: 0, right: 0 } // positions count from the sheet's edge
+      : { top: num(m.top, base.top), bottom: num(m.bottom, base.bottom), left: num(m.left, base.left), right: num(m.right, base.right) };
   return {
     widthMm,
     heightMm,
     margins,
     contentWidthMm: widthMm - margins.left - margins.right,
     contentHeightMm: heightMm - margins.top - margins.bottom,
+    size: page.size,
+    orientation: page.orientation,
+    layout: page.layout,
+    roll,
   };
+}
+
+/** The label of a size in the UI. */
+export const sizeLabel = (size: PageSize, rollWidthMm?: number) =>
+  size === "custom" ? "กำหนดเอง" : size === "roll" ? `ใบเสร็จม้วน ${rollWidthMm ?? 80} mm` : size;
+
+/** Margins no wider than leave MIN_CONTENT_MM for the content on a sheet `widthMm` × `heightMm` (a roll: width only). */
+export function fitMargins(m: Paper["margins"], widthMm: number, heightMm: number | null): Paper["margins"] {
+  const room = (span: number, a: number, b: number): [number, number] => {
+    const over = a + b - (span - MIN_CONTENT_MM);
+    if (over <= 0) return [a, b];
+    const total = a + b || 1;
+    return [Math.max(0, Math.floor(a - (over * a) / total)), Math.max(0, Math.floor(b - (over * b) / total))];
+  };
+  const [left, right] = room(widthMm, m.left, m.right);
+  const [top, bottom] = heightMm === null ? [m.top, m.bottom] : room(heightMm, m.top, m.bottom);
+  return { top, bottom, left, right };
 }
 
 /** Offsets (in the body's own units) where pages 2, 3, … begin for a body `bodyHeight` tall. */
@@ -116,4 +191,66 @@ export function setMargins(reportJson: string, m: Margins): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * report.json with `page` replaced by `page` (only that object's text changes; the rest stays as written).
+ * null when report.json is not a JSON object.
+ */
+export function setPage(reportJson: string, page: PageSpec): string | null {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(reportJson);
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const clean: Record<string, unknown> = { size: page.size };
+  if (page.size !== "roll") clean.orientation = page.orientation;
+  if (page.size === "custom") Object.assign(clean, { widthMm: page.widthMm, heightMm: page.heightMm });
+  if (page.size === "roll") clean.rollWidthMm = page.rollWidthMm ?? 80;
+  if (page.layout === "free") clean.layout = "free";
+  if (page.marginsMm) clean.marginsMm = page.marginsMm;
+  const key = /"page"\s*:\s*\{/.exec(reportJson);
+  const lead = (at: number) => /^[ \t]*/.exec(reportJson.slice(reportJson.lastIndexOf("\n", at - 1) + 1))![0];
+  if (!key) {
+    const root = reportJson.indexOf("{");
+    const rest = reportJson.slice(root + 1);
+    const text = JSON.stringify(clean, null, 2).replace(/\n/g, "\n  ");
+    return `${reportJson.slice(0, root + 1)}\n  "page": ${text}${rest.trim().startsWith("}") ? "\n" : ","}${rest}`;
+  }
+  const open = key.index + key[0].length - 1;
+  let depth = 0;
+  let close = -1;
+  for (let i = open; i < reportJson.length; i++) {
+    if (reportJson[i] === "{") depth++;
+    else if (reportJson[i] === "}" && --depth === 0) {
+      close = i;
+      break;
+    }
+  }
+  if (close < 0) return null;
+  const text = JSON.stringify(clean, null, 2).replace(/\n/g, `\n${lead(open)}`);
+  return `${reportJson.slice(0, open)}${text}${reportJson.slice(close + 1)}`;
+}
+
+/**
+ * report.json with `change` applied to `page` (the toolbar's size and orientation): custom starts from the
+ * current sheet's size, and margins that would leave less than MIN_CONTENT_MM are made smaller. A roll stays a
+ * roll and a sheet stays a sheet (SPEC-studio.md v1.8). null when report.json cannot be edited that way.
+ */
+export function changePage(reportJson: string, change: Partial<PageSpec>): string | null {
+  const before = paperOf(reportJson);
+  const cur = pageOf(reportJson);
+  if ((change.size === "roll") !== (cur.size === "roll") && change.size !== undefined) return null;
+  const next: PageSpec = { ...cur, ...change };
+  if (next.size === "custom" && next.widthMm === undefined) {
+    const [w, h] = before.orientation === "landscape" ? [before.heightMm, before.widthMm] : [before.widthMm, before.heightMm];
+    Object.assign(next, { widthMm: w, heightMm: h });
+  }
+  const after = paperOf(setPage(reportJson, next) ?? undefined);
+  const fitted = fitMargins(after.margins, after.widthMm, next.size === "roll" ? null : after.heightMm);
+  const same = (["top", "bottom", "left", "right"] as const).every((k) => fitted[k] === after.margins[k]);
+  if (!same && next.layout === "flow") next.marginsMm = fitted;
+  return setPage(reportJson, next);
 }

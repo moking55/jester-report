@@ -179,3 +179,26 @@ async def test_import_body_limit_is_26_mb_on_that_route_only(api, admin):
         content=b"a" * (11 * 1024 * 1024),
     )
     assert other.status_code == 413
+
+
+async def test_create_with_a_page(api, admin):
+    ok = await api.post(
+        "/v1/templates",
+        headers=admin,
+        json={"id": "receipt", "name": "R", "starter": "blank", "page": {"size": "roll", "rollWidthMm": 58}},
+    )
+    assert ok.status_code == 201
+    draft = (await api.get("/v1/templates/receipt/draft", headers=admin)).json()
+    assert "header.html" not in [f["name"] for f in draft["files"]]
+    bad = await api.post(
+        "/v1/templates",
+        headers=admin,
+        json={"id": "bad", "name": "B", "starter": "blank", "page": {"size": "roll"}},
+    )
+    assert (bad.status_code, bad.json()["code"]) == (422, "INPUT_INVALID")
+    wrong = await api.post(
+        "/v1/templates",
+        headers=admin,
+        json={"id": "bad2", "name": "B", "starter": "quotation", "page": {"size": "A5"}},
+    )
+    assert wrong.status_code == 422

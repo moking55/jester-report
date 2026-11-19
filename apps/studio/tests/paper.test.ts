@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { dragMargin } from "@/components/designer/Rulers";
 
 import { codeBox, compactLabel, fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
-import { pageBreaks, paperOf, setMargins } from "@/lib/paper";
+import { fitMargins, pageBreaks, pageOf, paperOf, setMargins, setPage } from "@/lib/paper";
 
 describe("paper", () => {
   it("is A4 portrait with the default margins, or as report.json says", () => {
@@ -103,5 +103,31 @@ describe("dragMargin", () => {
     expect(dragMargin(paper, paper.margins, "left", 7.4).left).toBe(22);
     expect(dragMargin(paper, paper.margins, "top", -40).top).toBe(5);
     expect(dragMargin(paper, paper.margins, "bottom", 100).bottom).toBe(50);
+  });
+});
+
+describe("sizes (v1.8)", () => {
+  const paper = (page: object) => paperOf(JSON.stringify({ page }));
+
+  it.each([
+    [{ size: "A5", orientation: "landscape" }, 210, 148],
+    [{ size: "Letter" }, 215.9, 279.4],
+    [{ size: "B5" }, 176, 250],
+    [{ size: "custom", widthMm: 100, heightMm: 50, orientation: "landscape", marginsMm: { top: 5, bottom: 5, left: 5, right: 5 } }, 50, 100],
+    [{ size: "roll", rollWidthMm: 58 }, 58, 1000],
+  ])("%j is %d x %d mm", (page, w, h) => {
+    expect(paper(page)).toMatchObject({ widthMm: w, heightMm: h });
+  });
+
+  it("a roll has narrow margins unless the report says; a free layout has none", () => {
+    expect(paper({ size: "roll", rollWidthMm: 80 })).toMatchObject({ roll: true, margins: { top: 3, bottom: 3, left: 2, right: 2 }, contentWidthMm: 76 });
+    expect(paper({ size: "A5", layout: "free", marginsMm: { top: 20 } })).toMatchObject({ layout: "free", margins: { top: 0, left: 0 }, contentWidthMm: 148 });
+    expect(pageOf(JSON.stringify({ page: { size: "roll", layout: "free", orientation: "landscape" } }))).toMatchObject({ layout: "flow", orientation: "portrait" });
+  });
+
+  it("margins are made smaller to leave 20 mm for the content", () => {
+    expect(fitMargins({ top: 20, bottom: 20, left: 15, right: 15 }, 100, 50)).toEqual({ top: 15, bottom: 15, left: 15, right: 15 });
+    expect(fitMargins({ top: 20, bottom: 20, left: 15, right: 15 }, 210, 297)).toEqual({ top: 20, bottom: 20, left: 15, right: 15 });
+    expect(fitMargins({ top: 3, bottom: 3, left: 2, right: 2 }, 58, null)).toEqual({ top: 3, bottom: 3, left: 2, right: 2 });
   });
 });

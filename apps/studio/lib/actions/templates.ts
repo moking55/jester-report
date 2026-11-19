@@ -18,8 +18,19 @@ export async function createTemplate(_: FormState, form: FormData): Promise<Form
     starter: String(form.get("starter") ?? "blank"),
   };
   if (!STARTERS.includes(values.starter)) values.starter = "blank";
+  // the sheet size and layout of a blank report (PageSetupModal); the api checks them
+  let page: unknown = undefined;
+  const rawPage = form.get("page");
+  if (typeof rawPage === "string" && values.starter === "blank") {
+    try {
+      const parsed: unknown = JSON.parse(rawPage);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) page = parsed;
+    } catch {
+      // not sent
+    }
+  }
   try {
-    await api("/v1/templates", { method: "POST", body: values });
+    await api("/v1/templates", { method: "POST", body: page ? { ...values, page } : values });
   } catch (error) {
     if (!(error instanceof ApiProblem)) throw error;
     if (error.status === 401) redirect("/login");

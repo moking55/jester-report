@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Form, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
@@ -22,6 +22,7 @@ class NewTemplate(views.Body):
     id: str
     name: str
     starter: Literal["blank", "quotation", "grouped-table", "master-detail", "tax-invoice"] = "blank"
+    page: dict[str, Any] | None = None  # report.json "page" (v1.8): blank starter only
 
 
 class Rename(views.Body):
@@ -64,7 +65,7 @@ async def list_templates(request: Request, caller: SessionCaller, includeArchive
 
 @router.post("/v1/templates", status_code=201)
 async def create_template(request: Request, caller: SessionCaller, body: NewTemplate) -> JSONResponse:
-    created = await services(request).store.create(body.id, body.name, body.starter, caller.name)
+    created = await services(request).store.create(body.id, body.name, body.starter, caller.name, body.page)
     return JSONResponse(views.template(created), status_code=201)
 
 

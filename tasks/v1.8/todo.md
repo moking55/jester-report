@@ -26,22 +26,22 @@
   - Acceptance: list ลูก/หลานเตรียมครบทุกชั้น, totals ต่อแถวแม่, ลำดับหลาน → ลูก → แม่; test เดิมผ่านทั้งหมด
   - Verify: pytest `tests/data_prep` (ใบสั่งซื้อ 3 ชั้น, หลานว่าง, groupBy ในลูก)
   - Files: `data_prep/prepare.py`, `data_prep/lists.py`, tests
-- [ ] **T6 สร้างรายงานพร้อม `page` (store + api + Studio types)**
+- [x] **T6 สร้างรายงานพร้อม `page` (store + api + Studio types)**
   - Acceptance: `POST /v1/templates` รับ `page` (blank เท่านั้น) → report.json + template ตั้งต้นตามรูปแบบ (แผ่น/ม้วน/อิสระ); OpenAPI + contract test; `npm run gen:api`
   - Verify: pytest template_store + public_api (contract); starter PDF เทียบ v1.7 ผ่าน
   - Files: `template_store/store.py`, `template_store/starter.py`, `public_api/…`, `openapi/public-api.yaml`, `studio/lib/types.gen.ts`
 
 ### Checkpoint A
-- [ ] pytest ทั้งชุดบน VM ผ่าน; PDF จริงของ A5/custom/ม้วน/อิสระ ถูกขนาด
+- [x] pytest ทั้งชุดบน VM ผ่าน (708); PDF จริงของ A5/custom/ม้วน/อิสระ ถูกขนาด (test_layouts_live)
 
 ## Phase B: Studio ขนาด + สร้าง
 
-- [ ] **T7 ผืนทุกขนาด + ม้วน + เปลี่ยนขนาดใน toolbar**
+- [x] **T7 ผืนทุกขนาด + ม้วน + เปลี่ยนขนาดใน toolbar**
   - Acceptance: `paperOf` รู้ทุกขนาด (ตาราง mm ตรงกับ api); ผืน/ไม้บรรทัด/ขอบตามขนาด; ม้วน = แถบยาวตามเนื้อหา ไม่มีเส้นตัดหน้า/โซน header-footer;
     toolbar "ขนาดกระดาษ" + แนว เขียน `page` (แก้เฉพาะค่า, หนึ่งขั้น undo); ม้วน ↔ แผ่น ปิดไว้
   - Verify: Vitest `paper` (ทุกขนาด, setPage คงข้อความอื่น); เบราว์เซอร์ A5/Letter/ม้วน
   - Files: `lib/paper.ts`, `components/designer/PaperCanvas.tsx`, `Rulers.tsx`, `DesignerPage.tsx`, tests
-- [ ] **T8 modal สร้างรายงาน**
+- [x] **T8 modal สร้างรายงาน**
   - Acceptance: starter "ว่าง" → modal การ์ด "จัดวางแบบคงที่"/"จัดวางแบบอิสระ" + ขนาด (สำเร็จรูป/กำหนดเอง/ม้วน) + แนว; ม้วนปิดแบบอิสระพร้อมเหตุผล; starter อื่นไม่มี modal
   - Verify: Vitest component; เบราว์เซอร์สร้างทั้ง 3 แบบ
   - Files: `components/CreateTemplate.tsx`, `components/PageSetupModal.tsx` (ใหม่), `lib/actions/templates.ts`

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { prepareDraft, saveFile } from "@/lib/actions/draft";
 import { isImageName, safeAssetName } from "@/lib/asset-name";
+import { changePage, pageOf, PAPER_MM, sizeLabel, type PageSize, type PageSpec } from "@/lib/paper";
 import { readBlocks } from "@/lib/doc-blocks";
 import { record, redo, startHistory, undo, type History } from "@/lib/doc-edit";
 import type { Scope } from "@/lib/doc-sample";
@@ -69,6 +70,7 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
   const dirty = !sameDoc(history.now, saved);
   const readOnly = archived || conflict;
   const blocks = useMemo(() => readBlocks(src), [src]);
+  const pageSpec = useMemo(() => pageOf(report), [report]);
   const shown = useMemo(() => ({ ...files, "report.json": report }), [files, report]);
 
   const edit = useCallback((next: string) => setHistory((h) => record(h, { ...h.now, html: next }, sameDoc)), []);
@@ -132,6 +134,14 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
     return body.asset.name;
   }
 
+  /** The toolbar's size, orientation and roll width: written into report.json's page (one undo step). */
+  function setPageField(change: Partial<PageSpec>) {
+    const next = changePage(report, change);
+    if (next === null) return setError("report.json อ่านไม่ได้ หรือเปลี่ยนระหว่างกระดาษแผ่นกับม้วนไม่ได้ — สร้างรายงานใหม่");
+    setError(null);
+    editReport(next);
+  }
+
   async function previewPdf() {
     if (dirty) {
       if (!window.confirm("Preview pdf ใช้ draft ที่บันทึกแล้ว — บันทึกแล้วดู PDF?")) return;
@@ -190,7 +200,77 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
         <b>{name}</b>
         <code>{templateId}</code>
         <span className={styles.mode}>Document Designer</span>
+        {pageSpec.layout === "free" && <span className={styles.mode}>แบบอิสระ</span>}
         <span className={styles.spacer} />
+        <label className={styles.toggle}>
+          ขนาดกระดาษ
+          <select
+            aria-label="ขนาดกระดาษ"
+            value={pageSpec.size === "roll" ? `roll${pageSpec.rollWidthMm ?? 80}` : pageSpec.size}
+            disabled={readOnly}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v.startsWith("roll")) setPageField({ size: "roll", rollWidthMm: v === "roll58" ? 58 : 80 });
+              else setPageField({ size: v as PageSize });
+            }}
+          >
+            {pageSpec.size === "roll"
+              ? [58, 80].map((w) => (
+                  <option key={w} value={`roll${w}`}>
+                    {sizeLabel("roll", w)}
+                  </option>
+                ))
+              : [...Object.keys(PAPER_MM), "custom"].map((n) => (
+                  <option key={n} value={n}>
+                    {sizeLabel(n as PageSize)}
+                  </option>
+                ))}
+          </select>
+        </label>
+        {pageSpec.size === "custom" && (
+          <>
+            <label className={styles.toggle}>
+              กว้าง
+              <input
+                aria-label="กว้าง (mm)"
+                className={styles.mm}
+                type="number"
+                min={25}
+                max={1000}
+                defaultValue={pageSpec.widthMm}
+                key={`w${pageSpec.widthMm}`}
+                disabled={readOnly}
+                onBlur={(e) => Number(e.target.value) !== pageSpec.widthMm && setPageField({ widthMm: Number(e.target.value) })}
+              />
+            </label>
+            <label className={styles.toggle}>
+              สูง
+              <input
+                aria-label="สูง (mm)"
+                className={styles.mm}
+                type="number"
+                min={25}
+                max={2000}
+                defaultValue={pageSpec.heightMm}
+                key={`h${pageSpec.heightMm}`}
+                disabled={readOnly}
+                onBlur={(e) => Number(e.target.value) !== pageSpec.heightMm && setPageField({ heightMm: Number(e.target.value) })}
+              />
+              mm
+            </label>
+          </>
+        )}
+        {pageSpec.size !== "roll" && (
+          <select
+            aria-label="แนวกระดาษ"
+            value={pageSpec.orientation}
+            disabled={readOnly}
+            onChange={(e) => setPageField({ orientation: e.target.value as "portrait" | "landscape" })}
+          >
+            <option value="portrait">แนวตั้ง</option>
+            <option value="landscape">แนวนอน</option>
+          </select>
+        )}
         <label className={styles.toggle}>
           <input type="checkbox" checked={sampleOn} onChange={() => void toggleSample()} /> แสดงข้อมูลตัวอย่าง
         </label>

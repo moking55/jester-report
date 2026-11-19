@@ -148,3 +148,46 @@ async def test_import_over_an_existing_draft_needs_its_revision(store):
 async def test_bad_zip_writes_nothing(store):
     assert await code_of(store.import_zip(b"not a zip", None, "bob")) == "INPUT_INVALID"
     assert await store.list(include_archived=True) == []
+
+
+# ---- v1.8: create with a page ----
+
+
+async def test_create_with_a_page_writes_report_json_and_a_matching_template(store):
+    import json
+
+    from jester_api.template_store import StoreError
+
+    roll = await store.create("rec", "ใบเสร็จ", "blank", "alice", {"size": "roll", "rollWidthMm": 80})
+    files = {f.name: f.content for f in (await store.get_draft("rec")).files}
+    assert roll.id == "rec" and json.loads(files["report.json"])["page"] == {
+        "size": "roll",
+        "rollWidthMm": 80,
+    }
+    assert (
+        "header.html" not in files and "footer.html" not in files and "ใบเสร็จรับเงิน" in files["template.html"]
+    )
+
+    await store.create(
+        "form", "ฟอร์ม", "blank", "alice", {"size": "A5", "orientation": "landscape", "layout": "free"}
+    )
+    files = {f.name: f.content for f in (await store.get_draft("form")).files}
+    assert (
+        'data-jd="page"' in files["template.html"] and "width: 210mm; height: 148mm" in files["template.html"]
+    )
+    assert "header.html" not in files
+
+    await store.create("a5", "A5", "blank", "alice", {"size": "A5"})
+    files = {f.name: f.content for f in (await store.get_draft("a5")).files}
+    assert (
+        "header.html" in files and "footer.html" in files
+    )  # a flow sheet keeps its running header and footer
+
+    for bad_starter, page in [
+        ("quotation", {"size": "A5"}),
+        ("blank", {"size": "roll"}),
+        ("blank", {"size": "A9"}),
+    ]:
+        with pytest.raises(StoreError) as e:
+            await store.create("bad", "x", bad_starter, "alice", page)
+        assert e.value.code == "INPUT_INVALID"

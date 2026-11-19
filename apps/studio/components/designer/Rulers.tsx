@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { MARGIN_LIMITS, PX_PER_MM, type Margins, type Paper } from "@/lib/paper";
 
@@ -35,7 +35,18 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
   const [live, setLive] = useState<{ side: Side; x: number; y: number; margins: Margins } | null>(null);
   const m = live?.margins ?? paper.margins;
   const W = paper.widthMm;
-  const H = paper.heightMm;
+  // a roll is as tall as its content: the vertical ruler follows the sheet
+  const page = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState(0);
+  useEffect(() => {
+    const el = page.current;
+    if (!el || !paper.roll) return;
+    const ro = new ResizeObserver(() => setMeasured(Math.round(el.offsetHeight / PX_PER_MM)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [paper.roll]);
+  const H = paper.roll ? Math.max(measured, 20) : paper.heightMm;
+  const marginsAdjustable = !readOnly && paper.layout === "flow"; // a free layout has no margins
 
   const marker = (side: Side) => {
     const across = side === "left" || side === "right";
@@ -97,7 +108,7 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
             {cm || ""}
           </span>
         ))}
-        {!readOnly && (["left", "right"] as const).map(marker)}
+        {marginsAdjustable && (["left", "right"] as const).map(marker)}
       </div>
       </div>
       <div className={styles.rulerSide}>
@@ -109,10 +120,10 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
             {cm || ""}
           </span>
         ))}
-        {!readOnly && (["top", "bottom"] as const).map(marker)}
+        {marginsAdjustable && (["top", "bottom"] as const).map(marker)}
       </div>
       </div>
-      <div className={styles.rulerPage} style={{ width: `${W}mm` }}>
+      <div ref={page} className={styles.rulerPage} style={{ width: `${W}mm` }}>
         {children}
         {live && (
           <div

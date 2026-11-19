@@ -116,9 +116,12 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
     return () => ro.disconnect();
   }, [root]);
 
+  // a roll is one sheet as tall as its content, and a free layout is one sheet: no page breaks
   const pageHeightPx = paper.contentHeightMm * PX_PER_MM;
-  const breaks = pageBreaks(bodyHeight, pageHeightPx);
+  const breaks = paper.roll || paper.layout === "free" ? [] : pageBreaks(bodyHeight, pageHeightPx);
   const pages = breaks.length + 1;
+  const sheetMin = paper.roll ? 30 : paper.heightMm * pages; // mm
+  const runningParts = !paper.roll && paper.layout === "flow"; // header.html / footer.html show on sheets of pages only
 
   const css = `${PAPER_CSS}${fontFaces(files["report.json"]).split("\n").slice(2).join("\n")}${BASE_CSS}${scopeReportCss(files["report.css"] ?? "")}`;
 
@@ -246,7 +249,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
   };
 
   const margin = (name: "header.html" | "footer.html", top: boolean) =>
-    files[name] ? (
+    runningParts && files[name] ? (
       <div
         className="jd-margin"
         style={{ [top ? "top" : "bottom"]: 0, height: `${top ? paper.margins.top : paper.margins.bottom}mm`, padding: "2mm 0" }}
@@ -266,13 +269,15 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
               className="jd-sheet"
               style={{
                 width: `${paper.widthMm}mm`,
-                minHeight: `${paper.heightMm * pages}mm`,
+                minHeight: `${sheetMin}mm`,
                 padding: `${paper.margins.top}mm ${paper.margins.right}mm ${paper.margins.bottom}mm ${paper.margins.left}mm`,
               }}
             >
               {margin("header.html", true)}
               <div ref={body} className="jd-body" style={{ width: `${paper.contentWidthMm}mm` }}>
-                <div className="jd-doc">{renderList(blocks, sample, "root")}</div>
+                <div className="jd-doc" style={paper.layout === "free" ? { margin: 0 } : undefined}>
+                  {renderList(blocks, sample, "root")}
+                </div>
                 {breaks.map((at, i) => (
                   <div key={at} className="jd-break" style={{ top: `${at}px` }}>
                     <span>หน้า {i + 2}</span>

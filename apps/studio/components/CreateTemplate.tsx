@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef, useState } from "react";
 
 import type { FormState } from "@/lib/actions/auth";
 import { createTemplate } from "@/lib/actions/templates";
 
 import styles from "./CreateTemplate.module.css";
+import { PageSetupModal, type NewPage } from "./PageSetupModal";
 
 const STARTERS = [
   ["blank", "ว่าง"],
@@ -17,8 +18,38 @@ const STARTERS = [
 
 export function CreateTemplate() {
   const [state, action, pending] = useActionState<FormState, FormData>(createTemplate, { error: null });
+  const form = useRef<HTMLFormElement>(null);
+  const [asking, setAsking] = useState(false); // the sheet size and layout modal of a blank report
+  const [page, setPage] = useState<NewPage | null>(null);
+  const chosen = useRef(false);
   return (
-    <form action={action} className={styles.form} aria-label="สร้างรายงาน">
+    <form
+      ref={form}
+      action={action}
+      className={styles.form}
+      aria-label="สร้างรายงาน"
+      onSubmit={(e) => {
+        // a blank report asks for its sheet size and layout first (SPEC-studio.md v1.8)
+        const starter = new FormData(e.currentTarget).get("starter");
+        if (starter === "blank" && !chosen.current) {
+          e.preventDefault();
+          setAsking(true);
+        }
+        chosen.current = false;
+      }}
+    >
+      {page && <input type="hidden" name="page" value={JSON.stringify(page)} />}
+      {asking && (
+        <PageSetupModal
+          onCancel={() => setAsking(false)}
+          onConfirm={(chosenPage) => {
+            setPage(chosenPage);
+            setAsking(false);
+            chosen.current = true;
+            setTimeout(() => form.current?.requestSubmit(), 0); // after the hidden field is in the form
+          }}
+        />
+      )}
       <label>
         id
         <input name="id" required pattern="[a-z0-9][a-z0-9\-]{1,62}" defaultValue={state.values?.id} placeholder="quotation" />
