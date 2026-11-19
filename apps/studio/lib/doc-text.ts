@@ -4,7 +4,7 @@
 // (a character of text, a chip, an open or a close tag) and only the changed middle is written anew: bytes the user
 // did not touch (entities, <br />, attribute quotes, whitespace) stay exactly as they were.
 
-import { escapeHtml } from "./doc-render";
+import { compactLabel, escapeHtml } from "./doc-render";
 import { applyPatches, type Edited, type Result } from "./doc-edit";
 import { checkCode } from "./doc-check";
 import { parse, type BlockNode, type Node, type Range } from "./doc-parse";
@@ -49,23 +49,23 @@ export function textUnits(raw: string): Unit[] {
 const chipLabel = (src: string, n: Node): { cls: string; label: string } => {
   switch (n.kind) {
     case "expr":
-      return { cls: "jd-expr", label: `{{ ${n.inner} }}` };
+      return { cls: "jd-expr", label: compactLabel(n.inner) };
     case "block": {
       const first = n.branches[0].tag.inner.replace(/^if\s+/, "");
-      return { cls: "jd-tag jd-if", label: `ถ้า ${first}${n.branches.length > 1 ? " …" : ""}` };
+      return { cls: "jd-tag jd-if", label: `ถ้า ${compactLabel(first)}${n.branches.length > 1 ? " …" : ""}` };
     }
     case "comment":
     case "html-comment":
       return { cls: "jd-tag", label: "หมายเหตุ" };
     case "stmt":
-      return { cls: "jd-tag", label: `{% ${n.inner} %}` };
+      return { cls: "jd-tag", label: compactLabel(n.inner) };
     default:
       return { cls: "jd-tag", label: src.slice(n.start, n.end) };
   }
 };
 
 const chipHtml = (raw: string, cls: string, label: string) =>
-  `<span class="jd-chip ${cls}" contenteditable="false" data-jd-raw="${escapeHtml(raw)}">${escapeHtml(label)}</span>`;
+  `<span class="jd-chip ${cls}" contenteditable="false" title="${escapeHtml(raw)}" data-jd-raw="${escapeHtml(raw)}">${escapeHtml(label)}</span>`;
 
 /** A chip for new Jinja source (a field picked while typing). */
 export const newChipHtml = (raw: string) => {

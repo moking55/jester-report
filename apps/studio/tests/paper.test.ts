@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { codeBox, fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
+import { codeBox, compactLabel, fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
 import { pageBreaks, paperOf } from "@/lib/paper";
 
 describe("paper", () => {
@@ -22,7 +22,7 @@ const mode = { sample: null, asset: (n: string) => `/assets/t1?name=${n}` };
 
 describe("rendering source on the paper", () => {
   it("expressions are chips; with a sample they are values, escaped", () => {
-    expect(renderSource("<p>{{ data.name }}</p>", mode)).toBe('<p><span class="jd-chip jd-expr">{{ data.name }}</span></p>');
+    expect(renderSource("<p>{{ data.name }}</p>", mode)).toBe('<p><span class="jd-chip jd-expr" title="{{ data.name }}">name</span></p>');
     const withSample = { ...mode, sample: { data: { name: "<b>สมชาย</b>" } } };
     expect(renderSource("<p>{{ data.name }}</p>", withSample)).toBe("<p>&lt;b&gt;สมชาย&lt;/b&gt;</p>");
   });
@@ -58,4 +58,15 @@ describe("codeBox", () => {
   it("other expressions are left alone", () => {
     expect(codeBox("fmt.money(totals.grand)", scope)).toBeNull();
   });
+});
+
+describe("compactLabel", () => {
+  it.each([
+    ["item.id", "id"],
+    ["data.customer.name", "customer.name"],
+    ["fmt.money(item.unitPrice)", "money(unitPrice)"],
+    ["fmt.thai_date(params.docDate)", "thai_date(docDate)"],
+    ["if data.seller.phone", "if seller.phone"],
+    ["loop.index", "index"],
+  ])("%s → %s", (expr, label) => expect(compactLabel(expr)).toBe(label));
 });

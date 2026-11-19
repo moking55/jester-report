@@ -11,7 +11,23 @@ export type RenderMode = { sample: Scope | null; asset: (name: string) => string
 export const escapeHtml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
-const chip = (cls: string, text: string) => `<span class="jd-chip ${cls}">${escapeHtml(text)}</span>`;
+const chip = (cls: string, text: string, title?: string) =>
+  `<span class="jd-chip ${cls}"${title ? ` title="${escapeHtml(title)}"` : ""}>${escapeHtml(text)}</span>`;
+
+/**
+ * A chip's label: the expression made short enough to sit where its value will (SPEC v1.7 รอบแก้ข้อ 5) — no fmt.,
+ * a path keeps its last part (two when it has three or more: customer.name); the full expression is the tooltip.
+ */
+export function compactLabel(expr: string): string {
+  return expr
+    .trim()
+    .replace(/\s+/g, " ")
+    .replace(/\bfmt\./g, "")
+    .replace(/\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)+/g, (path) => {
+      const parts = path.split(".");
+      return parts.slice(parts.length >= 3 ? -2 : -1).join(".");
+    });
+}
 
 /** The first argument of a call (up to a top-level comma), for sizing a code from its sample text. */
 function firstArg(args: string): string {
@@ -80,11 +96,11 @@ export function renderSource(src: string, mode: RenderMode, scope: Scope | null 
       case "expr": {
         const shown = sc ? evaluate(n.inner, sc) : null;
         const box = sc && !shown?.ok ? codeBox(n.inner, sc) : null;
-        out.push(shown?.ok ? escapeHtml(shown.text) : (box ?? (sc ? chip("jd-expr jd-unknown", shortLabel(n.inner)) : chip("jd-expr", `{{ ${n.inner} }}`))));
+        out.push(shown?.ok ? escapeHtml(shown.text) : (box ?? (sc ? chip("jd-expr jd-unknown", shortLabel(n.inner)) : chip("jd-expr", compactLabel(n.inner), `{{ ${n.inner} }}`))));
         break;
       }
       case "stmt":
-        out.push(sc ? "" : chip("jd-tag", `{% ${n.inner} %}`));
+        out.push(sc ? "" : chip("jd-tag", compactLabel(n.inner), `{% ${n.inner} %}`));
         break;
       case "element":
         out.push(src.slice(n.open.start, n.open.end));
@@ -118,10 +134,10 @@ export function renderSource(src: string, mode: RenderMode, scope: Scope | null 
           }
         }
         for (const b of n.branches) {
-          out.push(chip("jd-tag", `{% ${b.tag.inner} %}`));
+          out.push(chip("jd-tag", compactLabel(b.tag.inner), `{% ${b.tag.inner} %}`));
           b.children.forEach((c) => walk(c, sc));
         }
-        if (n.close) out.push(chip("jd-tag", `{% ${n.close.inner} %}`));
+        if (n.close) out.push(chip("jd-tag", n.close.inner.trim(), `{% ${n.close.inner} %}`));
         break;
       }
     }

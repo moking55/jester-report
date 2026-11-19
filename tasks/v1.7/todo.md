@@ -120,7 +120,7 @@
 
 ## Phase G5: รอบแก้หลังผู้ใช้ทดลอง (SPEC-studio "รอบแก้หลังผู้ใช้ทดลอง")
 
-- [ ] **T13 ชิปไม่ดันหน้าเพี้ยน**
+- [x] **T13 ชิปไม่ดันหน้าเพี้ยน**
   - Acceptance: ชิปบรรทัดเดียว ไม่กว้างเกินช่อง (… + tooltip), ฟอนต์เอกสารขนาดเล็ก, ไม่มี `{{ }}`; quotation โหมด expression ตารางกว้างไม่เกินกระดาษ
   - Verify: Vitest renderSource; เบราว์เซอร์ (quotation, tax-invoice); วัด T11 ซ้ำ (โหมดตัวอย่างไม่เปลี่ยน)
   - Files: `lib/doc-render.ts`, `components/designer/PaperCanvas.tsx`, `lib/doc-text.ts` (ป้ายชิปในโหมดพิมพ์)

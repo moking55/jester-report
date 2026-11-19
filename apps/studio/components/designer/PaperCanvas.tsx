@@ -65,10 +65,10 @@ const PAPER_CSS = `
 .jd-break { position: absolute; left: -8mm; right: -8mm; border-top: 1px dashed #d33; pointer-events: none; }
 .jd-break span { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #d33; background: #fff; padding: 0 4px; }
 .jd-guide { position: absolute; inset: 0; outline: 1px dashed #c8d3e0; pointer-events: none; }
-.jd-chip { display: inline-block; padding: 0 4px; border-radius: 4px; font: 0.82em ui-monospace, monospace; line-height: 1.3; }
+.jd-chip { display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: bottom; padding: 0 3px; border-radius: 4px;
+  font-size: 0.85em; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line, never wider than its place */
 .jd-expr { background: #e6f0ff; color: #1f4fa3; }
 .jd-tag { background: #fff0db; color: #8a5300; }
-.jd-unknown { font: 0.8em ui-monospace, monospace; }
 .jd-editing { outline: 2px solid #f0a020; outline-offset: 2px; cursor: text; }
 .jd-editing .jd-chip { user-select: all; }
 .jd-editing .jd-if { cursor: pointer; }

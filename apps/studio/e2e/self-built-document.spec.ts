@@ -94,7 +94,7 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   await page.keyboard.press("Enter");
   await expect(page.locator(".jd-editing")).toHaveCount(0);
   await expect(list(page, col2)).toContainText("เรียน");
-  await expect(list(page, col2).locator(".jd-chip")).toContainText("data.customer.name");
+  await expect(list(page, col2).locator(".jd-chip")).toHaveAttribute("title", "{{ data.customer.name }}");
 
   // a table bound to the list, a summary, a condition with a block inside
   await drag(page, palette(page, "table"), pageEnd(page), 1.2);
