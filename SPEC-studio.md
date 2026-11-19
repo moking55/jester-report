@@ -427,7 +427,7 @@ apps/studio/
 
 # v1.6: Form builder (E1–E3)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** (Open Questions ปิดแล้วใน interview รอบสอง) · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.6 (interview 19 พ.ย. 2026)
+สถานะ: **อนุมัติ 19 พ.ย. 2026** (Open Questions ปิดแล้วใน interview รอบสอง) · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.6 (interview 19 พ.ย. 2026)
 
 ## Objective
 
