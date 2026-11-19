@@ -140,7 +140,16 @@
   - Acceptance: ไม้บรรทัดบน/ซ้าย (mm), ลากขอบ 4 ด้าน → `page.marginsMm` ใน report.json (แก้เฉพาะค่านั้น), undo ครอบสองไฟล์, บันทึกเฉพาะไฟล์ที่เปลี่ยน
   - Verify: Vitest (แก้ JSON คงข้อความอื่น, history สองไฟล์, บันทึก); เบราว์เซอร์ + Preview pdf ขอบตรง
   - Files: `components/designer/Ruler.tsx`, `lib/paper.ts`, `components/designer/DesignerPage.tsx`, `components/designer/PaperCanvas.tsx`
-- [ ] **T18 ตรวจรวม:** studio 4 คำสั่ง, E2E ทุก spec บน stack สด (เพิ่มขั้นลาก-ลบ, เพิ่ม/รวมคอลัมน์, ขอบ), วัด T11 ซ้ำ
+- [ ] **T19 ตารางเปล่า**
+  - Acceptance: palette "ตารางเปล่า" → `<table data-jd="grid">` 3 × 2; อ่านเป็นบล็อก (ไม่เป็น Custom Code); ดับเบิลคลิกเซลล์พิมพ์ได้ (ชิป, `{{`);
+    เพิ่ม/ลบแถว, เพิ่ม/ลบ/ย้ายคอลัมน์, หัวตาราง เปิด/ปิด, เส้นตาราง
+  - Verify: Vitest `doc-blocks`/`doc-edit` (diff เฉพาะตาราง, round-trip); เบราว์เซอร์ + Preview pdf
+  - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `components/designer/BlockPanels.tsx`, `components/designer/TextEditor.tsx` (แก้ช่วงใดก็ได้ ไม่ใช่แค่บล็อกข้อความ), `Workbench.tsx`
+- [ ] **T20 ปรับขนาดตาราง**
+  - Acceptance: ความกว้างตาราง (%), ความกว้างคอลัมน์ (%, ว่าง = อัตโนมัติ), padding เซลล์ (mm) ในแผง; ลากเส้นแบ่งคอลัมน์ที่หัวตารางบนผืน; ใช้ได้ทั้งตารางรายการและตารางเปล่า
+  - Verify: Vitest (style ที่เขียน, คง property อื่น); เบราว์เซอร์ + Preview pdf ความกว้างตรง
+  - Files: `lib/doc-edit.ts`, `components/designer/BlockPanels.tsx`, `components/designer/PaperCanvas.tsx`
+- [ ] **T18 ตรวจรวม (ทำหลัง T19–T20):** studio 4 คำสั่ง, E2E ทุก spec บน stack สด (เพิ่มขั้นลาก-ลบ, เพิ่ม/รวมคอลัมน์, ขอบ, ตารางเปล่า, ความกว้างคอลัมน์), วัด T11 ซ้ำ
 
 ## Checkpoint: ปล่อย v1.7.0
 
