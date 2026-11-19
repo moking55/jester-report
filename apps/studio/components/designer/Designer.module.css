@@ -75,11 +75,12 @@
 }
 
 .paperScroll {
+  --paper-bg: color-mix(in srgb, var(--color-surfaceAlt) 70%, #888 10%);
   flex: 1;
   min-width: 0;
   overflow: auto;
-  padding: calc(var(--sp) * 3);
-  background: color-mix(in srgb, var(--color-surfaceAlt) 70%, #888 10%);
+  padding: 0; /* the rulers sit on the edges */
+  background: var(--paper-bg);
 }
 
 .backdrop {
@@ -412,13 +413,43 @@
 
 /* rulers around the paper (v1.7 รอบแก้ข้อ 6): 7mm bands on the top and the left */
 .rulers {
-  position: relative;
-  margin: 0 auto;
-  padding: 7mm 0 0 7mm;
+  display: grid;
+  grid-template-columns: 7mm 1fr;
+  grid-template-rows: 7mm auto;
+  width: max-content;
+  min-width: 100%;
+}
+
+/* the bars stay on the scrolling area's top and left edges; they cover the paper scrolling under them */
+.rulerCorner,
+.rulerTop,
+.rulerSide {
+  position: sticky;
+  z-index: 6;
+  background: var(--paper-bg);
+}
+
+.rulerCorner {
+  top: 0;
+  left: 0;
+  z-index: 7;
+}
+
+.rulerTop {
+  top: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  padding: 0 8mm;
+}
+
+.rulerSide {
+  left: 0;
+  padding-top: 6mm; /* the paper's own top gap */
 }
 
 .ruler {
-  position: absolute;
+  position: relative;
   background-color: var(--color-surface);
   background-image:
     repeating-linear-gradient(var(--ruler-dir), #8a93a3 0 1px, transparent 1px 10mm),
@@ -433,8 +464,7 @@
 
 .rulerH {
   --ruler-dir: to right;
-  top: 0;
-  left: 7mm;
+  flex: none;
   height: 6mm;
   background-size: 100% 40%, 100% 22%;
   background-position: bottom, bottom;
@@ -442,9 +472,8 @@
 
 .rulerV {
   --ruler-dir: to bottom;
-  top: 7mm;
-  left: 0;
   width: 6mm;
+  margin-left: 0.5mm;
   background-size: 40% 100%, 22% 100%;
   background-position: right, right;
 }
@@ -502,6 +531,8 @@
 
 .rulerPage {
   position: relative;
+  justify-self: center;
+  margin: 6mm 8mm 8mm;
 }
 
 .marginGuide {

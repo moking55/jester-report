@@ -85,7 +85,10 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
 
   const labels = (count: number) => Array.from({ length: Math.floor(count / 10) + 1 }, (_, i) => i);
   return (
-    <div className={styles.rulers} style={{ width: `calc(${W}mm + 7mm)` }}>
+    // a grid: the top bar sticks to the top of the scrolling area, the side bar to its left (like Word's)
+    <div className={styles.rulers}>
+      <div className={styles.rulerCorner} />
+      <div className={styles.rulerTop}>
       <div className={`${styles.ruler} ${styles.rulerH}`} style={{ width: `${W}mm` }} aria-label="ไม้บรรทัดแนวนอน (mm)">
         <div className={styles.rulerShade} style={{ left: 0, width: `${m.left}mm` }} />
         <div className={styles.rulerShade} style={{ right: 0, width: `${m.right}mm` }} />
@@ -96,6 +99,8 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
         ))}
         {!readOnly && (["left", "right"] as const).map(marker)}
       </div>
+      </div>
+      <div className={styles.rulerSide}>
       <div className={`${styles.ruler} ${styles.rulerV}`} style={{ height: `${H}mm` }} aria-label="ไม้บรรทัดแนวตั้ง (mm)">
         <div className={styles.rulerShade} style={{ top: 0, height: `${m.top}mm` }} />
         <div className={styles.rulerShade} style={{ bottom: 0, height: `${m.bottom}mm` }} />
@@ -105,6 +110,7 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
           </span>
         ))}
         {!readOnly && (["top", "bottom"] as const).map(marker)}
+      </div>
       </div>
       <div className={styles.rulerPage} style={{ width: `${W}mm` }}>
         {children}

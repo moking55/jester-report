@@ -112,7 +112,7 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   const expr = panel(page).getByLabel("ค่าที่แสดง (expression)");
   await expr.fill("row.id");
   await expr.press("Enter");
-  await expect(list(page, loopList)).toContainText("row.id");
+  await expect(list(page, loopList).locator(".jd-chip")).toHaveAttribute("title", "{{ row.id }}");
 
   // Custom Code: dropped from the palette, its modal opens; an unclosed {% if %} cannot close it
   await drag(page, palette(page, "custom"), pageEnd(page), 1.2);
@@ -136,6 +136,52 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   await expect(list(page, "root")).toContainText("VIP");
   await expect(blocks(page)).toHaveCount(built);
 
+  // a fixed table: type in a cell, give the first column 30% of the width
+  await drag(page, palette(page, "grid"), pageEnd(page), 1.2);
+  const grid = list(page, "root").locator(":scope > [data-jd-block]").last().locator("table");
+  await grid.locator("td").first().dblclick();
+  await expect(page.locator(".jd-editing")).toBeVisible();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("ช่องแรก");
+  await page.keyboard.press("Enter");
+  await expect(grid.locator("td").first()).toContainText("ช่องแรก");
+  await grid.locator("td").nth(1).click();
+  const firstCol = panel(page).getByLabel("คอลัมน์ 1 (%)");
+  await firstCol.fill("30");
+  await firstCol.press("Enter");
+  await expect(grid.locator("td").first()).toHaveAttribute("style", /width: 30%/);
+
+  // the row: one more column, then merged back; its blocks stay
+  await page.evaluate((id) => {
+    const root = document.querySelector("[data-paper]")!.shadowRoot!;
+    (root.querySelector(`[data-jd-list="${id}"]`)!.closest("[data-jd-block]") as HTMLElement).click();
+  }, col1);
+  await panel(page).getByRole("button", { name: "+ คอลัมน์" }).click();
+  await expect(panel(page).getByLabel("สัดส่วนคอลัมน์ 3")).toBeVisible();
+  await panel(page).getByRole("button", { name: "รวมกับคอลัมน์ขวา" }).nth(1).click();
+  await expect(panel(page).getByLabel("สัดส่วนคอลัมน์ 3")).toHaveCount(0);
+  await expect(list(page, col2)).toContainText("เรียน");
+
+  // the left margin on the ruler, by keyboard: 15 → 18 mm
+  const left = page.getByRole("slider", { name: "ขอบซ้าย (mm)" });
+  await left.focus();
+  for (let i = 0; i < 3; i++) await left.press("ArrowRight");
+  await expect(left).toHaveAttribute("aria-valuenow", "18");
+
+  // a block dragged back onto the palette is removed
+  const summary = list(page, "root").locator(":scope > [data-jd-block]").filter({ has: page.locator('table[data-jd="summary"]') });
+  await expect(summary).toHaveCount(1);
+  await summary.click();
+  const handle = (await summary.locator(".jd-handle").boundingBox())!;
+  const bin = (await page.getByRole("complementary", { name: "บล็อก", exact: true }).boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x - 10, handle.y + 10, { steps: 4 });
+  await page.mouse.move(bin.x + bin.width / 2, bin.y + 200, { steps: 15 });
+  await expect(page.getByRole("complementary", { name: "บล็อก", exact: true })).toHaveAttribute("data-trash", "hot"); // "ปล่อยที่นี่เพื่อลบ"
+  await page.mouse.up();
+  await expect(summary).toHaveCount(0);
+
   // the designer's own save, then Preview pdf in a modal
   await page.getByRole("button", { name: "บันทึก", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible({ timeout: 30_000 });
@@ -157,6 +203,14 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   expect(html).toContain("{{ data.customer.name }}");
   expect(html).toContain("{% for row in lists.items %}");
   expect(html).toContain('<div class="vip">');
+  expect(html).toContain('<table data-jd="grid"');
+  expect(html).toContain("ช่องแรก");
+  expect(html).not.toContain('data-jd="summary"');
+  await page.getByRole("navigation", { name: "ไฟล์" }).getByRole("button", { name: "report.json", exact: true }).click();
+  await expect.poll(() => editorText(page), { timeout: 30_000 }).toContain('"marginsMm"');
+  expect(JSON.parse(await editorText(page)).page.marginsMm.left).toBe(18);
+  await page.getByRole("navigation", { name: "ไฟล์" }).getByRole("button", { name: "template.html", exact: true }).click();
+  await expect.poll(() => editorText(page), { timeout: 30_000 }).toContain('data-jd="row"');
 
   // a hand-written comment, then an edit of another block in the designer: the comment stays as written
   const note = "{# เขียนมือ: ห้ามหาย #}\n";
