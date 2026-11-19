@@ -6,8 +6,12 @@ import { keyProblem, KIND_LABEL, type BuilderField, type FieldProps } from "@/li
 
 import styles from "./FormBuilder.module.css";
 
+export type Place = { label: string; parentKeys: string[] };
+
 type Props = {
   field: BuilderField;
+  places: Place[]; // where "อยู่ใน" can move the field (the keyboard's way across groups)
+  onMoveTo: (parentKeys: string[]) => void;
   readOnly: boolean;
   siblings: string[];
   onEdit: (patch: FieldProps) => void;
@@ -15,7 +19,7 @@ type Props = {
 };
 
 /** The selected field's properties (SPEC-studio v1.6 table); text boxes apply when they lose focus. */
-export function PropsPanel({ field, readOnly, siblings, onEdit, onRename }: Props) {
+export function PropsPanel({ field, places, onMoveTo, readOnly, siblings, onEdit, onRename }: Props) {
   const p = field.props;
   const kind = field.kind;
   const isParam = field.path.section === "params";
@@ -78,6 +82,22 @@ export function PropsPanel({ field, readOnly, siblings, onEdit, onRename }: Prop
         />
         {keyError && <span className={styles.error}>{keyError}</span>}
       </label>
+      {places.length > 1 && (
+        <label className={styles.prop}>
+          อยู่ใน
+          <select
+            value={field.path.keys.slice(0, -1).join("/")}
+            disabled={readOnly}
+            onChange={(e) => onMoveTo(e.target.value ? e.target.value.split("/") : [])}
+          >
+            {places.map((pl) => (
+              <option key={pl.parentKeys.join("/")} value={pl.parentKeys.join("/")}>
+                {pl.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {text("ป้าย", "label", { max: isParam ? 80 : undefined })}
       {text("คำอธิบาย", "description", { area: true, max: isParam ? 300 : undefined })}
       <label className={styles.check}>

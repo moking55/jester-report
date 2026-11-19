@@ -56,7 +56,7 @@
     "ยกเลิกการแก้", ออกจากโหมดทั้งที่ยังไม่บันทึก → ถาม; archive → อ่านอย่างเดียว; หลังบันทึกเรียก validate แล้วแสดงจำนวน problem
   - Verify: Vitest ของลำดับบันทึก/412/ล้มกลางทาง (fetch ปลอม); studio 4 คำสั่ง; เบราว์เซอร์กับ api บน VM
   - Files: `package.json`, `components/FormBuilder.tsx` (+ css), `lib/builder-save.ts` (ใหม่), `components/Workspace.tsx`, `app/(app)/templates/[id]/page.tsx`
-- [ ] **T8 ลากวางด้วย `@dnd-kit`**
+- [x] **T8 ลากวางด้วย `@dnd-kit`**
   - Acceptance: palette → ผืน, ย้ายในระดับเดียว/ข้ามกลุ่ม/เข้าตาราง ตาม `canMove`; วางไม่ได้ → เด้งกลับ + เหตุผล; เมาส์ (เลื่อน ≥ 5px),
     สัมผัส (กดค้าง 200ms), แป้นพิมพ์ (Space/ลูกศร/Esc) พร้อมประกาศภาษาไทย; palette กด Enter = เพิ่มท้ายส่วนที่เลือก;
     schema 150 ช่องลากไม่มี long task > 50ms
@@ -82,6 +82,16 @@
   - ย้ายข้ามกลุ่ม: ค่าใน sample ย้ายตาม (สร้าง object ปลายทางถ้ายังไม่มี); ข้ามขอบตาราง: ค่าเดิมหาย ช่องบังคับได้ค่าตัวอย่างใหม่
   - key `__proto__`/`constructor`/`prototype` ถูกปฏิเสธ (ผ่าน regex `Name` แต่อันตรายใน JS)
 - **ค้างตรวจในเบราว์เซอร์** (19 พ.ย. เครือข่ายเป็น hotspot เข้า VM ไม่ได้): T5 ฟอร์มตาม `form.json` มือ, T6 แท็บ "ช่องข้อมูล", T7 builder กับ api จริง (ลอจิกตรวจด้วย Vitest + jsdom แล้ว) — ทำพร้อม T10
+- T8 ตรวจในเบราว์เซอร์ (19 พ.ย., `next dev`/`next start` บนเครื่องนี้ + api 1.5.0-rc บน VM):
+  - ลากด้วยเมาส์ (ย้ายในระดับเดียว, palette → ตาราง, กลุ่มลงตาราง = ปฏิเสธพร้อมเหตุผล) และแป้นพิมพ์ (Space/ลูกศร/Space พร้อมประกาศภาษาไทย) ใช้ได้;
+    บันทึกแล้ว validate จริง "ไม่มี problem"; publish แล้วฟอร์มออกเอกสารใช้ `width: half` และช่องเงินแสดง `1,250.50` (T5 ผ่าน); แท็บ "ช่องข้อมูล" แสดงจริง (T6 ผ่าน)
+  - **ต่างจาก spec:** แป้นพิมพ์ลากได้เฉพาะสลับในระดับเดียวกัน — `closestCenter` กับลูกศรขึ้นจะตกเข้ากลุ่มข้างบนเสมอ;
+    การย้ายข้ามกลุ่ม/เข้าตารางด้วยแป้นพิมพ์ใช้ช่อง "อยู่ใน" ในแผงคุณสมบัติแทน (เลือกได้เฉพาะปลายทางที่ `canMove` อนุญาต)
+  - เมาส์/สัมผัสใช้ที่วางชั้นในสุดใต้ pointer (`pointerWithin` + พื้นที่เล็กสุด) แทน `closestCenter`
+  - `DndContext` ใช้ `id` จาก `useId()` แก้ hydration mismatch ของ `aria-describedby`
+  - **performance ยังไม่ผ่านเป้าเต็ม:** 150 ช่อง, production build, 120 จังหวะ pointer: median 3 ms, p90 48 ms, 9 จังหวะ > 50 ms (max 97 ms) —
+    วัดตอน pane ของเบราว์เซอร์ถูกซ่อน (ตัวเลขอาจคลาด) และวัดเวลา React ต่อจังหวะ ไม่ใช่ long task จาก Performance panel;
+    ลดแล้วหนึ่งรอบ (แยกหัวการ์ดเป็น `memo`: p90 53 → 48 ms) — ต้นเหตุคือทุก `useSortable` render ใหม่เมื่อจุดวางเปลี่ยน (การออกแบบของ `@dnd-kit`)
 - builder เก็บ state ด้วย `useState` (ไม่ใช่ `useImmer`): เอกสารมี token `JSON.rawJSON` ที่ freeze แล้ว และ model เป็น immutable อยู่แล้ว
 
 ## Checkpoint: ปล่อย v1.6.0

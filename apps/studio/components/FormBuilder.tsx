@@ -9,12 +9,13 @@ import { canEditExactly } from "@/lib/json-exact";
 import { problemMessage } from "@/lib/messages";
 import {
   addField,
+  canMove,
   changedFiles,
   DATA_KINDS,
   fieldTree,
   findField,
-  KIND_LABEL,
   markSaved,
+  moveField,
   openBuilder,
   PARAM_KINDS,
   removeField,
@@ -26,12 +27,13 @@ import {
   type FieldProps,
   type Kind,
   type Section,
+  type Target,
 } from "@/lib/schema-edit";
 import type { TextFile } from "@/lib/workspace";
 
-import { BuilderCanvas } from "./BuilderCanvas";
+import { BuilderCanvas, BuilderDnd, PaletteItem } from "./BuilderCanvas";
 import styles from "./FormBuilder.module.css";
-import { PropsPanel } from "./PropsPanel";
+import { PropsPanel, type Place } from "./PropsPanel";
 
 type Props = {
   templateId: string;
@@ -62,6 +64,9 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
   const [conflict, setConflict] = useState(false);
   const [problems, setProblems] = useState<number | null>(null);
 
+  // stable field objects between renders, so cards that did not change are not drawn again
+  const tree = useMemo(() => (builder ? fieldTree(builder) : { params: [], data: [] }), [builder]);
+
   if (!builder) {
     return (
       <div className={styles.builder}>
@@ -73,7 +78,6 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
     );
   }
 
-  const tree = fieldTree(builder);
   const changes = changedFiles(builder);
   const dirty = changes.length > 0;
   const current = selected ? findField(builder, selected) : null;
@@ -102,6 +106,13 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
       ? { section: parent.section, parentKeys: parent.keys, index: current!.children.length }
       : { section, parentKeys: [], index: tree[section].length };
     add(kind, target);
+  }
+
+  function move(from: FieldPath, to: Target) {
+    apply(moveField(builder!, from, to), ({ builder: b, path }) => {
+      setBuilder(b);
+      setSelected(path);
+    });
   }
 
   function edit(patch: FieldProps) {
@@ -206,35 +217,46 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
         </p>
       )}
       <div className={styles.main}>
-        {!readOnly && (
-          <aside className={styles.palette} aria-label="ชนิดช่อง">
-            <h3>เพิ่มช่อง</h3>
-            <p className={styles.hint}>ลากลงฟอร์ม หรือกด Enter เพื่อเพิ่มท้าย{section === "params" ? " ข้อมูลเอกสาร" : " ข้อมูล"}</p>
-            {DATA_KINDS.map((kind) => (
-              <PaletteItem
-                key={kind}
-                kind={kind}
-                disabled={section === "params" && !PARAM_KINDS.includes(kind) && !(current?.kind === "group" || current?.kind === "table")}
-                onAdd={() => addHere(kind)}
-              />
-            ))}
-          </aside>
-        )}
-        <BuilderCanvas
+        <BuilderDnd
           builder={builder}
           tree={tree}
-          selected={selected}
           readOnly={readOnly}
-          onSelect={(path) => {
-            setSelected(path);
-            setSection(path.section);
-          }}
-          onSection={setSection}
-          onRemove={remove}
-          onBuilder={setBuilder}
-          onAdd={add}
+          onMove={move}
+          onAdd={(kind, to) => add(kind, to)}
           onMessage={(text) => setMessage(text ? { kind: "error", text } : null)}
-        />
+        >
+          {readOnly ? (
+            <div />
+          ) : (
+            <aside className={styles.palette} aria-label="ชนิดช่อง">
+              <h3>เพิ่มช่อง</h3>
+              <p className={styles.hint}>
+                ลากลงฟอร์ม หรือกด Enter เพื่อเพิ่มท้าย{section === "params" ? " ข้อมูลเอกสาร" : " ข้อมูล"}
+              </p>
+              {DATA_KINDS.map((kind) => (
+                <PaletteItem
+                  key={kind}
+                  kind={kind}
+                  disabled={
+                    section === "params" && !PARAM_KINDS.includes(kind) && !(current?.kind === "group" || current?.kind === "table")
+                  }
+                  onAdd={() => addHere(kind)}
+                />
+              ))}
+            </aside>
+          )}
+          <BuilderCanvas
+            tree={tree}
+            selected={selected}
+            readOnly={readOnly}
+            onSelect={(path) => {
+              setSelected(path);
+              setSection(path.section);
+            }}
+            onSection={setSection}
+            onRemove={remove}
+          />
+        </BuilderDnd>
         <aside className={styles.panel} aria-label="คุณสมบัติของช่อง">
           {current ? (
             <PropsPanel
@@ -242,6 +264,13 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
               field={current}
               readOnly={readOnly}
               siblings={siblingKeys(tree, current)}
+              places={places(builder, tree, current)}
+              onMoveTo={(parentKeys) => {
+                const count = parentKeys.length
+                  ? (findField(builder, { section: current.path.section, keys: parentKeys })?.children.length ?? 0)
+                  : tree[current.path.section].length;
+                move(current.path, { section: current.path.section, parentKeys, index: count });
+              }}
               onEdit={edit}
               onRename={rename}
             />
@@ -251,6 +280,24 @@ export function FormBuilder({ templateId, name, revision: startRevision, files, 
         </aside>
       </div>
     </div>
+  );
+}
+
+/** The section root and every group/table the field may move into (its current place included). */
+function places(b: Builder, tree: { params: BuilderField[]; data: BuilderField[] }, field: BuilderField): Place[] {
+  const section = field.path.section;
+  const out: Place[] = [{ label: section === "params" ? "ข้อมูลเอกสาร" : "ข้อมูล (ระดับบนสุด)", parentKeys: [] }];
+  const walk = (fields: BuilderField[], trail: string) =>
+    fields.forEach((f) => {
+      if (f.kind !== "group" && f.kind !== "table") return;
+      const label = `${trail}${f.props.label ?? f.key}`;
+      out.push({ label, parentKeys: f.path.keys });
+      walk(f.children, `${label} › `);
+    });
+  walk(tree[section], "");
+  const here = field.path.keys.slice(0, -1).join("/");
+  return out.filter(
+    (pl) => pl.parentKeys.join("/") === here || canMove(b, field.path, { section, parentKeys: pl.parentKeys, index: 0 }) === null,
   );
 }
 
@@ -282,13 +329,5 @@ function Toolbar({
         กลับไปแก้ code
       </button>
     </div>
-  );
-}
-
-function PaletteItem({ kind, disabled, onAdd }: { kind: Kind; disabled: boolean; onAdd: () => void }) {
-  return (
-    <button type="button" className={styles.paletteItem} data-kind={kind} disabled={disabled} onClick={onAdd}>
-      {KIND_LABEL[kind]}
-    </button>
   );
 }
