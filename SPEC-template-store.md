@@ -380,7 +380,7 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 
 # v1.7: starter อ่านได้ใน Document Designer (G4)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [SPEC-studio.md](SPEC-studio.md) หัวข้อ v1.7
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · ที่มา: [SPEC-studio.md](SPEC-studio.md) หัวข้อ v1.7
 
 - เขียน `template.html` ของ starter ทั้ง 5 ตัวใหม่ให้อยู่ในรูปแบบบล็อกของ designer (ตาราง "บล็อก" ใน SPEC-studio v1.7) — `report.css`, ข้อมูล, `report.json` ไม่เปลี่ยน
   นอกจาก class ที่จำเป็นต้องย้ายเป็น `style=` เพื่อให้แก้ใน designer ได้

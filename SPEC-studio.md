@@ -658,7 +658,7 @@ designer ลากวางตัวเอกสาร (MVP ถัดไป) · 
 
 # v1.7: Document Designer (G1–G3)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** (Open Questions ปิดแล้วใน interview รอบสอง · ปล่อยรวมเป็น v1.7 ก้อนเดียว) · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.7 (interview 19 พ.ย. 2026)
+สถานะ: **อนุมัติ 19 พ.ย. 2026** (Open Questions ปิดแล้วใน interview รอบสอง · ปล่อยรวมเป็น v1.7 ก้อนเดียว) · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.7 (interview 19 พ.ย. 2026)
 
 ## Objective
 
