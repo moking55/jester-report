@@ -128,7 +128,7 @@
   - Acceptance: ลากเส้นแบ่งซ้าย/ขวาได้ (จำค่า); palette 3 กลุ่ม พับ/กางได้ (จำค่า)
   - Verify: Vitest component; เบราว์เซอร์
   - Files: `components/designer/Workbench.tsx`, `Designer.module.css`, `lib/panes.ts` (ถ้าใช้ร่วม)
-- [ ] **T15 ลากกลับแผงซ้าย = ลบ**
+- [x] **T15 ลากกลับแผงซ้าย = ลบ**
   - Acceptance: ลากบล็อกไปปล่อยบนแผงซ้าย → ลบ (Custom Code ถาม), แผงแสดง "ปล่อยเพื่อลบ" ระหว่างลาก, undo คืนได้
   - Verify: Vitest (drop target); เบราว์เซอร์; E2E เพิ่มขั้นนี้
   - Files: `components/designer/Workbench.tsx`

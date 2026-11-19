@@ -71,6 +71,9 @@ export const PALETTE: { kind: NewBlock["kind"]; label: string }[] = [
 export const MACROS = new Set<string>(["condition", "repeat", "set", "custom"]);
 type Group = "blocks" | "macros" | "fields";
 
+/** The palette as a drop target while a block on the paper is dragged: dropping there removes it (รอบแก้ข้อ 3). */
+export const TRASH = "jd-trash";
+
 const PANES_KEY = "jester.designer.panes";
 const GROUPS_KEY = "jester.designer.groups";
 export const PANE_LIMITS = { left: [120, 420], right: [200, 560] } as const;
@@ -289,8 +292,11 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
 
   function onDragMove(e: DragMoveEvent) {
     if (!shot.current || !at.current) return;
-    const place = placeNow(shot.current, at.current.x, at.current.y);
-    const next = place ? { ...place, reason: reasonFor(String(e.active.id), place) } : null;
+    const pal = area.current?.getBoundingClientRect();
+    const { x, y } = at.current;
+    const overPalette = !!pal && String(e.active.id).startsWith("b:") && x >= pal.left && x <= pal.right && y >= pal.top && y <= pal.bottom;
+    const place = overPalette ? { container: TRASH, index: 0 } : placeNow(shot.current, x, y);
+    const next = place ? { ...place, reason: overPalette ? null : reasonFor(String(e.active.id), place) } : null;
     const prev = dropRef.current;
     if (prev?.container === next?.container && prev?.index === next?.index && prev?.reason === next?.reason) return;
     dropRef.current = next;
@@ -311,6 +317,12 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     finish();
     if (!d || readOnly) return;
     if (d.reason) return setMessage(d.reason);
+    if (d.container === TRASH) {
+      const gone = flat.find((b) => keyOf(b) === String(e.active.id).slice(2));
+      if (!gone || (gone.kind === "custom" && !window.confirm("ลบ Custom Code นี้?"))) return;
+      setSelected(null);
+      return apply(removeBlock(src, gone));
+    }
     const list = listById(blocks, d.container);
     if (!list) return;
     const id = String(e.active.id);
@@ -389,7 +401,13 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     <DndContext id={dndId} sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish} autoScroll={{ threshold: { x: 0, y: 0.08 } }}>
       <DragCtx.Provider value={{ active, drop, pointer: pointerDrag, selected }}>
         {!readOnly && (
-          <aside ref={area} className={styles.palette} style={{ width: panes.left }} aria-label="บล็อก">
+          <aside
+            ref={area}
+            className={`${styles.palette} ${active?.startsWith("b:") ? styles.trash : ""} ${drop?.container === TRASH ? styles.trashHot : ""}`}
+            style={{ width: panes.left }}
+            aria-label="บล็อก"
+            data-trash={active?.startsWith("b:") ? (drop?.container === TRASH ? "hot" : "on") : undefined}
+          >
             <GroupHead label="บล็อกทั่วไป" open={open.blocks} onToggle={() => toggle("blocks")} />
             {open.blocks && (
               <>

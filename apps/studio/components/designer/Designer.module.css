@@ -366,3 +366,26 @@
   font-weight: 700;
   cursor: pointer;
 }
+
+/* while a block on the paper is dragged, the palette is where it goes to be removed */
+.palette.trash {
+  position: relative;
+}
+
+.palette.trash::after {
+  content: "ปล่อยที่นี่เพื่อลบ";
+  position: absolute;
+  inset: 4px;
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--color-danger);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-surface) 85%, transparent);
+  color: var(--color-danger);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.palette.trashHot::after {
+  background: var(--tint-danger);
+}
