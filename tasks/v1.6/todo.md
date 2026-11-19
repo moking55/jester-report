@@ -23,7 +23,7 @@
     key ใหม่ `fieldN`; key ผิดกติกา `Name` หรือซ้ำ → `Result` error ภาษาไทย
   - Verify: Vitest `tests/schema-edit.test.ts` (รวม `12345678901234567.89` ใน sample ยังตรงหลังแก้)
   - Files: `lib/schema-edit.ts`, `lib/json-exact.ts` (ใหม่: parse/stringify ที่เก็บ token ตัวเลข), `tests/schema-edit.test.ts`
-- [ ] **T3 `schema-edit`: ย้าย, เปลี่ยนชื่อ, ลบ, เติม sample**
+- [x] **T3 `schema-edit`: ย้าย, เปลี่ยนชื่อ, ลบ, เติม sample**
   - Acceptance: `canMove`/`move` ในระดับเดียว, ข้ามกลุ่ม, เข้าตาราง (scalar เท่านั้น), parameters ↔ data ได้เฉพาะชนิดที่รองรับทั้งสองฝั่ง;
     `rename` แก้ properties (คงลำดับ), required, form.json, ทุก sample, `lists.*.path` (รวม list ลูก); `remove` ปฏิเสธ array ที่ list ชี้;
     เพิ่มหรือเปิดบังคับ → sample ได้ค่าตัวอย่างตาม spec และผ่านการตรวจด้วย `validate` ของ `lib/form.ts`
@@ -72,6 +72,16 @@
     แก้ JSON มือ → builder เห็น → publish → ออกเอกสารด้วยฟอร์มตาม `form.json` → PDF)
   - Verify: E2E ทุก spec ผ่านบน `jester-e2e` (ไม่ใช้ retry)
   - Files: `e2e/form-builder.spec.ts`
+
+## บันทึกระหว่างทำ
+
+- ต่างจาก spec/แผน (T3, ตาม advisor):
+  - เปลี่ยนชื่อคอลัมน์ที่ `lists.*.id`, `sort`, `groupBy.key` ใช้อยู่ → แก้ชื่อในสามที่นั้นด้วย (api ตรวจว่าเป็นคอลัมน์จริง: `REF_UNKNOWN`);
+    ลบหรือย้ายข้ามกลุ่มคอลัมน์/ตาราง/กลุ่มที่ list ใช้ → ปฏิเสธพร้อมชื่อ list
+  - ย้ายระหว่าง "ข้อมูลเอกสาร" กับ "ข้อมูล" ไม่ได้ (spec ไม่ได้ระบุ; จะต้องแปลงชนิดและทำ `data.x` → `params.x` เสีย) — สร้างช่องใหม่แทน
+  - ย้ายข้ามกลุ่ม: ค่าใน sample ย้ายตาม (สร้าง object ปลายทางถ้ายังไม่มี); ข้ามขอบตาราง: ค่าเดิมหาย ช่องบังคับได้ค่าตัวอย่างใหม่
+  - key `__proto__`/`constructor`/`prototype` ถูกปฏิเสธ (ผ่าน regex `Name` แต่อันตรายใน JS)
+- builder เก็บ state ด้วย `useState` (ไม่ใช่ `useImmer`): เอกสารมี token `JSON.rawJSON` ที่ freeze แล้ว และ model เป็น immutable อยู่แล้ว
 
 ## Checkpoint: ปล่อย v1.6.0
 

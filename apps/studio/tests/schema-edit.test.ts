@@ -2,17 +2,22 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
+import { formSpec, sampleValues, validate } from "@/lib/form";
 import { canEditExactly, num, parseExact, stringifyExact } from "@/lib/json-exact";
 import {
   addField,
+  canMove,
   changedFiles,
   DATA_KINDS,
   fieldTree,
   findField,
   keyProblem,
   markSaved,
+  moveField,
   openBuilder,
   PARAM_KINDS,
+  removeField,
+  renameField,
   serialize,
   setProps,
   type Builder,
@@ -286,5 +291,190 @@ describe("keys", () => {
     for (const bad of ["1st", "ชื่อ", "a-b", "", "a b"]) expect(keyProblem(bad, [])).not.toBeNull();
     expect(keyProblem("__proto__", [])).not.toBeNull();
     expect(keyProblem("title", ["title"])).not.toBeNull();
+  });
+});
+
+// ---- T3: move, rename, remove, samples --------------------------------------------------------------
+
+const open = (name: string) => unwrap(openBuilder(starterFiles(name)));
+const sampleOf = (b: Builder, name = "sample.json") => JSON.parse(serialize(b)[name]!);
+const TODAY = "2026-11-19";
+
+/** The sample passes the schema as far as lib/form.ts can tell (the issue form's own checks). */
+function dataErrors(b: Builder, sample = "sample.json"): Record<string, string> {
+  const out = serialize(b);
+  const spec = formSpec(out["report.json"]!, out[b.schemaName]!);
+  const errors = validate(spec, sampleValues(spec, out[sample]!));
+  return Object.fromEntries(Object.entries(errors).filter(([p]) => p.startsWith("/data")));
+}
+
+/** Every key used in the sample under `keys` (every row of arrays). */
+function sampleKeys(value: unknown, keys: string[]): string[] {
+  if (Array.isArray(value)) return value.flatMap((v) => sampleKeys(v, keys));
+  if (typeof value !== "object" || value === null) return [];
+  if (!keys.length) return Object.keys(value);
+  return sampleKeys((value as Record<string, unknown>)[keys[0]], keys.slice(1));
+}
+
+describe("rename", () => {
+  it("renames a group everywhere: properties order, required, samples, form.json, lists paths", () => {
+    let b = open("quotation");
+    b = unwrap(setProps(b, data("customer", "name"), { width: "half" }));
+    const r = unwrap(renameField(b, data("customer"), "client"));
+    expect(r.path).toEqual(data("client"));
+    b = r.builder;
+    const schema = schemaOf(b);
+    expect(Object.keys(schema.properties)).toEqual(["company", "client", "items", "discount"].filter((k) => k in schema.properties));
+    expect(Object.keys(schema.properties).indexOf("client")).toBe(1);
+    expect(schema.required).toContain("client");
+    expect(schema.required).not.toContain("customer");
+    expect(sampleOf(b).client).toBeDefined();
+    expect(sampleOf(b).customer).toBeUndefined();
+    expect(JSON.parse(serialize(b)["form.json"]!).fields).toEqual({ "/data/client/name": { width: "half" } });
+    expect(dataErrors(b)).toEqual({});
+  });
+
+  it("renames a table and its lists path, and a column named by id/sort/groupBy", () => {
+    let b = open("sales-grouped");
+    b = unwrap(renameField(b, data("records"), "rows")).builder;
+    expect(reportOf(b).lists.records.path).toBe("/rows");
+    b = unwrap(renameField(b, data("rows", "region"), "area")).builder;
+    expect(reportOf(b).lists.records).toMatchObject({ sort: ["area", "id"], groupBy: { key: "area" } });
+    expect(sampleKeys(sampleOf(b), ["rows"])).not.toContain("region");
+    expect(sampleKeys(sampleOf(b), ["rows"])).toContain("area");
+    b = unwrap(renameField(b, data("rows", "id"), "rowId")).builder;
+    expect(reportOf(b).lists.records.id).toBe("rowId");
+    expect(dataErrors(b)).toEqual({});
+  });
+
+  it("renames inside nested lists: child path and child id", () => {
+    let b = open("purchase-order");
+    b = unwrap(renameField(b, data("orders", "details"), "lines")).builder;
+    expect(reportOf(b).lists.orders.lists.details.path).toBe("/lines");
+    b = unwrap(renameField(b, data("orders"), "pos")).builder;
+    expect(reportOf(b).lists.orders.path).toBe("/pos");
+    expect(reportOf(b).lists.orders.lists.details.path).toBe("/lines"); // relative to the row: unchanged
+    expect(sampleKeys(sampleOf(b), ["pos"])).toContain("lines");
+    expect(dataErrors(b)).toEqual({});
+  });
+
+  it("renames parameters in place and refuses bad keys", () => {
+    let b = open("quotation");
+    const p: FieldPath = { section: "params", keys: ["locale"] };
+    b = unwrap(renameField(b, p, "lang")).builder;
+    expect(Object.keys(reportOf(b).parameters)).toEqual(["quoteId", "lang", "docDate"]);
+    expect(renameField(b, { section: "params", keys: ["lang"] }, "quoteId").ok).toBe(false);
+    expect(renameField(b, data("customer"), "__proto__").ok).toBe(false);
+    expect(renameField(b, data("customer"), "1x").ok).toBe(false);
+  });
+});
+
+describe("remove", () => {
+  it("removes from schema, required, samples and form.json", () => {
+    let b = open("quotation");
+    b = unwrap(setProps(b, data("customer", "name"), { width: "half" }));
+    b = unwrap(removeField(b, data("customer")));
+    expect(schemaOf(b).properties.customer).toBeUndefined();
+    expect(schemaOf(b).required).not.toContain("customer");
+    expect(sampleOf(b).customer).toBeUndefined();
+    expect(serialize(b)["form.json"]).toBeNull();
+    expect(dataErrors(b)).toEqual({});
+  });
+
+  it("refuses tables and columns that report.json lists use, and groups holding them", () => {
+    const b = open("purchase-order");
+    expect(removeField(b, data("orders")).ok).toBe(false);
+    expect(removeField(b, data("orders", "details")).ok).toBe(false);
+    expect(removeField(b, data("orders", "orderId")).ok).toBe(false);
+    const r = removeField(open("sales-grouped"), data("records", "region"));
+    expect(r.ok ? "" : r.error).toContain("lists.records");
+  });
+
+  it("removes a plain column from every row", () => {
+    let b = open("quotation");
+    const col = fieldTree(b).data.find((f) => f.key === "items")!.children.find((c) => c.key !== "id")!.key;
+    b = unwrap(removeField(b, data("items", col)));
+    expect(sampleKeys(sampleOf(b), ["items"])).not.toContain(col);
+  });
+});
+
+describe("move", () => {
+  it("reorders within a level, keeps samples", () => {
+    let b = open("quotation");
+    const before = Object.keys(schemaOf(b).properties);
+    b = unwrap(moveField(b, data(before[0]), { section: "data", parentKeys: [], index: 99 })).builder;
+    expect(Object.keys(schemaOf(b).properties)).toEqual([...before.slice(1), before[0]]);
+    expect(sampleOf(b)).toEqual(sampleOf(open("quotation")));
+  });
+
+  it("moves into a group carrying the sample value and required", () => {
+    let b = blank();
+    b = unwrap(addField(b, "data", [], 99, "group")).builder; // field1
+    const r = unwrap(moveField(b, data("title"), { section: "data", parentKeys: ["field1"], index: 0 }, TODAY));
+    b = r.builder;
+    expect(r.path).toEqual(data("field1", "title"));
+    expect(schemaOf(b).properties.field1.required).toEqual(["title"]);
+    expect(schemaOf(b).required ?? []).not.toContain("title");
+    expect(sampleOf(b)).toEqual({ field1: { title: "สวัสดี Jester" } });
+  });
+
+  it("moves into a table: only scalars; required columns get example values in every row", () => {
+    let b = open("quotation");
+    b = unwrap(addField(b, "data", [], 99, "date")).builder; // fieldN at root
+    const key = fieldTree(b).data.at(-1)!.key;
+    b = unwrap(setProps(b, data(key), { required: true }, TODAY));
+    expect(sampleOf(b)[key]).toBe(TODAY);
+    b = unwrap(moveField(b, data(key), { section: "data", parentKeys: ["items"], index: 0 }, TODAY)).builder;
+    expect(sampleOf(b)[key]).toBeUndefined();
+    for (const row of sampleOf(b).items) expect(row[key]).toBe(TODAY);
+    expect(dataErrors(b)).toEqual({});
+    expect(canMove(b, data("customer"), { section: "data", parentKeys: ["items"], index: 0 })).toContain("ช่องธรรมดา");
+  });
+
+  it("refuses cross-section moves, moves into itself, name clashes and locked tables", () => {
+    let b = blank();
+    b = unwrap(addField(b, "data", [], 99, "group")).builder; // field1
+    b = unwrap(addField(b, "data", ["field1"], 0, "text")).builder; // field1.field1
+    expect(canMove(b, data("title"), { section: "params", parentKeys: [], index: 0 })).not.toBeNull();
+    expect(canMove(b, data("field1"), { section: "data", parentKeys: ["field1"], index: 0 })).not.toBeNull();
+    expect(canMove(b, data("field1", "field1"), { section: "data", parentKeys: [], index: 0 })).toContain("field1");
+    const po = open("purchase-order");
+    b = unwrap(addField(po, "data", [], 99, "group")).builder;
+    const g = fieldTree(b).data.at(-1)!.key;
+    expect(canMove(b, data("orders"), { section: "data", parentKeys: [g], index: 0 })).toContain("lists.orders");
+  });
+
+  it("reorders parameters", () => {
+    const b = unwrap(moveField(open("quotation"), { section: "params", keys: ["docDate"] }, { section: "params", parentKeys: [], index: 0 })).builder;
+    expect(Object.keys(reportOf(b).parameters)).toEqual(["docDate", "quoteId", "locale"]);
+  });
+});
+
+describe("required fills samples", () => {
+  it("gives every kind a value that passes, numbers exactly", () => {
+    let b = blank();
+    for (const kind of DATA_KINDS) b = unwrap(addField(b, "data", [], 99, kind)).builder;
+    b = unwrap(addField(b, "data", ["field8"], 0, "money")).builder; // group gets a required child first
+    b = unwrap(setProps(b, data("field8", "field1"), { required: true }, TODAY));
+    for (let i = 1; i <= 9; i++) b = unwrap(setProps(b, data(`field${i}`), { required: true }, TODAY));
+    const s = sampleOf(b);
+    expect(s).toMatchObject({
+      field1: "ตัวอย่าง",
+      field2: "ตัวอย่าง",
+      field3: 0,
+      field4: "0.00",
+      field5: TODAY,
+      field6: "ตัวเลือก 1",
+      field7: false,
+      field8: { field1: "0.00" },
+      field9: [],
+    });
+    expect(serialize(b)["sample.json"]).toContain('"field3": 0,');
+    expect(dataErrors(b)).toEqual({});
+  });
+
+  it("does not overwrite a value the sample already has", () => {
+    const b = unwrap(setProps(blank(), data("title"), { required: true }, TODAY));
+    expect(sampleOf(b).title).toBe("สวัสดี Jester");
   });
 });

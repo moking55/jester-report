@@ -519,7 +519,7 @@ function setOrDelete(node: Json, key: string, value: unknown): Json {
 }
 
 /** Apply panel edits to one field; every check happens before anything changes. */
-export function setProps(b: Builder, path: FieldPath, patch: FieldProps): Result<Builder> {
+export function setProps(b: Builder, path: FieldPath, patch: FieldProps, today = isoToday()): Result<Builder> {
   const field = findField(b, path);
   if (!field) return fail("ไม่พบช่องนี้");
   if (!field.kind) return fail("ช่องนี้แก้ได้ใน JSON เท่านั้น");
@@ -620,5 +620,301 @@ export function setProps(b: Builder, path: FieldPath, patch: FieldProps): Result
     return "required" in patch ? setRequired(next, key, patch.required === true) : next;
   });
   if (error) return fail(error);
-  return ok({ ...b, layout, schema });
+  const next: Builder = { ...b, layout, schema };
+  if (patch.required && !field.props.required) {
+    const node = (containerAt(schema, parentKeys)!.properties as Json)[key];
+    return ok({ ...next, samples: fillRequired(next, parentKeys, key, node, today) });
+  }
+  return ok(next);
+}
+
+// ---- samples --------------------------------------------------------------------------------------
+
+/** A copy of `value` with fn applied to every object at `keys` (arrays on the way: every row). */
+function mapAt(value: unknown, keys: string[], fn: (obj: Json) => Json): unknown {
+  if (Array.isArray(value)) return value.map((row) => mapAt(row, keys, fn));
+  if (!isObject(value)) return value;
+  if (keys.length === 0) return fn(value);
+  const [head, ...rest] = keys;
+  return head in value ? withKey(value, head, mapAt(value[head], rest, fn)) : value;
+}
+
+/** A copy of a plain-object path with `value` at `keys`, creating missing objects on the way (no arrays). */
+function setDeep(target: unknown, keys: string[], value: unknown): unknown {
+  if (!keys.length) return value;
+  const obj = isObject(target) ? target : {};
+  const [head, ...rest] = keys;
+  return withKey(obj, head, setDeep(obj[head], rest, value));
+}
+
+const mapSamples = (b: Builder, keys: string[], fn: (obj: Json) => Json): Record<string, unknown> =>
+  Object.fromEntries(Object.entries(b.samples).map(([name, s]) => [name, mapAt(s, keys, fn)]));
+
+export const isoToday = () => new Date().toISOString().slice(0, 10);
+
+/** A value that passes `node` (SPEC: default, else "ตัวอย่าง", 0, "0.00", today, the first option, false, …). */
+export function exampleFor(node: unknown, today: string): unknown {
+  if (!isObject(node)) return "ตัวอย่าง";
+  if ("default" in node) return node.default;
+  if (Array.isArray(node.enum) && node.enum.length) return node.enum[0];
+  switch (node.type) {
+    case "string":
+      return node.format === "date" ? today : node.format === "decimal" ? "0.00" : "ตัวอย่าง";
+    case "number":
+    case "integer":
+      return exactNumber("0");
+    case "boolean":
+      return false;
+    case "object": {
+      const props = isObject(node.properties) ? node.properties : {};
+      const req = Array.isArray(node.required) ? (node.required as string[]) : [];
+      return Object.fromEntries(req.filter((k) => k in props).map((k) => [k, exampleFor(props[k], today)]));
+    }
+    case "array": {
+      const rows = num(node.minItems) ?? 0;
+      return Array.from({ length: rows }, () => exampleFor(node.items, today));
+    }
+    default:
+      return "ตัวอย่าง";
+  }
+}
+
+/** Every sample gets a value for a required `key` under `parentKeys` where it has none. */
+function fillRequired(b: Builder, parentKeys: string[], key: string, node: unknown, today: string): Record<string, unknown> {
+  return mapSamples(b, parentKeys, (obj) => (key in obj ? obj : withKey(obj, key, exampleFor(node, today))));
+}
+
+// ---- lists in report.json -------------------------------------------------------------------------
+
+type ListRef = { name: string; spec: Json; full: string[] }; // full: data keys of the list's array
+
+const segments = (path: unknown) =>
+  typeof path === "string" ? path.split("/").slice(1).map((s) => s.replace(/~1/g, "/").replace(/~0/g, "~")) : [];
+
+function listRefs(report: Json): ListRef[] {
+  const out: ListRef[] = [];
+  const walk = (lists: unknown, base: string[], prefix: string) => {
+    if (!isObject(lists)) return;
+    for (const [name, spec] of Object.entries(lists)) {
+      if (!isObject(spec)) continue;
+      const full = [...base, ...segments(spec.path)];
+      out.push({ name: prefix + name, spec, full });
+      walk(spec.lists, full, `${prefix}${name}.`);
+    }
+  };
+  walk(report.lists, [], "");
+  return out;
+}
+
+const startsWith = (a: string[], prefix: string[]) => prefix.length <= a.length && prefix.every((k, i) => a[i] === k);
+const same = (a: string[], b: string[]) => a.length === b.length && startsWith(a, b);
+
+/** Names a list uses for its columns: id, sort, groupBy.key (the api checks them: REF_UNKNOWN). */
+function columnNames(spec: Json): string[] {
+  const out = typeof spec.id === "string" ? [spec.id] : [];
+  if (Array.isArray(spec.sort)) out.push(...spec.sort.filter((s): s is string => typeof s === "string"));
+  if (isObject(spec.groupBy) && typeof spec.groupBy.key === "string") out.push(spec.groupBy.key);
+  return out;
+}
+
+/** Why the field at `keys` must stay where it is, or null. */
+function listLock(report: Json, keys: string[]): string | null {
+  for (const ref of listRefs(report)) {
+    if (startsWith(ref.full, keys)) return `ใช้อยู่ใน lists.${ref.name} ของ report.json`;
+    if (same(ref.full, keys.slice(0, -1)) && columnNames(ref.spec).includes(keys[keys.length - 1])) {
+      return `เป็น id/sort ของ lists.${ref.name} ใน report.json`;
+    }
+  }
+  return null;
+}
+
+/** report.json with lists.*.path and column names following a rename of `keys` to `newKey`. */
+function renameInLists(report: Json, keys: string[], newKey: string): Json {
+  const parent = keys.slice(0, -1);
+  const old = keys[keys.length - 1];
+  const walk = (lists: unknown, base: string[]): unknown => {
+    if (!isObject(lists)) return lists;
+    return Object.fromEntries(
+      Object.entries(lists).map(([name, raw]) => {
+        if (!isObject(raw)) return [name, raw];
+        let spec: Json = raw;
+        const own = segments(spec.path);
+        const full = [...base, ...own];
+        const at = parent.length - base.length; // where the renamed key sits in this list's own path
+        if (startsWith(full, keys) && at >= 0 && at < own.length) {
+          const next = [...own];
+          next[at] = newKey;
+          spec = withKey(spec, "path", `/${next.join("/")}`);
+        }
+        if (same(full, parent)) {
+          const swap = (s: unknown) => (s === old ? newKey : s);
+          if (spec.id === old) spec = withKey(spec, "id", newKey);
+          if (Array.isArray(spec.sort)) spec = withKey(spec, "sort", spec.sort.map(swap));
+          if (isObject(spec.groupBy) && spec.groupBy.key === old) {
+            spec = withKey(spec, "groupBy", withKey(spec.groupBy, "key", newKey));
+          }
+        }
+        const renamedFull = startsWith(full, keys) ? [...parent, newKey, ...full.slice(keys.length)] : full;
+        if (isObject(spec.lists)) spec = withKey(spec, "lists", walk(spec.lists, renamedFull));
+        return [name, spec];
+      }),
+    );
+  };
+  return isObject(report.lists) ? withKey(report, "lists", walk(report.lists, [])) : report;
+}
+
+// ---- layout under a moved / renamed / removed field ------------------------------------------------
+
+function moveLayout(layout: Layout, from: string, to: string | null): Layout {
+  const out: Layout = {};
+  for (const [p, v] of Object.entries(layout)) {
+    if (p === from || p.startsWith(`${from}/`)) {
+      if (to !== null) out[to + p.slice(from.length)] = v;
+    } else out[p] = v;
+  }
+  return out;
+}
+
+const renameKey = (obj: Json, old: string, key: string): Json =>
+  Object.fromEntries(Object.entries(obj).map(([k, v]) => [k === old ? key : k, v]));
+
+// ---- rename ---------------------------------------------------------------------------------------
+
+/** Rename a field everywhere the builder owns it; template files are reported elsewhere, never changed. */
+export function renameField(b: Builder, path: FieldPath, newKey: string): Result<{ builder: Builder; path: FieldPath }> {
+  const field = findField(b, path);
+  if (!field) return fail("ไม่พบช่องนี้");
+  const old = path.keys[path.keys.length - 1];
+  if (newKey === old) return ok({ builder: b, path });
+  const parentKeys = path.keys.slice(0, -1);
+  const newPath: FieldPath = { section: path.section, keys: [...parentKeys, newKey] };
+  const layout = moveLayout(b.layout, field.pointer, pointerOf(newPath));
+
+  if (path.section === "params") {
+    const params = b.report.parameters as Json;
+    const problem = keyProblem(newKey, Object.keys(params));
+    if (problem) return fail(problem);
+    return ok({ builder: { ...b, layout, report: withKey(b.report, "parameters", renameKey(params, old, newKey)) }, path: newPath });
+  }
+  const props = containerAt(b.schema, parentKeys)!.properties as Json;
+  const problem = keyProblem(newKey, Object.keys(props));
+  if (problem) return fail(problem);
+  const schema = updateContainer(b.schema, parentKeys, (c) => {
+    const next: Json = { ...c, properties: renameKey(props, old, newKey) };
+    if (Array.isArray(c.required)) next.required = c.required.map((k) => (k === old ? newKey : k));
+    return next;
+  });
+  const samples = mapSamples(b, parentKeys, (obj) => (old in obj ? renameKey(obj, old, newKey) : obj));
+  return ok({
+    builder: { ...b, schema, samples, layout, report: renameInLists(b.report, path.keys, newKey) },
+    path: newPath,
+  });
+}
+
+// ---- remove ---------------------------------------------------------------------------------------
+
+export function removeField(b: Builder, path: FieldPath): Result<Builder> {
+  const field = findField(b, path);
+  if (!field) return fail("ไม่พบช่องนี้");
+  const key = path.keys[path.keys.length - 1];
+  const layout = moveLayout(b.layout, field.pointer, null);
+  if (path.section === "params") {
+    return ok({ ...b, layout, report: withKey(b.report, "parameters", without(b.report.parameters as Json, key)) });
+  }
+  const lock = listLock(b.report, path.keys);
+  if (lock) return fail(`ลบไม่ได้: ${lock} — แก้ report.json ก่อน`);
+  const parentKeys = path.keys.slice(0, -1);
+  const schema = updateContainer(b.schema, parentKeys, (c) => {
+    const next: Json = { ...c, properties: without(c.properties as Json, key) };
+    if (Array.isArray(c.required)) next.required = c.required.filter((k) => k !== key);
+    return next;
+  });
+  const samples = mapSamples(b, parentKeys, (obj) => without(obj, key));
+  return ok({ ...b, schema, samples, layout });
+}
+
+// ---- move -----------------------------------------------------------------------------------------
+
+export type Target = { section: Section; parentKeys: string[]; index: number };
+
+/** Why `from` cannot go to `to` (Thai), or null when it can. */
+export function canMove(b: Builder, from: FieldPath, to: Target): string | null {
+  const field = findField(b, from);
+  if (!field) return "ไม่พบช่องนี้";
+  if (from.section !== to.section) return "ย้ายระหว่าง \"ข้อมูลเอกสาร\" กับ \"ข้อมูล\" ไม่ได้ — สร้างช่องใหม่แทน";
+  const fromParent = from.keys.slice(0, -1);
+  if (same(fromParent, to.parentKeys)) return null; // reorder only
+  if (!field.kind) return "ช่องที่แก้ได้ใน JSON เท่านั้นย้ายได้แค่ในระดับเดิม";
+  if (startsWith(to.parentKeys, from.keys)) return "ย้ายเข้าไปในตัวเองไม่ได้";
+  const parent = to.parentKeys.length ? findField(b, { section: to.section, keys: to.parentKeys }) : null;
+  if (to.parentKeys.length && (!parent || (parent.kind !== "group" && parent.kind !== "table"))) {
+    return "วางได้เฉพาะในกลุ่มหรือตาราง";
+  }
+  if (parent?.kind === "table" && !SCALAR_KINDS.includes(field.kind)) return "คอลัมน์ในตารางต้องเป็นช่องธรรมดา";
+  const lock = listLock(b.report, from.keys);
+  if (lock) return `ย้ายข้ามกลุ่มไม่ได้: ${lock}`;
+  const siblings = (parent ? parent.children : fieldTree(b).data).map((f) => f.key);
+  if (siblings.includes(field.key)) return `ปลายทางมี "${field.key}" อยู่แล้ว — เปลี่ยนชื่อก่อน`;
+  return null;
+}
+
+/** Move a field; `to.index` counts the destination's fields without the moved one. */
+export function moveField(
+  b: Builder,
+  from: FieldPath,
+  to: Target,
+  today = isoToday(),
+): Result<{ builder: Builder; path: FieldPath }> {
+  const reason = canMove(b, from, to);
+  if (reason) return fail(reason);
+  const key = from.keys[from.keys.length - 1];
+  const path: FieldPath = { section: to.section, keys: [...to.parentKeys, key] };
+  const fromParent = from.keys.slice(0, -1);
+
+  if (from.section === "params") {
+    const params = b.report.parameters as Json;
+    const reordered = withKey(without(params, key), key, params[key], to.index);
+    return ok({ builder: { ...b, report: withKey(b.report, "parameters", reordered) }, path });
+  }
+  const src = containerAt(b.schema, fromParent)!;
+  const node = (src.properties as Json)[key];
+  const required = Array.isArray(src.required) && src.required.includes(key);
+
+  if (same(fromParent, to.parentKeys)) {
+    const schema = updateContainer(b.schema, fromParent, (c) => ({
+      ...c,
+      properties: withKey(without(c.properties as Json, key), key, node, to.index),
+    }));
+    return ok({ builder: { ...b, schema }, path });
+  }
+
+  let schema = updateContainer(b.schema, fromParent, (c) => {
+    const next: Json = { ...c, properties: without(c.properties as Json, key) };
+    if (Array.isArray(c.required)) next.required = c.required.filter((k) => k !== key);
+    return next;
+  });
+  schema = updateContainer(schema, to.parentKeys, (c) => {
+    const next: Json = { ...c, properties: withKey(isObject(c.properties) ? c.properties : {}, key, node, to.index) };
+    return required ? setRequired(next, key, true) : next;
+  });
+
+  // samples: carry the value between plain objects; across a table boundary it cannot be carried
+  const inTable = (keys: string[]) =>
+    keys.some((_, i) => findField(b, { section: "data", keys: keys.slice(0, i + 1) })?.kind === "table");
+  const carry = !inTable(fromParent) && !inTable(to.parentKeys);
+  const samples: Record<string, unknown> = {};
+  for (const [name, s] of Object.entries(b.samples)) {
+    let value: unknown;
+    let found = false;
+    if (carry) {
+      let cur: unknown = s;
+      for (const k of fromParent) cur = isObject(cur) ? cur[k] : undefined;
+      if (isObject(cur) && key in cur) [value, found] = [cur[key], true];
+    }
+    const removed = mapAt(s, fromParent, (obj) => without(obj, key));
+    samples[name] = found ? setDeep(removed, [...to.parentKeys, key], value) : removed;
+  }
+  let builder: Builder = { ...b, schema, samples, layout: moveLayout(b.layout, pointerOf(from), pointerOf(path)) };
+  if (required) builder = { ...builder, samples: fillRequired(builder, to.parentKeys, key, node, today) };
+  return ok({ builder, path });
 }
