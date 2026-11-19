@@ -124,7 +124,7 @@
   - Acceptance: ชิปบรรทัดเดียว ไม่กว้างเกินช่อง (… + tooltip), ฟอนต์เอกสารขนาดเล็ก, ไม่มี `{{ }}`; quotation โหมด expression ตารางกว้างไม่เกินกระดาษ
   - Verify: Vitest renderSource; เบราว์เซอร์ (quotation, tax-invoice); วัด T11 ซ้ำ (โหมดตัวอย่างไม่เปลี่ยน)
   - Files: `lib/doc-render.ts`, `components/designer/PaperCanvas.tsx`, `lib/doc-text.ts` (ป้ายชิปในโหมดพิมพ์)
-- [ ] **T14 แผงปรับขนาดได้ + กลุ่มพับได้**
+- [x] **T14 แผงปรับขนาดได้ + กลุ่มพับได้**
   - Acceptance: ลากเส้นแบ่งซ้าย/ขวาได้ (จำค่า); palette 3 กลุ่ม พับ/กางได้ (จำค่า)
   - Verify: Vitest component; เบราว์เซอร์
   - Files: `components/designer/Workbench.tsx`, `Designer.module.css`, `lib/panes.ts` (ถ้าใช้ร่วม)

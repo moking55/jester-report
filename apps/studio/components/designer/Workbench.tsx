@@ -25,6 +25,7 @@ import styles from "./Designer.module.css";
 import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCanvas";
 import { BlockPanel } from "./BlockPanels";
 import { CustomCodeModal } from "./CustomCodeModal";
+import { Resizer } from "../Resizer";
 import { StylePanel } from "./StylePanel";
 import { keepEditing, TextEditor, type Suggestion } from "./TextEditor";
 
@@ -65,6 +66,33 @@ export const PALETTE: { kind: NewBlock["kind"]; label: string }[] = [
   { kind: "set", label: "ตั้งค่าตัวแปร" },
   { kind: "custom", label: "Custom Code" },
 ];
+
+/** The palette's groups (SPEC v1.7 รอบแก้ข้อ 2): Jinja-made blocks are "มาโคร". */
+export const MACROS = new Set<string>(["condition", "repeat", "set", "custom"]);
+type Group = "blocks" | "macros" | "fields";
+
+const PANES_KEY = "jester.designer.panes";
+const GROUPS_KEY = "jester.designer.groups";
+export const PANE_LIMITS = { left: [120, 420], right: [200, 560] } as const;
+const DEFAULT_PANES = { left: 170, right: 280 };
+const clamp = (v: number, [lo, hi]: readonly [number, number]) => Math.round(Math.min(hi, Math.max(lo, v)));
+
+/** Pane widths and open groups as this browser last left them (try/catch: storage may be blocked). */
+function remembered<T extends object>(key: string, fallback: T): T {
+  try {
+    const v = JSON.parse(localStorage.getItem(key) ?? "null") as Partial<T> | null;
+    return v && typeof v === "object" ? { ...fallback, ...v } : fallback;
+  } catch {
+    return fallback;
+  }
+}
+function remember(key: string, value: object) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // not kept: fine
+  }
+}
 
 export const KIND_NAME: Record<BlockKind, string> = {
   text: "ข้อความ",
@@ -163,6 +191,31 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   const [message, setMessage] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // the text block being typed in
   const [coding, setCoding] = useState<number | null>(null); // the start of the block in the Custom Code modal
+  const [panes, setPanes] = useState(DEFAULT_PANES);
+  const [open, setOpen] = useState<Record<Group, boolean>>({ blocks: true, macros: true, fields: true });
+  const area = useRef<HTMLElement | null>(null); // the palette: its parent is the whole work area
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- storage exists only after hydration
+    setPanes(remembered(PANES_KEY, DEFAULT_PANES));
+    setOpen(remembered(GROUPS_KEY, { blocks: true, macros: true, fields: true }));
+  }, []);
+  function resize(next: { left?: number; right?: number }) {
+    setPanes((p) => {
+      const out = {
+        left: clamp(next.left ?? p.left, PANE_LIMITS.left),
+        right: clamp(next.right ?? p.right, PANE_LIMITS.right),
+      };
+      remember(PANES_KEY, out);
+      return out;
+    });
+  }
+  const toggle = (g: Group) =>
+    setOpen((o) => {
+      const out = { ...o, [g]: !o[g] };
+      remember(GROUPS_KEY, out);
+      return out;
+    });
+  const bounds = () => (area.current?.parentElement ?? document.body).getBoundingClientRect();
   const codeNext = useRef(false); // a Custom Code block was just dropped: open the modal on it
   const reselect = useRef<number | null>(null); // the start of the block to select after the next parse
   const shot = useRef<Snapshot | null>(null);
@@ -336,15 +389,22 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     <DndContext id={dndId} sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish} autoScroll={{ threshold: { x: 0, y: 0.08 } }}>
       <DragCtx.Provider value={{ active, drop, pointer: pointerDrag, selected }}>
         {!readOnly && (
-          <aside className={styles.palette} aria-label="บล็อก">
-            <h3>บล็อก</h3>
-            <p className={styles.hint}>ลากลงกระดาษ</p>
-            {PALETTE.map((p) => (
-              <PaletteItem key={p.kind} kind={p.kind} label={p.label} />
-            ))}
-            <h3>ช่องข้อมูล</h3>
-            <p className={styles.hint}>ดับเบิลคลิกข้อความ แล้วลากลงในข้อความ หรือพิมพ์ {"{{"}</p>
-            {fields.map((f) => (
+          <aside ref={area} className={styles.palette} style={{ width: panes.left }} aria-label="บล็อก">
+            <GroupHead label="บล็อกทั่วไป" open={open.blocks} onToggle={() => toggle("blocks")} />
+            {open.blocks && (
+              <>
+                <p className={styles.hint}>ลากลงกระดาษ</p>
+                {PALETTE.filter((p) => !MACROS.has(p.kind)).map((p) => (
+                  <PaletteItem key={p.kind} kind={p.kind} label={p.label} />
+                ))}
+              </>
+            )}
+            <GroupHead label="มาโคร" open={open.macros} onToggle={() => toggle("macros")} />
+            {open.macros &&
+              PALETTE.filter((p) => MACROS.has(p.kind)).map((p) => <PaletteItem key={p.kind} kind={p.kind} label={p.label} />)}
+            <GroupHead label="ช่องข้อมูล" open={open.fields} onToggle={() => toggle("fields")} />
+            {open.fields && <p className={styles.hint}>ดับเบิลคลิกข้อความ แล้วลากลงในข้อความ หรือพิมพ์ {"{{"}</p>}
+            {open.fields && fields.map((f) => (
               <span
                 key={f.expression}
                 className={styles.fieldItem}
@@ -358,6 +418,16 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             ))}
           </aside>
         )}
+        {!readOnly && (
+          <Resizer
+            orientation="vertical"
+            label="ปรับความกว้างแผงบล็อก"
+            className={styles.handle}
+            onMove={(x) => resize({ left: x - bounds().left })}
+            onStep={(d) => resize({ left: panes.left + d })}
+            onReset={() => resize({ left: DEFAULT_PANES.left })}
+          />
+        )}
         <div ref={scroller} className={styles.paperScroll} onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
           {message && (
             <p role="alert" className={styles.inlineAlert}>
@@ -368,7 +438,15 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} />
           </div>
         </div>
-        <aside className={styles.panel} aria-label="คุณสมบัติของบล็อก">
+        <Resizer
+          orientation="vertical"
+          label="ปรับความกว้างแผงคุณสมบัติ"
+          className={styles.handle}
+          onMove={(x) => resize({ right: bounds().right - x })}
+          onStep={(d) => resize({ right: panes.right - d })}
+          onReset={() => resize({ right: DEFAULT_PANES.right })}
+        />
+        <aside className={styles.panel} style={{ width: panes.right }} aria-label="คุณสมบัติของบล็อก">
           {current ? (
             <div className={styles.props}>
               <h3>{KIND_NAME[current.kind]}</h3>
@@ -432,6 +510,17 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
         <DragOverlay dropAnimation={null}>{active ? <div className={styles.overlay}>{label}</div> : null}</DragOverlay>
       </DragCtx.Provider>
     </DndContext>
+  );
+}
+
+/** A palette group's heading: a button that folds the group. */
+function GroupHead({ label, open, onToggle }: { label: string; open: boolean; onToggle: () => void }) {
+  return (
+    <h3 className={styles.groupHead}>
+      <button type="button" aria-expanded={open} onClick={onToggle}>
+        <span aria-hidden>{open ? "▾" : "▸"}</span> {label}
+      </button>
+    </h3>
   );
 }
 

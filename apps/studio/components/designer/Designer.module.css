@@ -344,3 +344,25 @@
   background: var(--fill-primary);
   color: var(--color-onPrimary);
 }
+
+.handle {
+  width: 6px;
+  flex: none;
+  cursor: col-resize;
+}
+
+.groupHead {
+  margin: 6px 0 0;
+}
+
+.groupHead button {
+  width: 100%;
+  text-align: left;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--heading);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
