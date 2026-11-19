@@ -63,7 +63,7 @@ function typedQuery(root: HTMLElement): { node: Text; start: number; query: stri
   const node = sel.anchorNode;
   if (!node || node.nodeType !== 3 || !root.contains(node)) return null;
   const before = (node as Text).data.slice(0, sel.anchorOffset);
-  const m = /\{\{\s*([\w.]*)$/.exec(before);
+  const m = /\{\{\s*([^\s{}]*)$/.exec(before); // the query may be a Thai label as well as a path
   if (!m) return null;
   return { node: node as Text, start: m.index, query: m[1], rect: sel.getRangeAt(0).getBoundingClientRect() };
 }
