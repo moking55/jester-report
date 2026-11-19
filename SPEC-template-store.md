@@ -390,3 +390,14 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
   - `tax-invoice`: `{% macro branch %}` (Custom Code; `{% if %}` กลางข้อความเป็นชิปเงื่อนไข)
   - `purchase-order`: ไม่มี — loop ครอบ section เป็นบล็อก "วนซ้ำ" (ตัดสิน 19 พ.ย. 2026)
 - ตรวจ: pytest `tests/template_store` (starter ทุกตัวผ่าน `load_definition` + render live เทียบภาพ) และ Vitest round-trip ของ `doc-parse` กับ starter ใหม่
+
+# v1.8: สร้างรายงานพร้อมขนาดกระดาษและรูปแบบ (L5)
+
+สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+
+- `create(..., page=None)`: starter `blank` + `page` → เขียน `page` ลง `report.json` ของ draft แรก และ `template.html` ตั้งต้นตามรูปแบบ:
+  - `flow` (แผ่น): เหมือน blank เดิม (header.html/footer.html)
+  - `flow` + `roll`: ไม่มี header/footer, ใบเสร็จตัวอย่างสั้น ๆ (หัวร้าน, ตารางรายการ, ยอดรวม)
+  - `free`: `<div data-jd="page" …>` เปล่าขนาดตามกระดาษ, ไม่มี header/footer
+- starter อื่น + `page` = `INPUT_INVALID` (starter เป็น A4 แบบคงที่เสมอ)
+- starter ทุกตัว PDF เหมือนเดิม (test เทียบ PDF ของ v1.7 ยังผ่าน)

@@ -226,3 +226,14 @@ async def convert_html(self, index_html: bytes, *, page: PageSetup, ...) -> Engi
 ## Out of scope ของ spec นี้
 
 Tahoma, ฟอนต์อื่นนอกจากที่ระบุ, การวัด performance/concurrency, security probes, PDF/A/UA, QR/chart
+
+# v1.8: ขนาดกระดาษใด ๆ และใบเสร็จม้วน (L2)
+
+สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+
+- `PageSetup`: `width_mm`, `height_mm` (หลังคิดแนวแล้ว) แทน `paper: "A4"`; ส่ง `paperWidth`/`paperHeight` เป็นนิ้ว (mm ÷ 25.4, ทศนิยม 4 ตำแหน่ง),
+  `landscape=false` เสมอ (binder หมุนให้แล้ว)
+- ม้วน: `single_page=True` → ส่ง `singlePage=true` (Gotenberg พิมพ์เนื้อหาทั้งหมดเป็นหน้าเดียว สูงตามเนื้อหา)
+- **spike แรกของแผน:** Gotenberg 9.4.1 ใน image ของเรารองรับ `singlePage` และ PDF ม้วน 80 mm สูงเท่าเนื้อหาจริงหรือไม่;
+  ถ้าไม่ได้ เลือกวิธีสำรองในแผน (เช่น render รอบแรกเพื่อวัดความสูงแล้ว render ใหม่ด้วยความสูงนั้น)
+- test: A5 แนวนอน, custom 100×50 mm, ม้วน 58/80 mm (live กับ Gotenberg)

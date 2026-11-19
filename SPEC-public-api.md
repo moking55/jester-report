@@ -266,3 +266,11 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 1. Studio ดึงรายการและดาวน์โหลดเอกสารผ่าน contract ได้ และ API key เข้าไม่ได้
 2. coverage ≥ 90%, `ruff` สะอาด, test contract ผ่าน
+
+# v1.8: สร้างรายงานพร้อม `page` (L5)
+
+สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+
+- `POST /v1/templates` รับ `page` (optional) รูปแบบเดียวกับ `report.json` → `page`; ใช้ได้กับ starter `blank` เท่านั้น
+- ไม่มี endpoint ใหม่อื่น; ขนาดกระดาษเปลี่ยนทีหลังด้วย `putDraftFile` ของ `report.json` ตามเดิม
+- contract test + OpenAPI อัปเดต (`PageSpec` schema)

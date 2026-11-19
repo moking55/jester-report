@@ -317,3 +317,27 @@ band ใน `report.json`, block editor, การรันโค้ดของ
 
 1. parameter มีป้ายภาษาไทยได้โดย report เดิมไม่ต้องแก้
 2. test เดิมผ่าน, coverage และ `ruff` เท่าเดิม
+
+# v1.8: การจัดหน้า (L1)
+
+สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8 · `schemaVersion` คง `1` (ทุก field ใหม่มีค่าเริ่มต้น = แบบเดิม)
+
+## `page`
+
+| field | ค่า | กฎ |
+| --- | --- | --- |
+| `size` | `A3` `A4` `A5` `A6` `B5` `Letter` `Legal` `DL` `custom` `roll` | ค่าเริ่ม `A4` |
+| `orientation` | `portrait` / `landscape` | ใช้กับขนาดสำเร็จรูปและ `custom`; `roll` ต้องไม่ระบุหรือเป็น `portrait` |
+| `widthMm`, `heightMm` | ตัวเลข | ต้องมีเมื่อ `custom` เท่านั้น: กว้าง 25–1000, สูง 25–2000 |
+| `rollWidthMm` | `58` / `80` | ต้องมีเมื่อ `roll` เท่านั้น |
+| `layout` | `flow` (ค่าเริ่ม) / `free` | `free` ใช้กับ `roll` ไม่ได้ |
+| `marginsMm` | เดิม (0–50) | `free` → ไม่ใช้ (พิกัดนับจากขอบกระดาษ); `roll` ค่าเริ่ม บน 3 ล่าง 3 ซ้าย 2 ขวา 2 |
+
+- ขนาดสำเร็จรูป (mm, แนวตั้ง): A3 297×420 · A4 210×297 · A5 148×210 · A6 105×148 · B5 176×250 · Letter 215.9×279.4 · Legal 215.9×355.6 · DL 110×220
+- หลังหักขอบต้องเหลือพื้นที่เนื้อหาอย่างน้อย 20 mm ทั้งกว้างและสูง ไม่งั้น `PAGE_INVALID`
+- error ใหม่: `PAGE_INVALID` (ขนาด/ค่าไม่เข้ากัน ชี้ pointer ใน `report.json`)
+
+## list ซ้อน
+
+- `lists.<name>.lists` ซ้อนได้ **ลึก 3 ชั้น** (list → ลูก → หลาน); ลึกกว่านั้น = error เดิม (ข้อความเป็น "3 levels")
+- `totals` ของ list ลูก/หลาน = ยอดต่อแถวแม่ (ดู SPEC-data-prep v1.8)

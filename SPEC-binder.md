@@ -244,3 +244,17 @@ JavaScript/QR/chart, URL ภายนอก, HTML sanitizer แบบเต็�
 ## Open Questions v1.1
 
 ไม่มี
+
+# v1.8: การจัดหน้า (L3)
+
+สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+
+- `PageSetup` จาก `page` ใหม่ (ขนาด mm, ม้วน = หน้าเดียว, `free` = margin 0)
+- **แบบอิสระ:** `template.html` มี `<div data-jd="page" style="position: relative; width: …mm; height: …mm">` และของข้างในเป็น
+  `<div data-jd="box" style="position: absolute; left: …mm; top: …mm; width: …mm; height: …mm">`; binder เติม CSS ฐาน `body { margin: 0 }` และ
+  `[data-jd="page"] { overflow: hidden }` ให้หน้าเดียวพอดีกระดาษ
+- **ภาพพื้นหลังนำทาง** (`<img data-jd="guide">`): binder เติม `[data-jd="guide"] { display: none }` — ไม่พิมพ์ออกมาเสมอ
+- **header/footer:** แบบอิสระและม้วนไม่ส่ง header/footer ไป engine (ไฟล์ที่มีถูกละไว้ + warning `HEADER_FOOTER_IGNORED`);
+  แบบคงที่: `<img src="asset">` ใน header/footer แทนด้วย data URI ของ asset (Chromium วาด header/footer โดยไม่โหลดไฟล์ข้างนอก);
+  รูปเกิน 1 MB = error `HEADER_IMAGE_TOO_LARGE`
+- ม้วน: เนื้อหากว้าง = กว้างม้วน − ขอบซ้ายขวา

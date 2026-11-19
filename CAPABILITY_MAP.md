@@ -137,3 +137,24 @@ Build order: G1 → G2 → G3, G4 (G4 คู่ขนานกับ G3 ได�
 
 **ไม่ทำ:** กระดาษนอกจาก A4 · วางตามพิกัด (absolute) · แก้ header/footer ใน designer · group-by ในตาราง (เป็น Custom Code) · class หรือแก้ `report.css` ·
 ให้หัวหน้าทีมใช้ designer
+
+## v1.8: การจัดหน้า — ขนาดกระดาษ, จัดวางแบบอิสระ, header/footer, ซ้อนหลายชั้น (เสนอ 20 พ.ย. 2026 หลัง interview, รออนุมัติ)
+
+เป้า: dev ทำเอกสารนอกจาก A4 ได้ — กระดาษทุกขนาด, ใบเสร็จม้วน, ฟอร์มหน้าเดียวที่วางของตามพิกัด, หัว/ท้ายกระดาษที่แก้ได้ใน designer
+และข้อมูลซ้อนหลายชั้น — โดยไม่เขียน Custom Code และ PDF ตรงกับผืน
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| L1 `page` ใหม่ใน `report.json`: ขนาดสำเร็จรูป/กำหนดเอง/ม้วน, `layout` = `flow`/`free`; list ซ้อนได้ลึก 3 ชั้น | `report-definition` | — |
+| L2 engine: ขนาดกระดาษใด ๆ (mm), ใบเสร็จม้วน = หน้าเดียวยาวเท่าเนื้อหา | `engine-client` | L1 |
+| L3 binder: CSS ของแบบอิสระ/ม้วน, รูปใน header/footer เป็น data URI, ไม่มี header/footer ในม้วนและแบบอิสระ, ซ่อนภาพพื้นหลังนำทาง | `binder` | L1 |
+| L4 data-prep: totals ของ list ลูก/หลานต่อแถวแม่ (ซ้อน 3 ชั้น) | `data-prep` | L1 |
+| L5 สร้างรายงานพร้อม `page` (ขนาด + รูปแบบ) → `report.json` + `template.html` ตั้งต้นตามรูปแบบ | `template-store`, `public-api` | L1 |
+| L6 Studio: modal สร้างรายงาน, ผืนทุกขนาด/ม้วน, เปลี่ยนขนาดใน toolbar, designer แบบอิสระ, แก้ header/footer บนผืน, ซ้อนหลายชั้นใน designer และ form builder | `studio` | L1–L5 |
+
+Build order: L1 → L2, L3, L4, L5 (คู่ขนานได้) → L6 · ปล่อยเป็น `v1.8.0` · spec: หัวข้อ v1.8 ใน [SPEC-report-definition.md](SPEC-report-definition.md),
+[SPEC-engine-client.md](SPEC-engine-client.md), [SPEC-binder.md](SPEC-binder.md), [SPEC-data-prep.md](SPEC-data-prep.md), [SPEC-template-store.md](SPEC-template-store.md),
+[SPEC-public-api.md](SPEC-public-api.md), [SPEC-studio.md](SPEC-studio.md)
+
+**ไม่ทำ:** header/footer หน้าแรกต่างจากหน้าอื่น · แปลงระหว่างแบบคงที่กับแบบอิสระ · แบบอิสระหลายหน้า / ตารางไหลข้ามหน้าในแบบอิสระ ·
+หมุนของเป็นมุม · ซ้อนลึกเกิน 3 ชั้น · เปลี่ยนระหว่างม้วนกับกระดาษแผ่น · header/footer ในแบบอิสระและม้วน · พิมพ์ภาพพื้นหลังนำทาง
