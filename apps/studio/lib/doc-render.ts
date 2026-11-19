@@ -147,7 +147,7 @@ export function renderSource(src: string, mode: RenderMode, scope: Scope | null 
 }
 
 /** report.css for the paper: rules for `body` apply to the document root instead (there is no body in a shadow root). */
-export const scopeReportCss = (css: string) => css.replace(/(^|[\s,}])body(?=[\s,{.:#[])/g, "$1.jd-doc");
+export const scopeReportCss = (css: string, to = ".jd-doc") => css.replace(/(^|[\s,}])body(?=[\s,{.:#[])/g, `$1${to}`);
 
 /** @font-face for the fonts the report uses that Studio serves (TH Sarabun New, as the engine has it). */
 export function fontFaces(reportJson: string | undefined): string {

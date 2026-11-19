@@ -35,6 +35,8 @@ type Props = {
   cellEditor?: (block: Block, row: number, col: number) => React.ReactNode | null; // a fixed table's cell being typed in
   onCell?: (block: Block, row: number, col: number) => void; // double-click on a fixed table's cell
   list?: ListFrame; // wraps each list's children (drop slots) — T7
+  part?: "body" | "header" | "footer"; // which file `blocks` and `src` are (v1.8); the others are drawn as they are
+  onZone?: (part: "header" | "footer") => void; // double-click on the header or footer zone
 };
 
 const asset = (templateId: string) => (name: string) => `/assets/${templateId}?name=${encodeURIComponent(name)}`;
@@ -60,7 +62,12 @@ function useDocumentFonts() {
 const PAPER_CSS = `
 :host { all: initial; display: block; } /* Studio's inherited styles (line-height, font, color) stop here */
 .jd-sheet { box-sizing: border-box; position: relative; background: #fff; color: #000; box-shadow: 0 2px 12px rgba(0,0,0,.18); margin: 0 auto; }
-.jd-margin { position: absolute; left: 0; right: 0; overflow: hidden; color: #555; pointer-events: none; }
+.jd-margin { position: absolute; left: 0; right: 0; overflow: hidden; color: #555; }
+.jd-margin.jd-zone-hint { color: #9aa; font: 11px system-ui; display: grid; place-items: center; cursor: pointer; }
+.jd-margin.jd-zone-live { overflow: visible; z-index: 2; outline: 2px solid #f0a020; background: #fffdf5; }
+.jd-dim { opacity: .4; pointer-events: none; }
+.pageNumber::before { content: "1"; }
+.totalPages::before { content: "N"; }
 .jd-margin-label { position: absolute; right: 4px; top: 2px; font: 10px system-ui; color: #9aa; }
 .jd-body { position: relative; display: flow-root; } /* the page's content box; holds the document's margins */
 .jd-doc { margin: 8px; } /* Chromium's default body margin, which the PDF has too; report.css may change it */
@@ -95,7 +102,7 @@ const PAPER_CSS = `
 .jd-slot-bad { border-color: #d33; background: rgba(221,51,51,.08); color: #d33; }
 `;
 
-export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor, cellEditor, onCell }: Props) {
+export function PaperCanvas({ src, blocks, files, templateId, sample, frame, list, editor, cellEditor, onCell, part = "body", onZone }: Props) {
   useDocumentFonts();
   const host = useRef<HTMLDivElement>(null);
   const [root, setRoot] = useState<ShadowRoot | null>(null);
@@ -123,7 +130,13 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
   const sheetMin = paper.roll ? 30 : paper.heightMm * pages; // mm
   const runningParts = !paper.roll && paper.layout === "flow"; // header.html / footer.html show on sheets of pages only
 
-  const css = `${PAPER_CSS}${fontFaces(files["report.json"]).split("\n").slice(2).join("\n")}${BASE_CSS}${scopeReportCss(files["report.css"] ?? "")}`;
+  // header.html / footer.html bring their own <style> (body { … }): it applies to their zone
+  const zoneCss = (["header", "footer"] as const)
+    .map((z) =>
+      [...(files[`${z}.html`] ?? "").matchAll(/<style>([\s\S]*?)<\/style>/g)].map((m) => scopeReportCss(m[1], `.jd-zone-${z}`)).join("\n"),
+    )
+    .join("\n");
+  const css = `${PAPER_CSS}${fontFaces(files["report.json"]).split("\n").slice(2).join("\n")}${BASE_CSS}${scopeReportCss(files["report.css"] ?? "")}\n${zoneCss}`;
 
   const renderList = (l: BlockList, scope: Scope | null, id: string): React.ReactNode => {
     const children = l.items.filter(visible).map((b) => renderBlock(b, scope));
@@ -248,16 +261,35 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
     return frame ? <FrameKey key={key}>{frame({ block: b, children: inner })}</FrameKey> : <FrameKey key={key}>{inner}</FrameKey>;
   };
 
-  const margin = (name: "header.html" | "footer.html", top: boolean) =>
-    runningParts && files[name] ? (
-      <div
-        className="jd-margin"
-        style={{ [top ? "top" : "bottom"]: 0, height: `${top ? paper.margins.top : paper.margins.bottom}mm`, padding: "2mm 0" }}
-      >
-        <span className="jd-margin-label">{top ? "header.html" : "footer.html"} (แก้ใน code)</span>
+  /**
+   * The header or footer zone (SPEC v1.8): drawn as it prints; double-click to edit it. While it is the file being
+   * edited (`part`) its blocks are the paper's list, with selection and drop slots; an absent file shows a hint.
+   */
+  const margin = (zone: "header" | "footer") => {
+    if (!runningParts) return null;
+    const name = `${zone}.html` as const;
+    const top = zone === "header";
+    const place = { [top ? "top" : "bottom"]: 0, height: `${top ? paper.margins.top : paper.margins.bottom}mm` };
+    if (part === zone)
+      return (
+        <div className={`jd-margin jd-zone-live jd-zone-${zone}`} data-jd-zone={zone} style={{ ...place, minHeight: place.height, height: "auto" }}>
+          {renderList(blocks, sample, "root")}
+        </div>
+      );
+    if (!onZone && !files[name]) return null;
+    const open = () => part === "body" && onZone?.(zone);
+    if (!files[name])
+      return (
+        <div className="jd-margin jd-zone-hint" style={place} onDoubleClick={open}>
+          ดับเบิลคลิกเพื่อเพิ่ม{top ? "หัวกระดาษ" : "ท้ายกระดาษ"}
+        </div>
+      );
+    return (
+      <div className={`jd-margin jd-zone-${zone}`} style={place} onDoubleClick={open} title={onZone ? "ดับเบิลคลิกเพื่อแก้" : undefined}>
         <div dangerouslySetInnerHTML={{ __html: renderSource(files[name], mode) }} />
       </div>
-    ) : null;
+    );
+  };
 
   return (
     <div ref={host} data-paper>
@@ -273,10 +305,14 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
                 padding: `${paper.margins.top}mm ${paper.margins.right}mm ${paper.margins.bottom}mm ${paper.margins.left}mm`,
               }}
             >
-              {margin("header.html", true)}
+              {margin("header")}
               <div ref={body} className="jd-body" style={{ width: `${paper.contentWidthMm}mm` }}>
-                <div className="jd-doc" style={paper.layout === "free" ? { margin: 0 } : undefined}>
-                  {renderList(blocks, sample, "root")}
+                <div
+                  className={part === "body" ? "jd-doc" : "jd-doc jd-dim"}
+                  style={paper.layout === "free" ? { margin: 0 } : undefined}
+                  {...(part === "body" ? {} : { dangerouslySetInnerHTML: { __html: renderSource(files["template.html"] ?? "", mode) } })}
+                >
+                  {part === "body" ? renderList(blocks, sample, "root") : undefined}
                 </div>
                 {breaks.map((at, i) => (
                   <div key={at} className="jd-break" style={{ top: `${at}px` }}>
@@ -284,7 +320,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
                   </div>
                 ))}
               </div>
-              {margin("footer.html", false)}
+              {margin("footer")}
             </div>
           </>,
           root as unknown as Element,

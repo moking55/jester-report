@@ -6,6 +6,7 @@
 
 .toolbar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: calc(var(--sp) * 1.5);
   padding: calc(var(--sp) * 1) calc(var(--sp) * 3);
@@ -557,4 +558,9 @@
   width: 64px;
   font: inherit;
   padding: 2px 4px;
+}
+
+.toolbar > *,
+.toolbar label {
+  white-space: nowrap;
 }

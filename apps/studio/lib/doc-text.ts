@@ -46,7 +46,14 @@ export function textUnits(raw: string): Unit[] {
   return out;
 }
 
+/** `<span class="pageNumber"></span>` / `totalPages`: the running page number of a header or footer. */
+export const PAGE_CHIPS: Record<string, string> = { pageNumber: "เลขหน้า", totalPages: "จำนวนหน้า" };
+const pageChip = (n: Node) =>
+  n.kind === "element" && n.name === "span" && !n.children.length ? PAGE_CHIPS[n.attrs.find((a) => a.name === "class")?.value ?? ""] : undefined;
+
 const chipLabel = (src: string, n: Node): { cls: string; label: string } => {
+  const page = pageChip(n);
+  if (page) return { cls: "jd-tag", label: page };
   switch (n.kind) {
     case "expr":
       return { cls: "jd-expr", label: compactLabel(n.inner) };
@@ -83,7 +90,7 @@ export function readInner(inner: string): { units: Unit[]; html: string } {
     if (n.kind === "text") {
       units.push(...textUnits(raw));
       html.push(raw);
-    } else if (n.kind === "element" && INLINE.has(n.name) && !n.broken) {
+    } else if (n.kind === "element" && INLINE.has(n.name) && !n.broken && !pageChip(n)) {
       const open = inner.slice(n.open.start, n.open.end);
       const close = n.close ? inner.slice(n.close.start, n.close.end) : "";
       units.push({ ch: null, raw: open });

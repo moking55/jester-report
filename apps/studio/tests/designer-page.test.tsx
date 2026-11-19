@@ -103,6 +103,25 @@ describe("DesignerPage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("header and footer are files of their own: created when first edited, saved only if changed, in order", async () => {
+    const api = setup();
+    api().setPart("header");
+    await waitFor(() => expect(api().part).toBe("header"));
+    expect(api().src).toBe(""); // no header.html in this report yet
+    api().edit('<div>หัว</div>');
+    await waitFor(() => expect(screen.getByRole("status").textContent).toBe("ยังไม่บันทึก"));
+    api().setPart("body");
+    await waitFor(() => expect(api().part).toBe("body"));
+    api().edit("<p>b</p>\n");
+    await waitFor(() => expect(api().src).toBe("<p>b</p>\n"));
+    fireEvent.click(screen.getByRole("button", { name: "บันทึก" }));
+    await waitFor(() => expect(saves.length).toBe(2));
+    expect(saves.map((x) => [x.name, x.revision, x.text])).toEqual([
+      ["template.html", 3, "<p>b</p>\n"],
+      ["header.html", 4, "<div>หัว</div>"],
+    ]);
+  });
+
   it("stops on 412 and offers a reload, never overwrites", async () => {
     status = 412;
     const api = setup();

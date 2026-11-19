@@ -48,7 +48,7 @@
 
 ## Phase C: header/footer + ซ้อน
 
-- [ ] **T9 แก้ header/footer บนผืน**
+- [x] **T9 แก้ header/footer บนผืน**
   - Acceptance: ดับเบิลคลิกโซนบน/ล่าง → แก้ด้วยบล็อกชุดเล็ก + ชิป "หน้า X/Y"; history/บันทึกครอบ 4 ไฟล์; สร้างไฟล์ให้เมื่อยังไม่มี; ม้วน/อิสระไม่มีโซน
   - Verify: Vitest (history 4 ไฟล์, ชิปเลขหน้า); เบราว์เซอร์ + Preview pdf มีโลโก้/เลขหน้าทุกหน้า
   - Files: `DesignerPage.tsx`, `Workbench.tsx`, `PaperCanvas.tsx`, `lib/doc-edit.ts`

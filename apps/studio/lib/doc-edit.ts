@@ -517,6 +517,26 @@ export function gridBorders(src: string, block: Block, on: boolean): Result<Edit
   return tableEdit(src, block, patches);
 }
 
+// ---- a detail row under every row of a list table (SPEC v1.8 ซ้อนหลายชั้น) ---------------------------------
+
+/** `<tr data-jd="detail"><td colspan="n"></td></tr>` after the row of cells, inside the loop: room for blocks. */
+export function addDetailRow(src: string, block: Block): Result<Edited> {
+  if (block.detail.kind !== "table" || block.node.kind !== "element") return fail("ไม่ใช่ตารางรายการ");
+  if (block.detail.detailRow) return fail("มีแถวรายละเอียดอยู่แล้ว");
+  const d = block.detail;
+  const colspan = d.cells.length;
+  const indent = indentAt(src, d.row.start);
+  const text = `
+${indent}<tr data-jd="detail"><td colspan="${colspan}"></td></tr>`;
+  return tableEdit(src, block, [{ start: d.row.end, end: d.row.end, text }]);
+}
+
+/** The detail row goes, with everything in it. */
+export function removeDetailRow(src: string, block: Block): Result<Edited> {
+  if (block.detail.kind !== "table" || !block.detail.detailRow) return fail("ไม่มีแถวรายละเอียด");
+  return tableEdit(src, block, [{ ...removal(src, block.detail.detailRow.range), text: "" }]);
+}
+
 // ---- table sizes (SPEC v1.7 รอบแก้ข้อ 8): list tables and fixed tables ---------------------------------
 
 /** The element that starts at `start` inside a node (cells of a list table are found this way). */

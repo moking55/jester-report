@@ -32,12 +32,15 @@ export type DesignerApi = {
   report: string; // report.json as the designer has it (page margins)
   editReport: (reportJson: string) => void; // one undo step
   upload: (file: File) => Promise<string | null>; // an image into the draft's assets
+  part: Part; // the file being edited (template.html, header.html or footer.html)
+  setPart: (part: Part) => void;
   readOnly: boolean;
 };
 
 /** What the designer edits: template.html, and report.json for the page margins (SPEC v1.7 รอบแก้ข้อ 6). */
-type Doc = { html: string; report: string };
-const sameDoc = (a: Doc, b: Doc) => a.html === b.html && a.report === b.report;
+type Doc = { html: string; report: string; header: string | null; footer: string | null }; // null: no such file yet
+const sameDoc = (a: Doc, b: Doc) => a.html === b.html && a.report === b.report && a.header === b.header && a.footer === b.footer;
+export type Part = "body" | "header" | "footer"; // the file the paper is editing
 
 /** Ctrl/Cmd shortcuts are the page's unless the user is typing somewhere. */
 const typing = (e: KeyboardEvent) => {
@@ -52,7 +55,12 @@ const typing = (e: KeyboardEvent) => {
 export function DesignerPage(props: DesignerProps & { children?: (api: DesignerApi) => React.ReactNode }) {
   const { templateId, name, files, archived, params } = props;
   const router = useRouter();
-  const first: Doc = { html: files["template.html"] ?? "", report: files["report.json"] ?? "{}" };
+  const first: Doc = {
+    html: files["template.html"] ?? "",
+    report: files["report.json"] ?? "{}",
+    header: files["header.html"] ?? null,
+    footer: files["footer.html"] ?? null,
+  };
   const [history, setHistory] = useState<History<Doc>>(() => startHistory(first));
   const [saved, setSaved] = useState<Doc>(first);
   const [revision, setRevision] = useState(props.revision);
@@ -65,15 +73,27 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
   const [zoom, setZoom] = useState(1);
   const [assets, setAssets] = useState(props.assets);
 
-  const src = history.now.html;
+  const [part, setPart] = useState<Part>("body"); // body: template.html; header / footer: the zone being edited
+
   const report = history.now.report;
+  const src = part === "body" ? history.now.html : (history.now[part] ?? ""); // the file being edited
   const dirty = !sameDoc(history.now, saved);
   const readOnly = archived || conflict;
-  const blocks = useMemo(() => readBlocks(src), [src]);
+  const blocks = useMemo(() => readBlocks(src, part !== "body"), [src, part]);
   const pageSpec = useMemo(() => pageOf(report), [report]);
-  const shown = useMemo(() => ({ ...files, "report.json": report }), [files, report]);
+  const shown = useMemo(() => {
+    const { html, header, footer } = history.now;
+    const out: Record<string, string> = { ...files, "template.html": html, "report.json": report };
+    if (header !== null) out["header.html"] = header;
+    if (footer !== null) out["footer.html"] = footer;
+    return out;
+  }, [files, history.now, report]);
 
-  const edit = useCallback((next: string) => setHistory((h) => record(h, { ...h.now, html: next }, sameDoc)), []);
+  const edit = useCallback(
+    (next: string) =>
+      setHistory((h) => record(h, part === "body" ? { ...h.now, html: next } : { ...h.now, [part]: next }, sameDoc)),
+    [part],
+  );
   const editReport = useCallback((next: string) => setHistory((h) => record(h, { ...h.now, report: next }, sameDoc)), []);
 
   /** Writes the files that changed (template.html, then report.json), each with the revision the last one gave. */
@@ -85,11 +105,14 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
     let rev = revision;
     const writes: [string, keyof Doc][] = [
       ["template.html", "html"],
+      ["header.html", "header"],
+      ["footer.html", "footer"],
       ["report.json", "report"],
     ];
     for (const [name, key] of writes) {
-      if (now[key] === saved[key]) continue;
-      const out = await saveFile(templateId, name, now[key], rev);
+      const text = now[key];
+      if (text === saved[key] || text === null) continue; // unchanged (a file is never deleted from here)
+      const out = await saveFile(templateId, name, text, rev);
       if (!out.ok) {
         setSaving(false);
         if (out.problem.status === 412) setConflict(true);
@@ -98,7 +121,7 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
       }
       rev = out.data.revision;
       setRevision(rev);
-      setSaved((s) => ({ ...s, [key]: now[key] }));
+      setSaved((s) => ({ ...s, [key]: text }));
     }
     setSaving(false);
     return true;
@@ -192,7 +215,7 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  const api: DesignerApi = { src, edit, report, editReport, upload: uploadImage, readOnly };
+  const api: DesignerApi = { src, edit, report, editReport, upload: uploadImage, part, setPart, readOnly };
 
   return (
     <div className={styles.designer}>
@@ -201,6 +224,14 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
         <code>{templateId}</code>
         <span className={styles.mode}>Document Designer</span>
         {pageSpec.layout === "free" && <span className={styles.mode}>แบบอิสระ</span>}
+        {part !== "body" && (
+          <>
+            <span className={styles.mode}>กำลังแก้ {part}.html (ทุกหน้าเหมือนกัน)</span>
+            <button type="button" onClick={() => setPart("body")}>
+              กลับไปแก้เนื้อหา
+            </button>
+          </>
+        )}
         <span className={styles.spacer} />
         <label className={styles.toggle}>
           ขนาดกระดาษ
@@ -324,6 +355,9 @@ export function DesignerPage(props: DesignerProps & { children?: (api: DesignerA
             blocks={blocks}
             edit={edit}
             onReport={editReport}
+            part={part}
+            onZone={readOnly ? undefined : setPart}
+            key={part} // selection and drag state belong to the file being edited
             readOnly={readOnly}
             files={shown}
             templateId={templateId}

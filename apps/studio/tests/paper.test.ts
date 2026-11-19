@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { dragMargin } from "@/components/designer/Rulers";
 
 import { codeBox, compactLabel, fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
-import { fitMargins, pageBreaks, pageOf, paperOf, setMargins, setPage } from "@/lib/paper";
+import { fitMargins, pageBreaks, pageOf, paperOf, setMargins } from "@/lib/paper";
 
 describe("paper", () => {
   it("is A4 portrait with the default margins, or as report.json says", () => {

@@ -42,6 +42,8 @@ type Props = {
   blocks: BlockList;
   edit: (src: string) => void;
   onReport?: (reportJson: string) => void; // report.json with new page margins (one undo step)
+  part?: "body" | "header" | "footer"; // the file `src` is: a header or footer has a smaller set of blocks (v1.8)
+  onZone?: (part: "header" | "footer") => void; // double-click on the paper's header or footer zone
   onUpload?: (file: File) => Promise<string | null>; // an image into the draft's assets; its name, or null
   readOnly: boolean;
   files: Record<string, string>;
@@ -76,6 +78,12 @@ export const PALETTE: { kind: NewBlock["kind"]; label: string }[] = [
 
 /** The palette's groups (SPEC v1.7 รอบแก้ข้อ 2): Jinja-made blocks are "มาโคร". */
 export const MACROS = new Set<string>(["condition", "repeat", "set", "custom"]);
+/** What a header or footer can hold: text, fields, an image, a row of columns, a rule, a gap. */
+export const RUNNING_KINDS = new Set<string>(["text", "heading", "field", "image", "row", "rule", "space"]);
+const PAGE_FIELDS = [
+  { label: "เลขหน้า", expression: '<span class="pageNumber"></span>' },
+  { label: "จำนวนหน้า", expression: '<span class="totalPages"></span>' },
+];
 type Group = "blocks" | "macros" | "fields";
 
 /** The palette as a drop target while a block on the paper is dragged: dropping there removes it (รอบแก้ข้อ 3). */
@@ -196,7 +204,7 @@ export function listById(blocks: BlockList, id: string): BlockList | null {
   return owner?.lists[Number(index)]?.list ?? null;
 }
 
-export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom, onReport, onUpload }: Props) {
+export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom, onReport, onUpload, part = "body", onZone }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
@@ -249,7 +257,9 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   );
 
   const flat = useMemo(() => allBlocks(blocks), [blocks]);
-  const fields = useMemo(() => suggestions(files), [files]);
+  const fields = useMemo(() => [...(part === "body" ? [] : PAGE_FIELDS), ...suggestions(files)], [files, part]);
+  const kinds = (macro: boolean) =>
+    PALETTE.filter((p) => (part === "body" ? MACROS.has(p.kind) === macro : !macro && RUNNING_KINDS.has(p.kind)));
   const current = flat.find((b) => keyOf(b) === selected) ?? null;
   const codeBlock = coding === null ? null : (flat.find((b) => b.start === coding) ?? null);
 
@@ -296,7 +306,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
         })
       : null;
     // the whole sheet counts as the page's list, so a drop in the empty paper below the last block appends
-    const sheet = root?.querySelector(".jd-sheet")?.getBoundingClientRect();
+    const sheet = (root?.querySelector("[data-jd-zone]") ?? root?.querySelector(".jd-sheet"))?.getBoundingClientRect();
     const page = shot.current?.layout.containers.find((c) => c.id === "root");
     if (sheet && page) page.box = { top: sheet.top, bottom: sheet.bottom, left: sheet.left, right: sheet.right };
     setActive(id);
@@ -442,14 +452,13 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             {open.blocks && (
               <>
                 <p className={styles.hint}>ลากลงกระดาษ</p>
-                {PALETTE.filter((p) => !MACROS.has(p.kind)).map((p) => (
+                {kinds(false).map((p) => (
                   <PaletteItem key={p.kind} kind={p.kind} label={p.label} />
                 ))}
               </>
             )}
-            <GroupHead label="มาโคร" open={open.macros} onToggle={() => toggle("macros")} />
-            {open.macros &&
-              PALETTE.filter((p) => MACROS.has(p.kind)).map((p) => <PaletteItem key={p.kind} kind={p.kind} label={p.label} />)}
+            {part === "body" && <GroupHead label="มาโคร" open={open.macros} onToggle={() => toggle("macros")} />}
+            {part === "body" && open.macros && kinds(true).map((p) => <PaletteItem key={p.kind} kind={p.kind} label={p.label} />)}
             <GroupHead label="ช่องข้อมูล" open={open.fields} onToggle={() => toggle("fields")} />
             {open.fields && <p className={styles.hint}>ดับเบิลคลิกข้อความ แล้วลากลงในข้อความ หรือพิมพ์ {"{{"}</p>}
             {open.fields && fields.map((f) => (
@@ -494,7 +503,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                 onReport?.(next);
               }}
             >
-            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
+            <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} part={part} onZone={onZone} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
             </Rulers>
           </div>
         </div>

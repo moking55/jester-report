@@ -50,6 +50,8 @@ export type Detail =
       cells: Cell[];
       emptyRow: Cell[] | null; // {% else %} row
       footer: Cell[][];
+      row: Range; // the row of cells in the loop
+      detailRow: { range: Range; cell: ElementNode } | null; // v1.8: a second row under every row, holding blocks
     }
   | { kind: "summary"; rows: { label: Cell; value: Cell }[] }
   | { kind: "grid"; rows: { range: Range; cells: GridCell[] }[]; head: boolean } // head: the first row is <th>
@@ -125,7 +127,18 @@ function tableDetail(src: string, el: ElementNode): Detail | null {
     const rows = solid(src, nodes);
     return rows.length === 1 ? cellsOf(src, rows[0], "td") : null;
   };
-  const cells = rowOf(loop.branches[0].children);
+  // the loop body: a row of cells, and optionally a detail row (`<tr data-jd="detail"><td colspan>` of blocks)
+  const body0 = solid(src, loop.branches[0].children);
+  const detailTr = body0.length === 2 ? body0[1] : null;
+  let detailRow: { range: Range; cell: ElementNode } | null = null;
+  if (detailTr) {
+    const tds = detailTr.kind === "element" ? solid(src, detailTr.children) : [];
+    const td = tds[0];
+    if (detailTr.kind !== "element" || detailTr.name !== "tr" || detailTr.broken || jd(detailTr) !== "detail") return null;
+    if (tds.length !== 1 || td.kind !== "element" || td.name !== "td" || td.broken) return null;
+    detailRow = { range: { start: detailTr.start, end: detailTr.end }, cell: td };
+  }
+  const cells = rowOf(detailRow ? body0.slice(0, 1) : loop.branches[0].children);
   if (!cells || (head && head.length !== cells.length)) return null;
   let emptyRow: Cell[] | null = null;
   if (loop.branches.length === 2) {
@@ -145,6 +158,8 @@ function tableDetail(src: string, el: ElementNode): Detail | null {
     cells,
     emptyRow,
     footer,
+    row: { start: body0[0].start, end: body0[0].end },
+    detailRow,
   };
 }
 
@@ -242,6 +257,7 @@ function classify(src: string, n: Node, path: number[]): Classified {
   const kids = solid(src, el.children);
 
   if (el.name === "link" && attr(el, "rel") === "stylesheet") return { ...custom(false), kind: "head" };
+  if (el.name === "style" && styleIsHead) return { ...custom(false), kind: "head" };
   if (el.name === "img") {
     const a = (name: string) => el.attrs.find((x) => x.name === name)?.valueRange ?? null;
     return attr(el, "src") ? known("image", { kind: "image", src: a("src"), width: a("width") }) : custom(true);
@@ -260,6 +276,11 @@ function classify(src: string, n: Node, path: number[]): Classified {
   }
   if (el.name === "table") {
     const d = tag === "summary" ? summaryDetail(src, el) : tag === "grid" ? gridDetail(src, el) : tag ? null : tableDetail(src, el);
+    if (d?.kind === "table" && d.detailRow) {
+      const cell = d.detailRow.cell;
+      const lists = [{ key: "detail", label: "แถวรายละเอียด (ใต้ทุกแถว)", list: listOf(src, cell.children, inner(cell), [...path, 0]) }];
+      return known("table", d, lists);
+    }
     return d ? known(d.kind as BlockKind, d) : custom(true);
   }
   if (el.name === "div" && !tag && kids.length === 1 && kids[0].kind === "expr") {
@@ -291,9 +312,17 @@ function listOf(src: string, nodes: Node[], range: Range, path: number[]): Block
   return { range, indent, items };
 }
 
-/** The page: the blocks of a template, top level. */
-export function readBlocks(src: string): BlockList {
-  return listOf(src, parse(src).children, { start: 0, end: src.length }, []);
+// header.html / footer.html start with a <style> for the engine (SPEC-studio.md v1.8): not a block there, kept in place
+let styleIsHead = false;
+
+/** The page: the blocks of a template, top level. `running`: header.html / footer.html (its <style> is no block). */
+export function readBlocks(src: string, running = false): BlockList {
+  styleIsHead = running;
+  try {
+    return listOf(src, parse(src).children, { start: 0, end: src.length }, []);
+  } finally {
+    styleIsHead = false;
+  }
 }
 
 /** Every block in the tree, depth first (for summaries and lookups). */

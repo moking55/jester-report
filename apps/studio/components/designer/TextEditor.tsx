@@ -179,7 +179,8 @@ export function TextEditor({ el, inner, src, fields, onDone }: Props) {
       range.selectNodeContents(root);
       range.collapse(false);
     }
-    const chip = /^\{\{[^{}]*\}\}$/.test(text) ? chipNode(text) : document.createTextNode(text);
+    const asChip = /^\{\{[^{}]*\}\}$/.test(text) || /^<span class="(pageNumber|totalPages)"><\/span>$/.test(text);
+    const chip = asChip ? chipNode(text) : document.createTextNode(text);
     range.insertNode(chip);
     selectionIn(root)?.collapse(chip.parentNode!, [...chip.parentNode!.childNodes].indexOf(chip as ChildNode) + 1);
     root.focus();

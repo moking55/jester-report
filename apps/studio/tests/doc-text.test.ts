@@ -108,3 +108,19 @@ describe("setTextTag", () => {
     expect(out.ok && out.value.at).toEqual({ start: 0, end: 20 });
   });
 });
+
+describe("page number chips (header / footer)", () => {
+  const inner = 'หน้า <span class="pageNumber"></span>/<span class="totalPages"></span> <b>x</b>';
+
+  it("are single chips and round-trip unchanged", () => {
+    const { html } = readInner(inner);
+    const el = document.createElement("div");
+    el.innerHTML = html;
+    expect([...el.querySelectorAll(".jd-chip")].map((c) => c.textContent)).toEqual(["เลขหน้า", "จำนวนหน้า"]);
+    expect(roundTrip(inner)).toBe(inner);
+  });
+
+  it("deleting one removes exactly its element", () => {
+    expect(roundTrip(inner, (el) => el.querySelector(".jd-chip")!.remove())).toBe('หน้า /<span class="totalPages"></span> <b>x</b>');
+  });
+});
