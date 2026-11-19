@@ -108,6 +108,8 @@
   ช่องขวาเป็น "Form Preview", บันทึกด้วย "บันทึก (Ctrl+S)" เดิม (การแก้ในตัวสร้าง = ไฟล์ที่ยังไม่บันทึกใน editor), เอาหน้า `?mode=form` และปุ่ม toolbar ออก
   (ลิงก์เดิมเปิด schema ในหน้า code) — ลบ `lib/builder-save.ts`; `Editor` มี `setContent`; `fileAdded` เลือกได้ว่าจะสลับไปไฟล์ใหม่หรือไม่ (`form.json` ที่ตัวสร้างสร้างไม่สลับ)
   - E2E `self-built-form.spec.ts` ปรับตาม: เปิดจากรายการไฟล์, สลับ "แก้ไข JSON" ไปกลับ, บันทึกครั้งเดียว; ลากด้วยแป้นพิมพ์เว้นจังหวะ 300 ms ระหว่างปุ่ม
+  - ตรวจ: studio test 141 + lint + typecheck ผ่าน; E2E 6/6 ผ่านบน stack ใหม่ (studio `1.6.0-rc` จาก `79bf8a3`) — รอบแรกหลัง build image ทันที
+    full-flow (บันทึกเกิน 5 s) และ lifecycle ล้มตอน VM load 8.4; `down -v` แล้วรันใหม่ผ่านครบโดยไม่แก้โค้ด
 
 ## Checkpoint: ปล่อย v1.6.0
 
