@@ -183,6 +183,8 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   await expect(summary).toHaveCount(0);
 
   // the designer's own save, then Preview pdf in a modal
+  // @dnd-kit swallows clicks for 50 ms after a drag ends (no click on what was under the drop); a person is slower
+  await page.waitForTimeout(150);
   await page.getByRole("button", { name: "บันทึก", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible({ timeout: 30_000 });
   const pdf = page.waitForResponse((r) => r.url().includes(`/preview/${ID}`) && r.request().method() === "POST", { timeout: 90_000 });
