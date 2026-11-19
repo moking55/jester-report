@@ -347,3 +347,32 @@
 .preview {
   margin: 0 calc(var(--sp) * -1.5);
 }
+
+/* v1.6 after user testing: the drop is shown in place before it happens */
+/* out of the flow but still measurable where it was, so the floating label starts at the card */
+.lifted {
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.slot,
+.slotBad {
+  grid-column: 1 / -1;
+  flex: 1 1 140px;
+  display: grid;
+  place-items: center;
+  min-height: 34px;
+  border: 2px dashed var(--color-primary);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--color-primary);
+  font-size: 0.85em;
+  font-weight: 600;
+}
+
+.slotBad {
+  border-color: var(--color-danger);
+  background: var(--tint-danger);
+  color: var(--color-danger);
+}

@@ -6,6 +6,9 @@ import { expect, test, type Locator, type Page } from "@playwright/test";
 
 import { login } from "./shared";
 
+// a desktop screen: in a short canvas the last card sits in @dnd-kit's auto-scroll band and drifts under the pointer
+test.use({ viewport: { width: 1440, height: 900 } });
+
 const ID = process.env.E2E_FORM_ID ?? "e2e-form"; // a fresh id to rerun on a stack that has one
 
 type View = { state: { doc: { length: number; toString(): string } }; dispatch: (tr: object) => void };
@@ -19,8 +22,13 @@ const setEditorText = (page: Page, text: string) =>
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
   }, text);
 
-/** A real mouse drag: press, move past the 5px start distance, glide to the target's centre, release. */
-async function drag(page: Page, from: Locator, to: Locator) {
+/**
+ * A real mouse drag: aim at the target as the form looks now, press, move past the 5px start distance, glide there,
+ * check the slot "วางที่นี่" shows the drop, release. `fy` is where on the target to point: 0.25 = its upper half
+ * (drop before it), 0.5 = an empty list's middle. The slot takes the dragged card's room, so the form near the
+ * pointer looks as it did before the drag.
+ */
+async function drag(page: Page, from: Locator, to: Locator, fy = 0.25) {
   // the target in the middle of the screen: near an edge, @dnd-kit's auto-scroll moves the canvas mid-drag
   await to.evaluate((el) => el.scrollIntoView({ block: "center" }));
   await from.scrollIntoViewIfNeeded();
@@ -29,7 +37,8 @@ async function drag(page: Page, from: Locator, to: Locator) {
   await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2);
   await page.mouse.down();
   await page.mouse.move(a.x + a.width / 2 + 12, a.y + a.height / 2 + 12, { steps: 4 });
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 15 });
+  await page.mouse.move(b.x + b.width * 0.75, b.y + b.height * fy, { steps: 15 });
+  await expect(page.locator("[data-drop-slot]")).toHaveCount(1); // the drop is shown before it happens
   await page.mouse.up();
   await settled(page);
 }
@@ -77,8 +86,8 @@ test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
   expect((await order(page, "c:data")).sort()).toEqual([...kinds.map((_, i) => `/data/field${i + 1}`), "/data/title"].sort());
 
   // a field in the group; three columns in the table, money among them
-  await drag(page, palette(page, "text"), box(page, "c:data/field8"));
-  await drag(page, palette(page, "text"), box(page, "c:data/field9"));
+  await drag(page, palette(page, "text"), box(page, "c:data/field8"), 0.5);
+  await drag(page, palette(page, "text"), box(page, "c:data/field9"), 0.5);
   await drag(page, palette(page, "number"), card(page, "/data/field9/field1"));
   await drag(page, palette(page, "money"), card(page, "/data/field9/field1"));
   expect(await order(page, "c:data/field9")).toHaveLength(3);
@@ -87,7 +96,7 @@ test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
   await expect(page.getByText("คอลัมน์ในตารางต้องเป็นช่องธรรมดา")).toBeVisible(); // next also has a role=alert announcer
 
   // two parameters
-  await drag(page, palette(page, "text"), box(page, "c:params"));
+  await drag(page, palette(page, "text"), box(page, "c:params"), 0.5);
   await drag(page, palette(page, "choice"), card(page, "/params/field1"));
   expect((await order(page, "c:params")).sort()).toEqual(["/params/field1", "/params/field2"]);
 
