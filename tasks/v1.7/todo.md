@@ -30,7 +30,7 @@
     บล็อกใหม่เยื้องตามระดับ; ทุกการแก้ = ข้อความไฟล์ใหม่ที่ต่างจากเดิมเฉพาะช่วงที่เกี่ยว; undo/redo คืนข้อความเดิมทุกตัวอักษร
   - Verify: Vitest: diff ของแต่ละการแก้อยู่ในช่วงบล็อก; undo หลายขั้น
   - Files: `lib/doc-edit.ts`, `tests/doc-edit.test.ts`
-- [ ] **T4 `doc-check` + `doc-sample`**
+- [x] **T4 `doc-check` + `doc-sample`**
   - Acceptance: check: tag Jinja ครบคู่/ซ้อนถูก, delimiter ปิดครบ, ชื่อ tag ที่ Jinja มี, HTML ปิดครบ → `{ line, message }` ภาษาไทย;
     sample: ประเมิน path / `loop.index` / `fmt.money` / `fmt.number` / `fmt.thai_date` กับ view model ของ `prepareDraft`, เงื่อนไขชุดเล็ก — ที่เหลือคืน "ประเมินไม่ได้"
   - Verify: Vitest (`fmt` ใช้ค่าทดสอบชุดเดียวกับ test ของ data-prep ฝั่ง api)
