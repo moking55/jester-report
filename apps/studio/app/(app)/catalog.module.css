@@ -125,8 +125,19 @@
 
 .row {
   display: flex;
+  flex-wrap: wrap; /* four buttons do not fit a 270px card: wrap instead of squeezing the Thai labels */
+  align-items: center;
   gap: calc(var(--sp) * 1);
   margin-top: auto;
+}
+
+.row > a {
+  white-space: nowrap;
+}
+
+.row a.issue,
+.row a.documents {
+  margin-right: 0; /* the row's gap spaces them */
 }
 
 .open {
