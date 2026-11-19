@@ -3,7 +3,7 @@
 // of it; anything else (or anything broken) is Custom Code, kept byte for byte. Every list of blocks (the page,
 // a column, a branch, a loop body) is tiled by its blocks and the whitespace gaps between them.
 
-import { attr, isBroken, parse, type BlockNode, type ElementNode, type Node, type Range } from "./doc-parse";
+import { attr, isBroken, parse, type ElementNode, type Node, type Range } from "./doc-parse";
 
 export type BlockKind =
   | "text" // <p>/<h1-4>/<div> of inline content
@@ -58,7 +58,6 @@ export type Detail =
 const INLINE = new Set(["b", "strong", "i", "em", "u", "small", "span", "br", "sub", "sup"]);
 const TEXT_TAGS = new Set(["p", "h1", "h2", "h3", "h4", "div"]);
 const LOOP = /^for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_][\w.]*)$/;
-const FIELD_PATH = /^[A-Za-z_][\w.]*$/;
 
 const isGap = (src: string, n: Node) => n.kind === "text" && src.slice(n.start, n.end).trim() === "";
 const jd = (el: ElementNode) => attr(el, "data-jd");
