@@ -287,7 +287,7 @@ apps/api/tests/data_prep/test_codes.py — ใหม่
 
 # v1.8: ซ้อน 3 ชั้น (L4)
 
-สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+สถานะ: **อนุมัติ 20 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
 
 - เตรียม list ลูก/หลานแบบเดียวกับ list ลูกชั้นเดียวในปัจจุบัน (sort, computed, groupBy, เติม property ที่ขาด) ทุกชั้น
 - `totals` ของ list ลูก/หลาน คำนวณ **ต่อแถวแม่** และอยู่ในแถวแม่ตามรูปแบบเดิมของชั้นเดียว

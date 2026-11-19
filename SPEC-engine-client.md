@@ -229,7 +229,7 @@ Tahoma, ฟอนต์อื่นนอกจากที่ระบุ, ก�
 
 # v1.8: ขนาดกระดาษใด ๆ และใบเสร็จม้วน (L2)
 
-สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+สถานะ: **อนุมัติ 20 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
 
 - `PageSetup`: `width_mm`, `height_mm` (หลังคิดแนวแล้ว) แทน `paper: "A4"`; ส่ง `paperWidth`/`paperHeight` เป็นนิ้ว (mm ÷ 25.4, ทศนิยม 4 ตำแหน่ง),
   `landscape=false` เสมอ (binder หมุนให้แล้ว)

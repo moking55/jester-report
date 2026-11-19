@@ -393,7 +393,7 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 
 # v1.8: สร้างรายงานพร้อมขนาดกระดาษและรูปแบบ (L5)
 
-สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+สถานะ: **อนุมัติ 20 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
 
 - `create(..., page=None)`: starter `blank` + `page` → เขียน `page` ลง `report.json` ของ draft แรก และ `template.html` ตั้งต้นตามรูปแบบ:
   - `flow` (แผ่น): เหมือน blank เดิม (header.html/footer.html)

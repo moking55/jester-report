@@ -320,7 +320,7 @@ band ใน `report.json`, block editor, การรันโค้ดของ
 
 # v1.8: การจัดหน้า (L1)
 
-สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8 · `schemaVersion` คง `1` (ทุก field ใหม่มีค่าเริ่มต้น = แบบเดิม)
+สถานะ: **อนุมัติ 20 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8 · `schemaVersion` คง `1` (ทุก field ใหม่มีค่าเริ่มต้น = แบบเดิม)
 
 ## `page`
 

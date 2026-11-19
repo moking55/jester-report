@@ -247,7 +247,7 @@ JavaScript/QR/chart, URL ภายนอก, HTML sanitizer แบบเต็�
 
 # v1.8: การจัดหน้า (L3)
 
-สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+สถานะ: **อนุมัติ 20 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
 
 - `PageSetup` จาก `page` ใหม่ (ขนาด mm, ม้วน = หน้าเดียว, `free` = margin 0)
 - **แบบอิสระ:** `template.html` มี `<div data-jd="page" style="position: relative; width: …mm; height: …mm">` และของข้างในเป็น

@@ -269,7 +269,7 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 # v1.8: สร้างรายงานพร้อม `page` (L5)
 
-สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
+สถานะ: **อนุมัติ 20 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8
 
 - `POST /v1/templates` รับ `page` (optional) รูปแบบเดียวกับ `report.json` → `page`; ใช้ได้กับ starter `blank` เท่านั้น
 - ไม่มี endpoint ใหม่อื่น; ขนาดกระดาษเปลี่ยนทีหลังด้วย `putDraftFile` ของ `report.json` ตามเดิม

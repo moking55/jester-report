@@ -882,7 +882,7 @@ export function replaceBlock(source: string, block: Block, html: string): string
 
 # v1.8: การจัดหน้า (L6)
 
-สถานะ: **เสนอ 20 พ.ย. 2026 รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8 · interview 20 พ.ย. 2026
+สถานะ: **อนุมัติ 20 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.8 · interview 20 พ.ย. 2026
 
 ## สร้างรายงาน: modal ขนาดกระดาษและรูปแบบ
 
