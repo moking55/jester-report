@@ -277,3 +277,70 @@
   padding: 3px 10px;
   cursor: pointer;
 }
+
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.column {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.props .primary,
+.modalBar .primary {
+  border-color: var(--line-primary);
+  background: var(--fill-primary);
+  color: var(--color-onPrimary);
+  font-weight: 600;
+}
+
+.codeModal {
+  width: min(960px, 94vw);
+  height: 80vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border-radius: var(--radius-pane);
+  overflow: hidden;
+  box-shadow: var(--shadow-pane);
+}
+
+.codeHost {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.codeHost :global(.cm-editor) {
+  height: 100%;
+}
+
+.smallModal {
+  width: min(420px, 92vw);
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  background: var(--color-surface);
+  border-radius: var(--radius-pane);
+  box-shadow: var(--shadow-pane);
+}
+
+.smallModal button {
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.smallModal .primary {
+  border-color: var(--line-primary);
+  background: var(--fill-primary);
+  color: var(--color-onPrimary);
+}

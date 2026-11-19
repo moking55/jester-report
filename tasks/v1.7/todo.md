@@ -76,11 +76,14 @@
   - ตรวจแล้ว (19 พ.ย.): ดับเบิลคลิก → พิมพ์ไทยบนผืน, `{{` → รายการช่องข้อมูล (ลูกศร/Enter), ลากช่องข้อมูลจาก palette ลงกลางข้อความ/บนชิป (วางหลังชิป),
     พิมพ์ `{% if %}` → ชิป "ถ้า …" → popover แก้สาขา (คง `{%-`), Enter จบ = undo/redo ขั้นเดียว, Delete/Ctrl+Z ขณะพิมพ์ไม่โดนระดับหน้า, ระดับ p/h1–h3;
     ไม่แก้ = ไบต์เดิมทุกบล็อกข้อความใน 5 starter + fixture (Vitest); Ctrl+S ขณะพิมพ์ไม่บันทึก (ออกจากโหมดพิมพ์ก่อน)
-- [ ] **T9 แผงของบล็อกพิเศษ + Custom Code modal**
+- [x] **T9 แผงของบล็อกพิเศษ + Custom Code modal**
   - Acceptance: ตาราง (คอลัมน์ ฯลฯ), สรุปยอด, รูป (asset), QR/barcode, เงื่อนไข (modal เงื่อนไข), วนซ้ำ (list/ตัวแปร), ตั้งค่าตัวแปร; Custom Code modal: CodeMirror +
     autocomplete + snippet + ตรวจด้วย `doc-check` ก่อนปิด (ผิด = ปิดไม่ได้ + บอกบรรทัด)
   - Verify: Vitest component ของ modal; เบราว์เซอร์
-  - Files: `components/designer/BlockPanels.tsx`, `components/designer/CustomCodeModal.tsx`, `components/designer/ConditionModal.tsx`
+  - Files: `components/designer/BlockPanels.tsx` (รวมตัวช่วยสร้างเงื่อนไข), `components/designer/CustomCodeModal.tsx`
+  - ตรวจแล้ว (19 พ.ย., d-tax): ดับเบิลคลิก Custom Code → modal; `{% if %}` ไม่ปิด → "ยังปิดไม่ได้: บรรทัด 16" + มาร์คในโค้ด;
+    Ctrl+Space → snippet for/if/set (อยู่บน tag HTML); ตกลง → ส่วนนั้นกลายเป็นบล็อกวนซ้ำ; แผงตาราง (วนจากรายการ, คอลัมน์ +/←/→/ลบ),
+    บล็อกเงื่อนไขใหม่ → ตัวช่วย "มีค่า" → `params.invoiceNo`, + ไม่เช่นนั้น; Vitest modal + buildTest
 
 - T5–T6 ตรวจในเบราว์เซอร์ (19 พ.ย., `next dev` + api 1.6.0-rc บน VM): ผืน A4 ของ quotation ใช้ฟอนต์ TH Sarabun New, header ในขอบบน, ชิป expression;
   "แสดงข้อมูลตัวอย่าง" แทนค่า params/totals/header และแถวตารางตาม sample (`lists.<x>` ใน view model เป็น `{rows, groups}` → แปลงเป็น array ของแถวที่มี `.groups`);

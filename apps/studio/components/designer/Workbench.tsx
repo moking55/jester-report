@@ -23,6 +23,8 @@ import type { Scope } from "@/lib/doc-sample";
 
 import styles from "./Designer.module.css";
 import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCanvas";
+import { BlockPanel } from "./BlockPanels";
+import { CustomCodeModal } from "./CustomCodeModal";
 import { StylePanel } from "./StylePanel";
 import { keepEditing, TextEditor, type Suggestion } from "./TextEditor";
 
@@ -40,7 +42,6 @@ type Props = {
   assets: string[];
   sample: Scope | null;
   zoom: number;
-  Panel?: React.ComponentType<{ block: Block; apply: (r: Result<Edited> | Edited) => void }>; // extra panels (T9)
 };
 
 type Drop = Place & { reason: string | null };
@@ -154,13 +155,15 @@ export function listById(blocks: BlockList, id: string): BlockList | null {
   return owner?.lists[Number(index)]?.list ?? null;
 }
 
-export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom, Panel }: Props) {
+export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [active, setActive] = useState<string | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
   const [pointerDrag, setPointerDrag] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // the text block being typed in
+  const [coding, setCoding] = useState<number | null>(null); // the start of the block in the Custom Code modal
+  const codeNext = useRef(false); // a Custom Code block was just dropped: open the modal on it
   const reselect = useRef<number | null>(null); // the start of the block to select after the next parse
   const shot = useRef<Snapshot | null>(null);
   const at = useRef<{ x: number; y: number } | null>(null);
@@ -176,6 +179,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   const flat = useMemo(() => allBlocks(blocks), [blocks]);
   const fields = useMemo(() => suggestions(files), [files]);
   const current = flat.find((b) => keyOf(b) === selected) ?? null;
+  const codeBlock = coding === null ? null : (flat.find((b) => b.start === coding) ?? null);
 
   // after an edit: select the block that starts where the edit said it is now
   useEffect(() => {
@@ -183,6 +187,8 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     const b = flat.find((x) => x.start === reselect.current);
     reselect.current = null;
     setSelected(b ? keyOf(b) : null);
+    if (codeNext.current && b) setCoding(b.start);
+    codeNext.current = false;
   }, [flat]);
 
   function apply(r: Result<Edited> | Edited) {
@@ -257,6 +263,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     const id = String(e.active.id);
     if (id.startsWith("new:")) {
       const kind = id.slice(4) as NewBlock["kind"];
+      codeNext.current = kind === "custom";
       return apply(insertBlock(src, list, modelIndex(list, d.index, null), newBlockHtml(newBlockFor(kind, files, assets))));
     }
     const block = flat.find((b) => keyOf(b) === id.slice(2));
@@ -306,7 +313,12 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   }
 
   const frame: BlockFrame = ({ block, children }) => (
-    <Frame block={block} readOnly={readOnly} onSelect={setSelected} onEdit={block.kind === "text" && !readOnly ? setEditing : undefined}>
+    <Frame
+      block={block}
+      readOnly={readOnly}
+      onSelect={setSelected}
+      onEdit={block.kind === "text" && !readOnly ? setEditing : block.kind === "custom" ? () => setCoding(block.start) : undefined}
+    >
       {children}
     </Frame>
   );
@@ -389,13 +401,34 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                 </label>
               )}
               {current.kind === "text" && !readOnly && <p className={styles.hint}>ดับเบิลคลิกบนกระดาษเพื่อพิมพ์ · Enter จบ · Shift+Enter ขึ้นบรรทัด</p>}
-              {Panel && <Panel block={current} apply={apply} />}
+              <BlockPanel
+                block={current}
+                src={src}
+                files={files}
+                assets={assets}
+                readOnly={readOnly}
+                fields={fields}
+                apply={apply}
+                onCode={() => setCoding(current.start)}
+              />
               {current.style && <StylePanel src={src} block={current} readOnly={readOnly} onChange={(props) => apply(setStyle(src, current, props))} />}
             </div>
           ) : (
             <p className={styles.hint}>คลิกบล็อกบนกระดาษเพื่อแก้ ลากจากด้านซ้ายเพื่อเพิ่ม</p>
           )}
         </aside>
+        {codeBlock && (
+          <CustomCodeModal
+            code={src.slice(codeBlock.start, codeBlock.end)}
+            reportJson={files["report.json"]}
+            readOnly={readOnly}
+            onClose={() => setCoding(null)}
+            onSave={(code) => {
+              setCoding(null);
+              apply(replaceIn(src, codeBlock, codeBlock, code));
+            }}
+          />
+        )}
         <DragOverlay dropAnimation={null}>{active ? <div className={styles.overlay}>{label}</div> : null}</DragOverlay>
       </DragCtx.Provider>
     </DndContext>
