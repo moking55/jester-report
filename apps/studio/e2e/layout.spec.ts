@@ -44,6 +44,7 @@ async function openDesigner(page: Page, rid: string) {
 }
 
 async function save(page: Page) {
+  await page.waitForTimeout(150); // @dnd-kit swallows clicks for 50 ms after a drag ends; a person is slower
   await page.getByRole("button", { name: "บันทึก", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible({ timeout: 30_000 });
 }

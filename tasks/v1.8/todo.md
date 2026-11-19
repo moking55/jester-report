@@ -81,12 +81,12 @@
 - [x] **T15 ผืน vs PDF หลายขนาด**
   - Acceptance: สคริปต์ T11 ของ v1.7 ขยายเป็น A5, Letter, custom, ม้วน 80 (≤ 2 mm) และแบบอิสระ A5 (≤ 0.5 mm)
   - Verify: `tasks/v1.8/fidelity/results.md`
-- [ ] **T16 E2E `layout.spec.ts` + ทุก spec**
+- [x] **T16 E2E `layout.spec.ts` + ทุก spec**
   - Acceptance: modal → ม้วน 80 → designer → Preview pdf หน้าเดียว; อิสระ A5 วาง/ลาก/snap → PDF; header/footer โลโก้ + เลขหน้า; ใบสั่งซื้อ 3 ชั้น
   - Verify: E2E ทุก spec ผ่านบน stack สด 1.8.0-rc ไม่ retry
 
 ## Checkpoint: ปล่อย v1.8.0
 
-- [ ] studio 4 คำสั่ง + pytest + E2E ผ่านทั้งหมด
+- [x] studio 4 คำสั่ง + pytest + E2E ผ่านทั้งหมด
 - [ ] ผู้ใช้ลอง
 - [ ] อนุมัติ → version 1.8.0, tag `v1.8.0`, push, deploy บน VM
