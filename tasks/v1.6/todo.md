@@ -16,7 +16,7 @@
     `writeLayout(layout, known)` ตัด pointer ที่ไม่อยู่ใน `known`, ไม่เขียน `width: "full"` หรือ entry ว่าง, ไม่มี entry เลย → ไม่มีไฟล์
   - Verify: Vitest `tests/form-layout.test.ts`
   - Files: `lib/form-layout.ts`, `tests/form-layout.test.ts`
-- [ ] **T2 `lib/schema-edit.ts`: อ่าน → ต้นไม้ช่อง, เขียนกลับ, เพิ่ม, แก้คุณสมบัติ**
+- [x] **T2 `lib/schema-edit.ts`: อ่าน → ต้นไม้ช่อง, เขียนกลับ, เพิ่ม, แก้คุณสมบัติ**
   - Acceptance: JSON อ่าน/เขียนด้วย token ตัวเลขจาก `context.source`; round-trip ทุก starter ได้ข้อความเท่าเดิม (หลังจัดรูปแบบ 2 ช่องว่าง);
     ส่วนที่ไม่รองรับ (`oneOf`, `$ref`, หลาย `type`, key ขึ้นต้นตัวเลข) เป็น node อ่านอย่างเดียว; เพิ่มได้ 9 ชนิดใน data และ 7 ชนิดใน parameters ตามตาราง spec;
     `setProps` แก้ป้าย/คำอธิบาย/บังคับ/default/min/max/ความยาว/pattern/ตัวเลือก/จำนวนแถว/widget/width ตามตาราง (parameter บังคับ → ล้าง default);
