@@ -67,3 +67,21 @@ def test_page_setup_landscape_and_negative_margin():
     assert PageSetup(landscape=True).form_fields()["landscape"] == "true"
     with pytest.raises(ValueError):
         PageSetup(margin_top_mm=Decimal("-1"))
+
+
+@pytest.mark.parametrize(
+    ("setup", "width", "height", "single"),
+    [
+        (PageSetup(width_mm=148, height_mm=210, landscape=True), "5.8268", "8.2677", None),
+        (PageSetup(width_mm=100, height_mm=50), "3.937", "1.9685", None),
+        (PageSetup(width_mm=80, height_mm=1000, single_page=True), "3.1496", "39.3701", "true"),
+    ],
+)
+def test_page_setup_sizes_in_inches(setup, width, height, single):
+    fields = setup.form_fields()
+    assert (fields["paperWidth"], fields["paperHeight"], fields.get("singlePage")) == (width, height, single)
+
+
+def test_page_setup_a4_keeps_its_v1_values():
+    fields = PageSetup().form_fields()
+    assert (fields["paperWidth"], fields["paperHeight"]) == ("8.27", "11.7") and "singlePage" not in fields

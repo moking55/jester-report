@@ -9,16 +9,16 @@
     บันทึกขนาดหน้า PDF ที่ได้; ตัดสินวิธีทำม้วน (singlePage หรือ 2 รอบ) ใน plan.md
   - Verify: ตัวเลขขนาดหน้าจาก `pypdf` บันทึกใน `tasks/v1.8/spike.md`
   - Files: `tasks/v1.8/spike.md`, สคริปต์ใน `tasks/v1.8/`
-- [ ] **T2 `page` ใหม่ + list ซ้อน 3 ชั้นใน report-definition**
+- [x] **T2 `page` ใหม่ + list ซ้อน 3 ชั้นใน report-definition**
   - Acceptance: `size`/`orientation`/`widthMm`/`heightMm`/`rollWidthMm`/`layout`/`marginsMm` ตาม spec + `PAGE_INVALID`; ขนาด mm ของทุกขนาดคำนวณที่เดียว;
     list ซ้อน 3 ชั้น; report.json เดิมทั้งหมดยังผ่าน
   - Verify: pytest `tests/report_definition` (ค่าถูก/ผิดทุกกฎ, starter ทุกตัว load ได้)
   - Files: `report_definition/model.py`, `report_definition/page.py` (ใหม่), tests
-- [ ] **T3 engine: ขนาด mm + ม้วน**
+- [x] **T3 engine: ขนาด mm + ม้วน**
   - Acceptance: `PageSetup(width_mm, height_mm, single_page, margins)`; วิธีม้วนตาม T1
   - Verify: pytest unit (form fields) + live: A5 แนวนอน, custom, ม้วน 58/80 ได้ขนาดหน้าถูก (`pypdf`)
   - Files: `engine_client/models.py`, `engine_client/client.py`, tests
-- [ ] **T4 binder: page setup, แบบอิสระ, header/footer**
+- [x] **T4 binder: page setup, แบบอิสระ, header/footer**
   - Acceptance: PageSetup จาก `page`; CSS ฐานแบบอิสระ + ซ่อน guide; ไม่ส่ง header/footer ในม้วน/อิสระ (+ warning); `<img>` ใน header/footer เป็น data URI (≤ 1 MB)
   - Verify: pytest binder + live: แบบอิสระ A5 ข้อความอยู่ตามพิกัด ±0.5 mm; header มีรูปโลโก้ใน PDF
   - Files: `binder/bind.py`, `binder/document.py`, tests

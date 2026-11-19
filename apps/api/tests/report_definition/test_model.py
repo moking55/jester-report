@@ -94,7 +94,7 @@ def test_defaults_applied():
     [
         ({"extra": 1}, "/extra"),
         ({"schemaVersion": 2}, "/schemaVersion"),
-        ({"page__size": "A5"}, "/page/size"),
+        ({"page__size": "A2"}, "/page/size"),
         ({"page__marginsMm__top": 60}, "/page/marginsMm/top"),
         ({"fonts__body": []}, "/fonts/body"),
         ({"expressionMode": "python"}, "/expressionMode"),
@@ -131,16 +131,6 @@ def test_group_key_must_lead_sort():
     assert problems[0].pointer == "/lists/records"
 
 
-def test_lists_one_level_deep_only():
-    deep = {
-        "path": "/a",
-        "id": "id",
-        "lists": {"b": {"path": "/b", "id": "id", "lists": {"c": {"path": "/c", "id": "id"}}}},
-    }
-    _, problems = parse(with_(lists={"a": deep}))
-    assert any("one level" in p.message for p in problems)
-
-
 @pytest.mark.parametrize(
     ("ptype", "default", "ok"),
     [
@@ -172,7 +162,7 @@ def test_root_must_be_object():
 
 
 def test_collects_all_problems_at_once():
-    obj = with_(extra=1, schemaVersion=2, page__size="A5")
+    obj = with_(extra=1, schemaVersion=2, page__size="A2")
     assert len(pointers(obj)) >= 3
 
 
@@ -199,3 +189,90 @@ def test_parameter_title_and_description_rules(change):
     assert [(p.code, p.pointer) for p in problems] == [
         ("DEFINITION_INVALID", f"/parameters/p/{next(iter(change))}")
     ]
+
+
+# ---- v1.8: page sizes, layout, 3-level lists ----
+
+SMALL = {
+    "top": 5,
+    "bottom": 5,
+    "left": 5,
+    "right": 5,
+}  # a 100 x 50 mm page cannot take the 20 mm default margins
+
+
+def _codes(result):
+    return [(p.code, p.pointer) for p in result[1]]
+
+
+@pytest.mark.parametrize(
+    ("page", "paper"),
+    [
+        ({"size": "A5", "orientation": "landscape"}, (210, 148)),
+        ({"size": "Letter"}, ("215.9", "279.4")),
+        ({"size": "custom", "widthMm": 100, "heightMm": 50, "marginsMm": SMALL}, (100, 50)),
+        (
+            {
+                "size": "custom",
+                "widthMm": 100,
+                "heightMm": 50,
+                "orientation": "landscape",
+                "marginsMm": SMALL,
+            },
+            (50, 100),
+        ),
+        ({"size": "roll", "rollWidthMm": 80}, (80, 1000)),
+        ({"size": "roll", "rollWidthMm": 58}, (58, 1000)),
+    ],
+)
+def test_page_sizes(page, paper):
+    report, problems = parse({**QUOTATION, "page": page})
+    assert problems == []
+    from decimal import Decimal
+
+    assert report.page.paper_mm() == (Decimal(str(paper[0])), Decimal(str(paper[1])))
+
+
+def test_roll_starts_with_narrow_margins_and_free_has_none():
+    roll, _ = parse({**QUOTATION, "page": {"size": "roll", "rollWidthMm": 80}})
+    assert {k: float(v) for k, v in roll.page.effective_margins().items()} == {
+        "top": 3,
+        "bottom": 3,
+        "left": 2,
+        "right": 2,
+    }
+    free, _ = parse({**QUOTATION, "page": {"size": "A5", "layout": "free"}})
+    assert all(v == 0 for v in free.page.effective_margins().values())
+
+
+@pytest.mark.parametrize(
+    "page",
+    [
+        {"size": "A2"},
+        {"size": "custom"},
+        {"size": "custom", "widthMm": 10, "heightMm": 50},
+        {"size": "custom", "widthMm": 100, "heightMm": 3000},
+        {"size": "A4", "widthMm": 100},
+        {"size": "A4", "rollWidthMm": 80},
+        {"size": "roll"},
+        {"size": "roll", "rollWidthMm": 70},
+        {"size": "roll", "rollWidthMm": 80, "orientation": "landscape"},
+        {"size": "roll", "rollWidthMm": 80, "layout": "free"},
+        {"size": "A6", "marginsMm": {"left": 50, "right": 50}},
+    ],
+)
+def test_page_rules_say_page_invalid(page):
+    codes = _codes(parse({**QUOTATION, "page": page}))
+    assert codes and all(code == "PAGE_INVALID" and ptr.startswith("/page") for code, ptr in codes)
+
+
+def test_lists_nest_three_levels_not_four():
+    def chain(depth):
+        spec = {"path": "/x", "id": "id"}
+        for _ in range(depth - 1):
+            spec = {"path": "/x", "id": "id", "lists": {"child": spec}}
+        return spec
+
+    assert parse({**QUOTATION, "lists": {"a": chain(3)}})[1] == []
+    problems = parse({**QUOTATION, "lists": {"a": chain(4)}})[1]
+    assert [p.code for p in problems] == ["DEFINITION_INVALID"] and "3 levels" in problems[0].message

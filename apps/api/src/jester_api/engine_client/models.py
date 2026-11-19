@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Literal
 
 from pydantic import BaseModel, Field
 
@@ -12,25 +11,39 @@ from .errors import EngineError, ErrorCode
 RESERVED_NAMES = frozenset({"index.html", "header.html", "footer.html"})
 
 
+# A4 keeps the inch values the starters were checked with (v1.0-v1.7): 210 x 297 mm
+_A4 = (Decimal(210), Decimal(297))
+
+
+def _inches(mm: Decimal) -> str:
+    return f"{mm / Decimal('25.4'):.4f}".rstrip("0").rstrip(".")
+
+
 class PageSetup(BaseModel):
-    paper: Literal["A4"] = "A4"
+    width_mm: Decimal = Field(default=_A4[0], gt=0)  # as the size is defined: before the orientation
+    height_mm: Decimal = Field(default=_A4[1], gt=0)
     landscape: bool = False
+    single_page: bool = False  # a receipt roll: one page as tall as the content (Gotenberg singlePage)
     margin_top_mm: Decimal = Field(default=Decimal("20"), ge=0)
     margin_bottom_mm: Decimal = Field(default=Decimal("20"), ge=0)
     margin_left_mm: Decimal = Field(default=Decimal("15"), ge=0)
     margin_right_mm: Decimal = Field(default=Decimal("15"), ge=0)
 
     def form_fields(self) -> dict[str, str]:
-        # A4 in inches; sent explicitly because Gotenberg defaults to Letter
-        return {
-            "paperWidth": "8.27",
-            "paperHeight": "11.7",
+        # the size is sent explicitly because Gotenberg defaults to Letter
+        a4 = (self.width_mm, self.height_mm) == _A4
+        fields = {
+            "paperWidth": "8.27" if a4 else _inches(self.width_mm),
+            "paperHeight": "11.7" if a4 else _inches(self.height_mm),
             "landscape": str(self.landscape).lower(),
             "marginTop": f"{self.margin_top_mm}mm",
             "marginBottom": f"{self.margin_bottom_mm}mm",
             "marginLeft": f"{self.margin_left_mm}mm",
             "marginRight": f"{self.margin_right_mm}mm",
         }
+        if self.single_page:
+            fields["singlePage"] = "true"
+        return fields
 
 
 @dataclass(frozen=True)

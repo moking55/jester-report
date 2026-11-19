@@ -10,6 +10,16 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, ValidationError, model_validator
 
+from .page import (
+    CUSTOM_HEIGHT,
+    CUSTOM_WIDTH,
+    MIN_CONTENT_MM,
+    PAPER_MM,
+    ROLL_BASE_HEIGHT_MM,
+    ROLL_MARGINS,
+    ROLL_WIDTHS,
+    SIZES,
+)
 from .problems import Problem, error, pointer
 
 FILE = "report.json"
@@ -41,9 +51,70 @@ class Margins(_Strict):
 
 
 class Page(_Strict):
-    size: Literal["A4"] = "A4"
+    size: Literal[SIZES] = "A4"  # type: ignore[valid-type]
     orientation: Literal["portrait", "landscape"] = "portrait"
+    widthMm: Decimal | None = None  # custom only
+    heightMm: Decimal | None = None  # custom only
+    rollWidthMm: Literal[58, 80] | None = None  # roll only
+    layout: Literal["flow", "free"] = "flow"
     marginsMm: Margins = Margins()
+
+    @model_validator(mode="before")
+    @classmethod
+    def _roll_margins(cls, data: Any) -> Any:
+        # a receipt roll starts with narrow margins unless the report says otherwise
+        if isinstance(data, dict) and data.get("size") == "roll" and "marginsMm" not in data:
+            return {**data, "marginsMm": {k: v for k, v in ROLL_MARGINS.items()}}
+        return data
+
+    @model_validator(mode="after")
+    def _rules(self) -> Page:
+        custom, roll = self.size == "custom", self.size == "roll"
+        if custom:
+            if self.widthMm is None or self.heightMm is None:
+                raise ValueError("size custom needs widthMm and heightMm")
+            if not CUSTOM_WIDTH[0] <= self.widthMm <= CUSTOM_WIDTH[1]:
+                raise ValueError(f"widthMm must be {CUSTOM_WIDTH[0]}-{CUSTOM_WIDTH[1]}")
+            if not CUSTOM_HEIGHT[0] <= self.heightMm <= CUSTOM_HEIGHT[1]:
+                raise ValueError(f"heightMm must be {CUSTOM_HEIGHT[0]}-{CUSTOM_HEIGHT[1]}")
+        elif self.widthMm is not None or self.heightMm is not None:
+            raise ValueError("widthMm and heightMm go with size custom only")
+        if roll:
+            if self.rollWidthMm not in ROLL_WIDTHS:
+                raise ValueError("size roll needs rollWidthMm 58 or 80")
+            if self.orientation != "portrait":
+                raise ValueError("a roll has no orientation")
+            if self.layout != "flow":
+                raise ValueError("a roll cannot use layout free")
+        elif self.rollWidthMm is not None:
+            raise ValueError("rollWidthMm goes with size roll only")
+        width, height = self.paper_mm()
+        m = self.effective_margins()
+        if width - m["left"] - m["right"] < MIN_CONTENT_MM or (
+            not roll and height - m["top"] - m["bottom"] < MIN_CONTENT_MM
+        ):
+            raise ValueError("margins leave less than 20 mm for the content")
+        return self
+
+    def portrait_mm(self) -> tuple[Decimal, Decimal]:
+        """Width x height as the size is defined, before the orientation (a roll: width and base height)."""
+        if self.size == "roll":
+            return Decimal(self.rollWidthMm or 80), ROLL_BASE_HEIGHT_MM
+        width, height = (self.widthMm, self.heightMm) if self.size == "custom" else PAPER_MM[self.size]
+        assert width is not None and height is not None
+        return width, height
+
+    def paper_mm(self) -> tuple[Decimal, Decimal]:
+        """Width x height of one sheet as it is printed, after the orientation."""
+        width, height = self.portrait_mm()
+        return (height, width) if self.orientation == "landscape" else (width, height)
+
+    def effective_margins(self) -> dict[str, Decimal]:
+        """Free layout counts positions from the sheet's edge: no margins."""
+        if self.layout == "free":
+            return {"top": Decimal(0), "bottom": Decimal(0), "left": Decimal(0), "right": Decimal(0)}
+        m = self.marginsMm
+        return {"top": m.top, "bottom": m.bottom, "left": m.left, "right": m.right}
 
 
 class Fonts(_Strict):
@@ -96,6 +167,11 @@ class GroupBy(_Strict):
     totals: dict[Name, Expr] = {}
 
 
+def _depth(spec: ListSpec) -> int:
+    """Levels of lists from this one down: 1 with no child lists, 3 for list -> child -> grandchild."""
+    return 1 + max((_depth(c) for c in spec.lists.values()), default=0)
+
+
 class ListSpec(_Strict):
     path: Annotated[str, StringConstraints(pattern=r"^/")]
     id: Name
@@ -109,9 +185,8 @@ class ListSpec(_Strict):
     def _rules(self) -> ListSpec:
         if self.groupBy and self.sort and self.sort[0] != self.groupBy.key:
             raise ValueError("groupBy.key must be the first sort field")
-        for child in self.lists.values():
-            if child.lists:
-                raise ValueError("lists can be nested one level deep only")
+        if _depth(self) > 3:
+            raise ValueError("lists can be nested 3 levels deep at most")
         return self
 
 
@@ -143,7 +218,7 @@ def parse_report_json(text: str) -> tuple[ReportJson | None, list[Problem]]:
     except ValidationError as exc:
         return None, [
             error(
-                "DEFINITION_INVALID",
+                "PAGE_INVALID" if e["loc"] and e["loc"][0] == "page" else "DEFINITION_INVALID",
                 e["msg"].removeprefix("Value error, "),
                 file=FILE,
                 pointer=_loc_to_pointer(e["loc"]),

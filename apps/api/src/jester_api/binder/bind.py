@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from ..data_prep import Prepared
 from ..engine_client import PageSetup, RenderFile
 from ..report_definition.loader import ReportDefinition
-from ..report_definition.problems import AssetInfo, Problem, has_errors
+from ..report_definition.problems import AssetInfo, Problem, has_errors, warning
 from .document import header_footer_html, index_html, page_setup
 from .environment import MAX_OUTPUT_BYTES, BindEnvironment, render
 from .resources import check_resources
@@ -57,9 +57,16 @@ def bind(
         return BindResult(None, problems)
 
     documents = {"template.html": index_html(rendered["template.html"], report, assets)}
+    one_sheet = report.page.size == "roll" or report.page.layout == "free"  # no running header or footer
     for name in ("header.html", "footer.html"):
-        if name in rendered:
-            documents[name] = header_footer_html(rendered[name], report)
+        if name not in rendered:
+            continue
+        if one_sheet:
+            problems.append(
+                warning("HEADER_FOOTER_IGNORED", f"{name} is not used with a roll or free layout", file=name)
+            )
+            continue
+        documents[name] = header_footer_html(rendered[name], report)
     found, used_files, used_assets = check_resources(documents, files, assets)
     problems += found
     if has_errors(problems):

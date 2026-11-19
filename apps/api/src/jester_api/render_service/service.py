@@ -31,6 +31,7 @@ from ..report_definition.problems import Problem, error, has_errors
 from ..template_store import StoredDefinition, StoreError, TemplateStore
 from .document_files import DocumentFiles
 from .fonts import EngineFonts
+from .header_images import HeaderImageTooLarge, inline_images
 from .runs import (
     Caller,
     DocumentStorageError,
@@ -238,16 +239,20 @@ class RenderService:
         return result.bound, [*warnings, *result.problems]
 
     async def _convert(self, bound: Bound, stored: StoredDefinition, index_html: bytes) -> EngineResult:
-        files = [
-            *bound.files,
-            *[RenderFile(n, await self._asset(stored.assets[n].sha256)) for n in bound.asset_names],
-        ]
+        contents = {n: await self._asset(stored.assets[n].sha256) for n in bound.asset_names}
+        files = [*bound.files, *[RenderFile(n, data) for n, data in contents.items()]]
+        images = {n: (stored.assets[n].content_type, data) for n, data in contents.items()}
+        try:
+            header_html = inline_images(bound.header_html, images)
+            footer_html = inline_images(bound.footer_html, images)
+        except HeaderImageTooLarge as exc:
+            raise RenderError("INPUT_INVALID", 422, str(exc)) from None
         try:
             return await self._engine.convert_html(
                 index_html,
                 page=bound.page,
-                header_html=bound.header_html,
-                footer_html=bound.footer_html,
+                header_html=header_html,
+                footer_html=footer_html,
                 assets=files,
             )
         except EngineError as exc:

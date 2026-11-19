@@ -10,6 +10,9 @@ from ..report_definition.problems import AssetInfo
 
 # thead repeats on every page and rows may split across pages (spike M0, decision D3)
 BASE_CSS = "thead { display: table-header-group; }\ntr { break-inside: auto; }\n"
+# v1.8: a background image for lining boxes up is never printed; free layout counts from the sheet's edge
+GUIDE_CSS = '[data-jd="guide"] { display: none; }\n'
+FREE_CSS = 'body { margin: 0; }\n[data-jd="page"] { overflow: hidden; }\n'
 
 
 def css_string(value: str) -> str:
@@ -38,7 +41,8 @@ def index_html(body: str, report: ReportJson, assets: Mapping[str, AssetInfo]) -
     )
     return (
         '<!doctype html>\n<html lang="th"><head><meta charset="utf-8">\n'
-        f"<style>\n{css}{BASE_CSS}</style>\n</head><body>\n{body}\n</body></html>\n"
+        f"<style>\n{css}{BASE_CSS}{GUIDE_CSS}{FREE_CSS if report.page.layout == 'free' else ''}</style>\n"
+        f"</head><body>\n{body}\n</body></html>\n"
     )
 
 
@@ -50,11 +54,16 @@ def header_footer_html(part: str, report: ReportJson) -> str:
 
 
 def page_setup(report: ReportJson) -> PageSetup:
-    m = report.page.marginsMm
+    page = report.page
+    m = page.effective_margins()
+    width, height = page.portrait_mm()
     return PageSetup(
-        landscape=report.page.orientation == "landscape",
-        margin_top_mm=m.top,
-        margin_bottom_mm=m.bottom,
-        margin_left_mm=m.left,
-        margin_right_mm=m.right,
+        width_mm=width,
+        height_mm=height,
+        landscape=page.orientation == "landscape",
+        single_page=page.size == "roll",
+        margin_top_mm=m["top"],
+        margin_bottom_mm=m["bottom"],
+        margin_left_mm=m["left"],
+        margin_right_mm=m["right"],
     )

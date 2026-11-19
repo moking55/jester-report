@@ -54,3 +54,23 @@ def test_page_setup_from_report():
     assert page.landscape and page.margin_top_mm == Decimal(10) and page.margin_left_mm == Decimal(5)
     assert page.margin_bottom_mm == Decimal(20) and page.margin_right_mm == Decimal(15)
     assert page_setup(report()).landscape is False
+
+
+# ---- v1.8 ----
+
+
+def test_guide_images_are_never_printed_and_free_layout_counts_from_the_edge():
+    flow = index_html("", report(), ASSETS)
+    free = index_html("", report(page={"size": "A5", "layout": "free"}), ASSETS)
+    assert '[data-jd="guide"] { display: none; }' in flow and 'data-jd="page"' not in flow
+    assert "body { margin: 0; }" in free and '[data-jd="page"] { overflow: hidden; }' in free
+
+
+def test_page_setup_from_page():
+    setup = page_setup(report(page={"size": "A5", "orientation": "landscape"}))
+    assert (setup.width_mm, setup.height_mm, setup.landscape, setup.single_page) == (148, 210, True, False)
+    assert page_setup(report()).form_fields()["paperWidth"] == "8.27"  # A4 as before
+    roll = page_setup(report(page={"size": "roll", "rollWidthMm": 80}))
+    assert (roll.width_mm, roll.single_page, roll.margin_left_mm, roll.margin_top_mm) == (80, True, 2, 3)
+    free = page_setup(report(page={"size": "A5", "layout": "free", "marginsMm": {"top": 10}}))
+    assert (free.margin_top_mm, free.margin_left_mm) == (0, 0)  # positions count from the sheet's edge
