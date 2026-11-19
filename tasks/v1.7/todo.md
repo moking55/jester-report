@@ -168,6 +168,6 @@
 
 ## Checkpoint: ปล่อย v1.7.0
 
-- [ ] studio 4 คำสั่ง + pytest + E2E ผ่านทั้งหมด
-- [ ] ผู้ใช้ลองจัดหน้าเอกสารใหม่ใน designer และเปิด starter แก้ได้
-- [ ] อนุมัติ → version 1.7.0 (api, studio, compose tag), tag `v1.7.0`, push, deploy บน VM
+- [x] studio 4 คำสั่ง + pytest + E2E ผ่านทั้งหมด
+- [x] ผู้ใช้ลองจัดหน้าเอกสารใหม่ใน designer และเปิด starter แก้ได้
+- [x] อนุมัติ → version 1.7.0 (api, studio, compose tag), tag `v1.7.0`, push, deploy บน VM
