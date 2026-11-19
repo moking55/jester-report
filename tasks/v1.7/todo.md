@@ -47,7 +47,7 @@
 
 ## Phase G2: ผืน A4
 
-- [ ] **T5 `PaperCanvas`**
+- [x] **T5 `PaperCanvas`**
   - Acceptance: ฟอนต์ TH Sarabun New + LICENSE ใน `public/fonts/`; Shadow DOM, ขนาด mm ตาม `page`, ขอบ, โซน header/footer (อ่านอย่างเดียว, ชิป), เส้นตัดหน้า;
     CSS = `@font-face` ตาม `fonts.body` + `body { font-family }` + `BASE_CSS` + `report.css`; รูป/asset จาก route เดิม; วาดบล็อกจาก T2 (ยังไม่แก้ได้);
     โหมด expression / ข้อมูลตัวอย่าง
