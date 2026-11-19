@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
+import { codeBox, fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
 import { pageBreaks, paperOf } from "@/lib/paper";
 
 describe("paper", () => {
@@ -42,5 +42,20 @@ describe("rendering source on the paper", () => {
   it("report.css body rules apply to the document root; fonts follow report.json", () => {
     expect(scopeReportCss("body { font-size: 14pt }\nbody.x, p { a: b }")).toBe(".jd-doc { font-size: 14pt }\n.jd-doc.x, p { a: b }");
     expect(fontFaces(JSON.stringify({ fonts: { body: ["TH Sarabun New"] } }))).toContain('.jd-doc { font-family: "TH Sarabun New"; }');
+  });
+});
+
+describe("codeBox", () => {
+  const scope = { params: { invoiceNo: "INV-2026-0001" }, data: {}, lists: {}, totals: {} };
+  it("a QR code is a square of size_mm (30 by default)", () => {
+    expect(codeBox("fmt.qr(fmt.promptpay(data.promptpay, totals.grand), size_mm=28)", scope)).toContain('width="28mm" height="28mm"');
+    expect(codeBox("fmt.qr(data.x)", scope)).toContain('width="30mm" height="30mm"');
+  });
+  it("a Code 128 barcode is as wide as its sample text needs", () => {
+    // 13 characters: 0.3 mm x (11 x 13 + 55) modules
+    expect(codeBox("fmt.barcode(params.invoiceNo, height_mm=8)", scope)).toContain('width="59.4mm" height="8mm"');
+  });
+  it("other expressions are left alone", () => {
+    expect(codeBox("fmt.money(totals.grand)", scope)).toBeNull();
   });
 });

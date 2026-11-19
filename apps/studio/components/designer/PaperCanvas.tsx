@@ -56,17 +56,19 @@ function useDocumentFonts() {
 }
 
 const PAPER_CSS = `
-:host { display: block; }
-.jd-sheet { position: relative; background: #fff; color: #000; box-shadow: 0 2px 12px rgba(0,0,0,.18); margin: 0 auto; }
+:host { all: initial; display: block; } /* Studio's inherited styles (line-height, font, color) stop here */
+.jd-sheet { box-sizing: border-box; position: relative; background: #fff; color: #000; box-shadow: 0 2px 12px rgba(0,0,0,.18); margin: 0 auto; }
 .jd-margin { position: absolute; left: 0; right: 0; overflow: hidden; color: #555; pointer-events: none; }
 .jd-margin-label { position: absolute; right: 4px; top: 2px; font: 10px system-ui; color: #9aa; }
-.jd-body { position: relative; }
+.jd-body { position: relative; display: flow-root; } /* the page's content box; holds the document's margins */
+.jd-doc { margin: 8px; } /* Chromium's default body margin, which the PDF has too; report.css may change it */
 .jd-break { position: absolute; left: -8mm; right: -8mm; border-top: 1px dashed #d33; pointer-events: none; }
 .jd-break span { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #d33; background: #fff; padding: 0 4px; }
 .jd-guide { position: absolute; inset: 0; outline: 1px dashed #c8d3e0; pointer-events: none; }
 .jd-chip { display: inline-block; padding: 0 4px; border-radius: 4px; font: 0.82em ui-monospace, monospace; line-height: 1.3; }
 .jd-expr { background: #e6f0ff; color: #1f4fa3; }
 .jd-tag { background: #fff0db; color: #8a5300; }
+.jd-unknown { font: 0.8em ui-monospace, monospace; }
 .jd-editing { outline: 2px solid #f0a020; outline-offset: 2px; cursor: text; }
 .jd-editing .jd-chip { user-select: all; }
 .jd-editing .jd-if { cursor: pointer; }
@@ -136,9 +138,9 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
           <div style={style} className={own?.attrs.find((a) => a.name === "class")?.value ?? undefined}>
             {b.lists.map((l, i) => {
               const col = own?.children.filter((c) => c.kind === "element")[i];
-              const colStyle = col && col.kind === "element" ? styleObject(col.attrs.find((a) => a.name === "style")?.value ?? "") : {};
+              const colAttr = (name: string) => (col && col.kind === "element" ? (col.attrs.find((a) => a.name === name)?.value ?? "") : "");
               return (
-                <div key={l.key} style={colStyle} className="jd-container">
+                <div key={l.key} style={styleObject(colAttr("style"))} className={`jd-container ${colAttr("class")}`.trim()}>
                   {renderList(l.list, scope, listId(b, i))}
                 </div>
               );
@@ -154,7 +156,11 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
           only = d.branches.findIndex((br) => br.keyword === "else" || test(br.test, scope) === true);
           if (d.branches.some((br, i) => i < (only < 0 ? d.branches.length : only) && br.keyword !== "else" && test(br.test, scope) === undefined)) only = -2;
         }
-        inner = (
+        inner =
+          only >= 0 && scope ? (
+            // the sample picks a branch: drawn as the PDF would draw it, with no frame or label
+            <div>{renderList(b.lists[only].list, scope, listId(b, only))}</div>
+          ) : (
           <div>
             {b.lists.map((l, i) =>
               only >= -1 && scope && i !== only ? null : (
@@ -165,7 +171,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
               ),
             )}
           </div>
-        );
+          );
         break;
       }
       case "repeat": {
@@ -233,8 +239,8 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
               }}
             >
               {margin("header.html", true)}
-              <div ref={body} className="jd-body jd-doc" style={{ width: `${paper.contentWidthMm}mm` }}>
-                {renderList(blocks, sample, "root")}
+              <div ref={body} className="jd-body" style={{ width: `${paper.contentWidthMm}mm` }}>
+                <div className="jd-doc">{renderList(blocks, sample, "root")}</div>
                 {breaks.map((at, i) => (
                   <div key={at} className="jd-break" style={{ top: `${at}px` }}>
                     <span>หน้า {i + 2}</span>

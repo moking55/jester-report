@@ -104,10 +104,11 @@
 
 ## Phase ตรวจ
 
-- [ ] **T11 ผืน vs PDF**
+- [x] **T11 ผืน vs PDF**
   - Acceptance: `quotation` และ `tax-invoice` (โหมดข้อมูลตัวอย่าง): จับภาพผืนกับหน้าแรกของ PDF, วัดตำแหน่งบล็อกหลัก ต่าง ≤ ~2 mm; บันทึกภาพและตัวเลขใน `tasks/v1.7/`
   - Verify: สคริปต์ Playwright (ไม่อยู่ใน E2E) + บันทึกผล
   - Files: `tasks/v1.7/fidelity/*`
+  - ผล (19 พ.ย.): ต่างมากสุด 0.53 mm หลังแก้ผืน 6 จุด — ดู `tasks/v1.7/fidelity/README.md`
 - [ ] **T12 E2E `designer.spec.ts`**
   - Acceptance: ตาม Testing Strategy v1.7 ของ SPEC-studio (blank → บล็อกครบ → วนซ้ำ + ตาราง → Custom Code ผิด/ถูก → undo/redo → บันทึก → Preview pdf → HTML ใหม่;
     comment ที่เขียนมือยังอยู่หลังแก้บล็อกอื่น)
