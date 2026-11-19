@@ -29,7 +29,7 @@
     เพิ่มหรือเปิดบังคับ → sample ได้ค่าตัวอย่างตาม spec และผ่านการตรวจด้วย `validate` ของ `lib/form.ts`
   - Verify: Vitest `tests/schema-edit.test.ts`
   - Files: `lib/schema-edit.ts`, `tests/schema-edit.test.ts`
-- [ ] **T4 `lib/field-refs.ts`: expression, "ไม่ถูกใช้", การอ้างก่อนเปลี่ยนชื่อ/ลบ**
+- [x] **T4 `lib/field-refs.ts`: expression, "ไม่ถูกใช้", การอ้างก่อนเปลี่ยนชื่อ/ลบ**
   - Acceptance: expression ตาม spec (params, data, list + list ลูก, `fmt.money`, `fmt.thai_date`); `unused(files)` ช่อง scalar ที่ไม่พบ `.<key>`
     ในไฟล์ `.html` และ expression ของ `report.json`; `references(files, path)` คืนชื่อไฟล์ที่พบ `.<key>` หรือ `["<key>"]`
   - Verify: Vitest `tests/field-refs.test.ts` กับ starter `quotation` (ไม่มีช่องไม่ถูกใช้ที่ผิด) และ `tax-invoice`
