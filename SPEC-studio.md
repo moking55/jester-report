@@ -933,7 +933,7 @@ export function replaceBlock(source: string, block: Block, html: string): string
 
 ## Open Questions v1.8
 
-1. `singlePage` ของ Gotenberg 9.4.1 ใช้กับ PDF ม้วนได้หรือไม่ — spike แรกของแผน
+1. ~~`singlePage` ของ Gotenberg~~ — ใช้ได้ (spike 20 พ.ย. 2026)
 2. snap ตาราง 1 mm หรือ 0.5 mm เป็นค่าเริ่ม (เสนอ 1 mm)
 
 ## Not Doing v1.8

@@ -234,6 +234,5 @@ Tahoma, ฟอนต์อื่นนอกจากที่ระบุ, ก�
 - `PageSetup`: `width_mm`, `height_mm` (หลังคิดแนวแล้ว) แทน `paper: "A4"`; ส่ง `paperWidth`/`paperHeight` เป็นนิ้ว (mm ÷ 25.4, ทศนิยม 4 ตำแหน่ง),
   `landscape=false` เสมอ (binder หมุนให้แล้ว)
 - ม้วน: `single_page=True` → ส่ง `singlePage=true` (Gotenberg พิมพ์เนื้อหาทั้งหมดเป็นหน้าเดียว สูงตามเนื้อหา)
-- **spike แรกของแผน:** Gotenberg 9.4.1 ใน image ของเรารองรับ `singlePage` และ PDF ม้วน 80 mm สูงเท่าเนื้อหาจริงหรือไม่;
-  ถ้าไม่ได้ เลือกวิธีสำรองในแผน (เช่น render รอบแรกเพื่อวัดความสูงแล้ว render ใหม่ด้วยความสูงนั้น)
+- **spike แล้ว (20 พ.ย. 2026, [tasks/v1.8/spike.md](tasks/v1.8/spike.md)):** Gotenberg 9.4.1 รองรับ `singlePage` — ม้วน 80 mm ได้หน้าเดียวสูงตามเนื้อหา (ไม่ต้อง render สองรอบ)
 - test: A5 แนวนอน, custom 100×50 mm, ม้วน 58/80 mm (live กับ Gotenberg)

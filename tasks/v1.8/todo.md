@@ -4,7 +4,7 @@
 
 ## Phase A: api
 
-- [ ] **T1 spike: ขนาดใด ๆ + ใบเสร็จม้วนใน Gotenberg**
+- [x] **T1 spike: ขนาดใด ๆ + ใบเสร็จม้วนใน Gotenberg**
   - Acceptance: สคริปต์ส่ง HTML จริงไป Gotenberg บน VM: A5 แนวนอน, custom 100×50 mm, 80 mm + `singlePage=true` (ข้อความยาว 3 ความยาว) →
     บันทึกขนาดหน้า PDF ที่ได้; ตัดสินวิธีทำม้วน (singlePage หรือ 2 รอบ) ใน plan.md
   - Verify: ตัวเลขขนาดหน้าจาก `pypdf` บันทึกใน `tasks/v1.8/spike.md`
