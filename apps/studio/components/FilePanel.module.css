@@ -182,3 +182,9 @@
   color: var(--color-textMuted);
   font-size: 0.85em;
 }
+
+.notice {
+  margin: calc(var(--sp) * 0.5) calc(var(--sp) * 1.5) 0;
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}

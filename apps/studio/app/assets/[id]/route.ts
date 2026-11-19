@@ -1,10 +1,10 @@
 // Assets of the workspace draft. Upload: a Route Handler, not a Server Action, because actions cap the
 // body at 1 MB by default and fonts are bigger. Read (GET ?name=): the image preview; the browser never
 // calls the api, so this forwards with the session.
+import { ASSET_NAME } from "@/lib/asset-name";
 import { apiRaw, ApiProblem } from "@/lib/api";
 import { isTemplateId, sameOrigin } from "@/lib/result";
 
-const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$/;
 
 const problem = (status: number, code: string, detail: string) =>
   Response.json({ type: "about:blank", title: code, status, code, detail, retryable: false }, { status });

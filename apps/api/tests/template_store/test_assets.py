@@ -79,6 +79,7 @@ def test_noto_and_otf():
         ("photo.avif", AVIF, "image/avif"),
         ("photo.avif", AVIF_MIF1, "image/avif"),
         ("scan.BMP", BMP, "image/bmp"),
+        ("anim.gif", GIF, "image/gif"),  # accepted from v1.7
     ],
 )
 def test_images(name, data, content_type):
@@ -97,7 +98,8 @@ def test_images(name, data, content_type):
         ("doc.svg", b"text before <svg></svg>"),
         ("noext", PNG),
         ("script.js", b"alert(1)"),
-        ("anim.gif", GIF),  # gif is not accepted
+        ("anim.gif", PNG),  # a png named .gif
+        ("logo.png", GIF),
         ("logo.webp", PNG),
         ("logo.webp", b"RIFF\0\0\0\0WAVEfmt "),  # RIFF, but audio
         ("logo.avif", b"\0\0\0\x18ftypheic\0\0\0\0mif1heic"),  # HEIC, not AVIF

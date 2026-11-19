@@ -153,7 +153,7 @@
   - ผล (19 พ.ย.): Vitest 298, tsc/eslint สะอาด; E2E ทั้ง 7 spec ผ่านบน stack สด 1.7.0-rc (2.0 นาที, ไม่ retry) — ขั้นลาก-ลบต้องรอ 150 ms
     เพราะ @dnd-kit กินคลิกที่ตามมาภายใน 50 ms; วัดผืน vs PDF ซ้ำบน build 1.7.0-rc ต่างมากสุด 0.53 mm
 
-- [ ] **T21 รูปทุกชนิดทั่วไป + ชื่อปลอดภัย**
+- [x] **T21 รูปทุกชนิดทั่วไป + ชื่อปลอดภัย**
   - Acceptance: api รับ gif (ตรวจ bytes) และนามสกุลตัวใหญ่ (เก็บเป็นตัวเล็ก); Studio `safeAssetName(name, existing)` (ช่องว่าง/ไทย/อักขระแปลก → `-`,
     `image.png` เมื่อไม่เหลืออะไร, `-2`… เมื่อซ้ำ) ใช้ทั้งหน้า code และ designer; แจ้งชื่อที่ได้
   - Verify: pytest `test_assets` (gif, .PNG); Vitest `safeAssetName`; เบราว์เซอร์อัปโหลด `โลโก้ บริษัท.PNG`, `a b.gif`

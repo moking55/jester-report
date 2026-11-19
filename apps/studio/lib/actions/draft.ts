@@ -1,5 +1,6 @@
 "use server";
 
+import { ASSET_NAME } from "@/lib/asset-name";
 import { api } from "@/lib/api";
 import { attempt, draftPath } from "@/lib/result";
 import type { Draft, PreparedData, Result, Run, ValidationResult } from "@/lib/workspace";
@@ -31,7 +32,6 @@ export async function deleteFile(templateId: string, name: string, revision: num
   return attempt(() => api<{ revision: number }>(draftPath(templateId, name), { method: "DELETE", ifMatch: revision }));
 }
 
-const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$/;
 
 export async function deleteAsset(templateId: string, name: string, revision: number): Promise<Result<{ revision: number }>> {
   if (!ASSET_NAME.test(name)) throw new Error("invalid asset name");

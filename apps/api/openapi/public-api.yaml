@@ -729,7 +729,7 @@ paths:
                 file: { type: string, format: binary }
             encoding:
               file:
-                contentType: image/png, image/jpeg, image/svg+xml, image/webp, image/avif, image/bmp, font/ttf, font/otf
+                contentType: image/png, image/jpeg, image/gif, image/svg+xml, image/webp, image/avif, image/bmp, font/ttf, font/otf
       responses:
         '201':
           description: Stored (content-addressed by sha256; uploading the same bytes is a no-op)
@@ -774,6 +774,7 @@ paths:
           content:
             image/png: { schema: { type: string, format: binary } }
             image/jpeg: { schema: { type: string, format: binary } }
+            image/gif: { schema: { type: string, format: binary } }
             image/svg+xml: { schema: { type: string, format: binary } }
             image/webp: { schema: { type: string, format: binary } }
             image/avif: { schema: { type: string, format: binary } }
@@ -1407,7 +1408,7 @@ components:
     AssetName:
       type: string
       description: Basename only; must not collide with text files or index/header/footer.html
-      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$'
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|gif|svg|webp|avif|bmp|ttf|otf)$'
 
     ErrorCode:
       type: string

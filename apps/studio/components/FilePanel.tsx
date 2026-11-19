@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
+import { ASSET_ACCEPT, isAssetName, isImageName, safeAssetName } from "@/lib/asset-name";
 import type { Asset, TextFile } from "@/lib/workspace";
 
 import styles from "./FilePanel.module.css";
 
 const REQUIRED = ["report.json", "template.html"]; // the api refuses to delete these
 const FILE_NAME = /^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$/;
-const ASSET = /\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$/i;
-const IMAGE = /\.(png|jpe?g|svg|webp|avif|bmp)$/i;
 const NAME_RULE = "ชื่อไฟล์ใช้ได้เฉพาะ A–Z a–z 0–9 . _ - และลงท้าย .html .css .json";
 
 type Props = {
@@ -35,6 +34,7 @@ export function FilePanel(props: Props) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null); // the name an upload got, when it is not the file's own
   const picker = useRef<HTMLInputElement>(null);
   const addMenu = useRef<HTMLDivElement>(null);
   const taken = (file: string) => files.some((f) => f.name === file);
@@ -64,7 +64,13 @@ export function FilePanel(props: Props) {
   /** Images and fonts become assets; .html .css .json become draft files with their text. */
   async function importFile(file: File) {
     setError(null);
-    if (ASSET.test(file.name)) return props.onUpload(file);
+    setNotice(null);
+    if (isAssetName(file.name)) {
+      // any file name: the api takes A–Z 0–9 . _ - only, so Studio picks such a name (never one already there)
+      const safe = safeAssetName(file.name, assets.map((a) => a.name))!;
+      if (safe !== file.name) setNotice(`อัปโหลด "${file.name}" เป็น ${safe}`);
+      return props.onUpload(safe === file.name ? file : new File([file], safe, { type: file.type }));
+    }
     if (!FILE_NAME.test(file.name)) return setError(`นำเข้า ${file.name} ไม่ได้: ${NAME_RULE} หรือเป็นรูป/ฟอนต์`);
     if (taken(file.name)) return setError(`มีไฟล์ ${file.name} อยู่แล้ว ลบหรือเปลี่ยนชื่อไฟล์ที่จะนำเข้าก่อน`);
     props.onAdd(file.name, await file.text());
@@ -141,7 +147,7 @@ export function FilePanel(props: Props) {
           ref={picker}
           type="file"
           hidden
-          accept=".html,.css,.json,.png,.jpg,.jpeg,.svg,.webp,.avif,.bmp,.ttf,.otf"
+          accept={`.html,.css,.json,${ASSET_ACCEPT}`}
           onChange={(e) => {
             const file = e.target.files?.[0];
             e.target.value = "";
@@ -170,6 +176,11 @@ export function FilePanel(props: Props) {
       {creating && name && !valid && (
         <p className={styles.error}>{taken(name) ? `มีไฟล์ ${name} อยู่แล้ว` : NAME_RULE}</p>
       )}
+      {notice && (
+        <p role="status" className={styles.notice}>
+          {notice}
+        </p>
+      )}
       {error && (
         <p role="alert" className={styles.error}>
           {error}
@@ -180,7 +191,7 @@ export function FilePanel(props: Props) {
       {assets.length === 0 && <p className={styles.hint}>รูปหรือฟอนต์ที่ template ใช้ นำเข้าผ่าน &quot;+ เพิ่มไฟล์&quot;</p>}
       {assets.map((a) => (
         <div key={a.name} className={styles.row}>
-          {IMAGE.test(a.name) ? (
+          {isImageName(a.name) ? (
             <button
               type="button"
               className={`${styles.name} ${styles.asset}`}
