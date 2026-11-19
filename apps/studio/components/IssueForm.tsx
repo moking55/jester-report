@@ -8,6 +8,7 @@ import {
   emptyValues,
   fieldPointer,
   formSpec,
+  moneyDisplay,
   pointers,
   renderBody,
   sampleValues,
@@ -53,8 +54,25 @@ function filenameOf(disposition: string | null, fallback: string): string {
   return disposition?.match(/filename="([^"]+)"/i)?.[1] ?? fallback;
 }
 
+/** A decimal box that shows 1,250.50 when not focused; the value stays the text typed ("1250.5"). */
+function MoneyInput(props: React.InputHTMLAttributes<HTMLInputElement> & { value: string; onValue: (v: string) => void }) {
+  const { value, onValue, ...rest } = props;
+  const [editing, setEditing] = useState(false);
+  return (
+    <input
+      {...rest}
+      type="text"
+      inputMode="decimal"
+      value={editing ? value : moneyDisplay(value)}
+      onFocus={() => setEditing(true)}
+      onBlur={() => setEditing(false)}
+      onChange={(e) => onValue(e.target.value)}
+    />
+  );
+}
+
 export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
-  const spec = useMemo(() => formSpec(source.reportJson, source.schemaJson), [source]);
+  const spec = useMemo(() => formSpec(source.reportJson, source.schemaJson, source.formJson), [source]);
   const [values, setValues] = useState<FormValues>(() => emptyValues(spec));
   const [filename, setFilename] = useState("");
   const [errors, setErrors] = useState<Errors>({});
@@ -125,6 +143,18 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
     const input =
       field.kind === "boolean" ? (
         <input {...common} type="checkbox" checked={value === true} onChange={(e) => onChange(e.target.checked)} />
+      ) : field.kind === "enum" && field.widget === "radio" && !inRow ? (
+        <span role="radiogroup" aria-labelledby={`${id}-label`} className={styles.radios}>
+          {field.options?.map((o) => (
+            <label key={o}>
+              <input type="radio" name={id} value={o} checked={value === o} onChange={() => onChange(o)} /> {o}
+            </label>
+          ))}
+        </span>
+      ) : field.kind === "decimal" && field.widget === "money" ? (
+        <MoneyInput {...common} value={String(value)} onValue={onChange} />
+      ) : field.kind === "text" && field.widget === "textarea" && !inRow ? (
+        <textarea {...common} rows={3} maxLength={field.maxLength} value={String(value)} onChange={(e) => onChange(e.target.value)} />
       ) : field.kind === "enum" ? (
         <select {...common} value={String(value)} onChange={(e) => onChange(e.target.value)}>
           <option value="">{field.required ? "— เลือก —" : "— ไม่ระบุ —"}</option>
@@ -156,8 +186,8 @@ export function IssueForm({ templateId, source, onPdf, onBody }: Props) {
       );
     }
     return (
-      <div key={field.key} className={styles.field} data-pointer={pointer}>
-        <label htmlFor={id}>
+      <div key={field.key} className={`${styles.field} ${field.width ? styles[field.width] : ""}`} data-pointer={pointer}>
+        <label htmlFor={id} id={`${id}-label`}>
           {field.label}
           {field.required && <span className={styles.required}> *</span>}
         </label>

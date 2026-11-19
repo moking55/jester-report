@@ -4,9 +4,12 @@
 // Values are kept as the text the user typed. The body is assembled from that text, never through
 // JSON.parse + stringify of numbers, so 12345678901234567.89 reaches the api exactly (like lib/render.ts).
 
+import { readLayout, type Layout, type Widget, type Width } from "./form-layout";
+
 export type Scalar = "text" | "date" | "decimal" | "integer" | "number" | "enum" | "boolean" | "json";
 
-type Base = { key: string; label: string; description?: string; required: boolean };
+// widget and width come from form.json (v1.6); absent → the v1.4 look
+type Base = { key: string; label: string; description?: string; required: boolean; widget?: Widget; width?: Width };
 export type ScalarField = Base & {
   kind: Scalar;
   options?: string[]; // enum
@@ -100,8 +103,23 @@ const PARAM_KIND: Record<string, Scalar> = {
   boolean: "boolean",
 };
 
-/** The form for a version: its report.json parameters and data.schema.json. */
-export function formSpec(reportJson: string, schemaJson: string): FormSpec {
+/** A copy of `field` (and its children) with the widget and width form.json gives its pointer. */
+function withLayout(field: Field, pointer: string, layout: Layout): Field {
+  const own = layout[pointer] ?? {};
+  const out = { ...field, ...(own.widget ? { widget: own.widget } : {}), ...(own.width ? { width: own.width } : {}) };
+  if (out.kind === "object") return { ...out, fields: out.fields.map((f) => withLayout(f, `${pointer}/${f.key}`, layout)) };
+  if (out.kind === "array") {
+    // columns are keyed by the array's pointer and the column, without a row number
+    const item = out.item.kind === "object"
+      ? { ...out.item, fields: out.item.fields.map((f) => withLayout(f, `${pointer}/${f.key}`, layout)) }
+      : out.item;
+    return { ...out, item };
+  }
+  return out;
+}
+
+/** The form for a version: its report.json parameters, data.schema.json and form.json (v1.6, optional). */
+export function formSpec(reportJson: string, schemaJson: string, formJson?: string): FormSpec {
   const report = JSON.parse(reportJson) as Json;
   const parameters = isObject(report.parameters) ? report.parameters : {};
   const params: Field[] = Object.entries(parameters).map(([key, raw]) => {
@@ -120,7 +138,19 @@ export function formSpec(reportJson: string, schemaJson: string): FormSpec {
         typeof def === "boolean" ? def : typeof def === "number" ? String(def) : typeof def === "string" ? def : undefined,
     };
   });
-  return { params, data: fieldFromSchema(JSON.parse(schemaJson), "data", true) };
+  const layout = readLayout(formJson).fields;
+  return {
+    params: params.map((f) => withLayout(f, `/params/${f.key}`, layout)),
+    data: withLayout(fieldFromSchema(JSON.parse(schemaJson), "data", true), "/data", layout),
+  };
+}
+
+/** How a money field shows a valid decimal when it is not being typed in: "1250.5" → "1,250.50". */
+export function moneyDisplay(value: string): string {
+  const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
+  if (!m) return value;
+  const [, sign, whole, frac = ""] = m;
+  return `${sign}${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${frac.padEnd(2, "0")}`;
 }
 
 // ---- values ---------------------------------------------------------------------------------------

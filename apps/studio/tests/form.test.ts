@@ -5,6 +5,7 @@ import {
   fieldFromSchema,
   fieldPointer,
   formSpec,
+  moneyDisplay,
   pointers,
   renderBody,
   sampleValues,
@@ -181,5 +182,63 @@ describe("pointers from the api", () => {
     expect(fieldPointer("/data/items/1/nope", known)).toBe("/data/items/1");
     expect(fieldPointer("/params/issueDate", known)).toBe("/params/issueDate");
     expect(fieldPointer("/filename", known)).toBeNull();
+  });
+});
+
+describe("form.json (v1.6)", () => {
+  const report = JSON.stringify({ parameters: { note: { type: "string" } } });
+  const schema = JSON.stringify({
+    type: "object",
+    properties: {
+      customer: { type: "object", properties: { address: { type: "string" }, taxId: { type: "string" } } },
+      pay: { type: "string", enum: ["เงินสด", "โอน"] },
+      items: { type: "array", items: { type: "object", properties: { unitPrice: { type: "string", format: "decimal" } } } },
+    },
+  });
+  const form = JSON.stringify({
+    formVersion: 1,
+    fields: {
+      "/params/note": { widget: "textarea" },
+      "/data/customer/address": { widget: "textarea", width: "full" },
+      "/data/customer/taxId": { width: "half" },
+      "/data/pay": { widget: "radio", width: "third" },
+      "/data/items/unitPrice": { widget: "money" },
+    },
+  });
+
+  it("puts widgets and widths on fields by pointer, table columns without a row number", () => {
+    const spec = formSpec(report, schema, form);
+    expect(spec.params[0]).toMatchObject({ key: "note", widget: "textarea" });
+    const root = spec.data as ObjectField;
+    const customer = root.fields[0] as ObjectField;
+    expect(customer.fields.map((f) => [f.key, f.widget, f.width])).toEqual([
+      ["address", "textarea", "full"],
+      ["taxId", undefined, "half"],
+    ]);
+    expect(root.fields[1]).toMatchObject({ kind: "enum", widget: "radio", width: "third" });
+    const item = (root.fields[2] as ArrayField).item as ObjectField;
+    expect(item.fields[0]).toMatchObject({ kind: "decimal", widget: "money" });
+  });
+
+  it("is the v1.4 form without form.json or with a broken one", () => {
+    expect(formSpec(report, schema)).toEqual(formSpec(report, schema, "{broken"));
+    expect(JSON.stringify(formSpec(report, schema))).not.toContain("widget");
+  });
+
+  it("does not change what is sent: money stays the text typed", () => {
+    const spec = formSpec(report, schema, form);
+    const values = emptyValues(spec);
+    const data = values.data as Record<string, unknown>;
+    data.items = [{ unitPrice: "1250.5" }];
+    expect(renderBody("t", spec, values)).toContain('"unitPrice":"1250.5"');
+  });
+
+  it("shows money with thousands and two decimals, leaves anything else alone", () => {
+    expect(moneyDisplay("1250.5")).toBe("1,250.50");
+    expect(moneyDisplay("1234567")).toBe("1,234,567.00");
+    expect(moneyDisplay("-1000.125")).toBe("-1,000.125");
+    expect(moneyDisplay("12345678901234567.89")).toBe("12,345,678,901,234,567.89");
+    expect(moneyDisplay("abc")).toBe("abc");
+    expect(moneyDisplay("")).toBe("");
   });
 });

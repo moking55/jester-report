@@ -163,3 +163,35 @@
 .kept a {
   color: var(--color-primary);
 }
+
+/* v1.6: widths from form.json on a 6-column grid (full = 6, half = 3, third = 2) */
+.form,
+.group {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.form > *,
+.group > * {
+  grid-column: 1 / -1;
+}
+
+.form > .half,
+.group > .half {
+  grid-column: span 3;
+}
+
+.form > .third,
+.group > .third {
+  grid-column: span 2;
+}
+
+.radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px calc(var(--sp) * 2);
+}
+
+.radios label {
+  color: var(--color-text);
+  font-size: 1em;
+}

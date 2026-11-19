@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { Workspace } from "@/components/Workspace";
 import { api, ApiProblem } from "@/lib/api";
+import { FORM_FILE } from "@/lib/form-layout";
 import { draftPath, isTemplateId } from "@/lib/result";
 import type { components } from "@/lib/types.gen";
 import type { Draft, IssueSource } from "@/lib/workspace";
@@ -19,7 +20,13 @@ async function issueSource(id: string, version: number): Promise<IssueSource | n
     const data = (JSON.parse(reportJson) as { data?: { schema?: string; samples?: string[] } }).data ?? {};
     const schemaJson = data.schema ? byName.get(data.schema) : undefined;
     if (!schemaJson) return null;
-    return { version, reportJson, schemaJson, sampleJson: data.samples?.[0] ? byName.get(data.samples[0]) : undefined };
+    return {
+      version,
+      reportJson,
+      schemaJson,
+      sampleJson: data.samples?.[0] ? byName.get(data.samples[0]) : undefined,
+      formJson: byName.get(FORM_FILE),
+    };
   } catch {
     return null; // a published version always parses; anything else falls back to the code view
   }
