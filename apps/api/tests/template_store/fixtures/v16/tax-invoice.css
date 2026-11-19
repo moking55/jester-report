@@ -1,0 +1,29 @@
+body { font-family: "TH Sarabun New"; font-size: 15pt; }
+table { width: 100%; border-collapse: collapse; }
+thead { display: table-header-group; }
+tr { break-inside: avoid; }
+.n { text-align: right; }
+.c { text-align: center; }
+
+.head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8mm; }
+.seller img { height: 14mm; display: block; margin-bottom: 2mm; }
+.title { text-align: right; }
+.title h1 { margin: 0; font-size: 28pt; }
+
+.meta { margin: 4mm 0; }
+.meta td { border: 1px solid #555; padding: 2mm 3mm; vertical-align: top; }
+.meta .doc { width: 32%; }
+.meta .code { margin-top: 1mm; }
+
+.items th, .items td { border: 1px solid #555; padding: 1mm 2mm; }
+.items th { background: #eee; }
+
+.foot { display: flex; gap: 6mm; margin-top: 3mm; }
+.words { flex: 1; }
+.pay { display: flex; align-items: center; gap: 3mm; margin-top: 3mm; }
+.sums { width: 45%; }
+.sums td { padding: 1mm 2mm; border-bottom: 1px solid #ccc; }
+.sums .grand td { font-weight: bold; border-top: 2px solid #000; border-bottom: 3px double #000; }
+
+.sign { margin-top: 14mm; text-align: center; }
+.sign td { width: 50%; }

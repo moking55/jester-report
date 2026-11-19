@@ -1,0 +1,17 @@
+<link rel="stylesheet" href="report.css">
+<img src="logo.png" alt="">
+<h1>ใบเสนอราคา</h1>
+<p>เลขที่ {{ params.quoteId }} · วันที่ {{ fmt.thai_date(params.docDate) }}<br>เรียน {{ data.customer.name }}</p>
+<table>
+  <thead><tr><th>รหัส</th><th>รายการ</th><th class="n">จำนวน</th><th class="n">ราคา/หน่วย</th><th class="n">จำนวนเงิน</th></tr></thead>
+  <tbody>
+  {% for item in lists.items %}
+    <tr><td>{{ item.id }}</td><td>{{ item.description }}</td><td class="n">{{ item.qty }}</td>
+        <td class="n">{{ fmt.money(item.unitPrice) }}</td><td class="n">{{ fmt.money(item.amount) }}</td></tr>
+  {% endfor %}
+    <tr><td colspan="4">รวม</td><td class="n">{{ fmt.money(totals.subtotal) }}</td></tr>
+    <tr><td colspan="4">ภาษีมูลค่าเพิ่ม 7%</td><td class="n">{{ fmt.money(totals.vat) }}</td></tr>
+    <tr><td colspan="4">ยอดสุทธิ</td><td class="n">{{ fmt.money(totals.grand) }}</td></tr>
+  </tbody>
+</table>
+<p>({{ fmt.baht_text(totals.grand) }})</p>

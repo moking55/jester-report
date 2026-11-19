@@ -91,11 +91,16 @@
 
 ## Phase G4: starter
 
-- [ ] **T10 เขียน starter ใหม่ + เทียบ PDF**
+- [x] **T10 เขียน starter ใหม่ + เทียบ PDF**
   - Acceptance: `template.html` ของ 5 starter อยู่ในรูปแบบบล็อก (Custom Code เฉพาะ: ตารางแบ่งกลุ่มของ sales-grouped, `{% macro %}` ของ tax-invoice);
     test live: render ไฟล์เดิม (เก็บเป็น fixture) และไฟล์ใหม่ด้วย sample → ข้อความ+ตำแหน่งทุกชิ้นทุกหน้าต่าง ≤ 0.5 pt (pypdf)
   - Verify: pytest บน VM `tests/template_store`; Vitest round-trip + จำแนกบล็อกของไฟล์ใหม่ (เกือบไม่มี Custom Code)
   - Files: `starters/*/template.html` (+ `report.css` ถ้าย้าย class), `tests/template_store/test_starter_pdf.py`, `tests/template_store/fixtures/v16/*.html`
+  - ทำแล้ว (19 พ.ย.): quotation/blank/sales-grouped เป็นบล็อกอยู่แล้ว (sales-grouped เหลือตารางแบ่งกลุ่มเป็น Custom Code); purchase-order ถอด `<section>`;
+    tax-invoice: head/meta/foot/pay/sign เป็น `data-jd="row"` + class เดิม, sums เป็น `data-jd="summary"`, เหลือ macro `branch()` (ไม่แสดงผล);
+    report.css ของ tax-invoice: meta/sign เป็น flex (doc = `calc(32% - 1.4px)` เท่าเซลล์ 32% ของตาราง collapse เดิม), `.sums { height: 100% }`
+    (เดิมตารางถูก flex ยืด), `.pay svg { display: block }`; test live บน VM: 5 starter ข้อความ+ตำแหน่งตรงกัน ≤ 0.5 pt, api 469 ผ่าน;
+    Vitest `starters.test.ts` (จำนวน Custom Code)
 
 ## Phase ตรวจ
 

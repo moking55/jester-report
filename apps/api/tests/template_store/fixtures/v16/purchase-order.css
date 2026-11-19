@@ -1,0 +1,5 @@
+body { font-family: "TH Sarabun New"; font-size: 16pt; }
+table { width: 100%; border-collapse: collapse; }
+thead { display: table-header-group; }
+tr { break-inside: auto; }
+.n { text-align: right; }

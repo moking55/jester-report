@@ -1,18 +1,16 @@
 <link rel="stylesheet" href="report.css">
 {% for order in lists.orders %}
-<section>
-  <h2>ใบสั่งซื้อ {{ order.orderId }} · {{ order.supplier }}</h2>
-  <table>
-    <thead><tr><th>รหัส</th><th>รายละเอียด</th><th class="n">จำนวนเงิน</th></tr></thead>
-    <tbody>
-    {% for d in order.details %}
-      <tr><td>{{ d.detailId }}</td><td>{{ d.description }}</td><td class="n">{{ fmt.money(d.amount) }}</td></tr>
-    {% else %}
-      <tr><td colspan="3">ไม่มีรายการ</td></tr>
-    {% endfor %}
-      <tr><td colspan="2">รวม {{ order.orderId }}</td><td class="n">{{ fmt.money(order.total) }}</td></tr>
-    </tbody>
-  </table>
-</section>
+<h2>ใบสั่งซื้อ {{ order.orderId }} · {{ order.supplier }}</h2>
+<table>
+  <thead><tr><th>รหัส</th><th>รายละเอียด</th><th class="n">จำนวนเงิน</th></tr></thead>
+  <tbody>
+  {% for d in order.details %}
+    <tr><td>{{ d.detailId }}</td><td>{{ d.description }}</td><td class="n">{{ fmt.money(d.amount) }}</td></tr>
+  {% else %}
+    <tr><td colspan="3">ไม่มีรายการ</td></tr>
+  {% endfor %}
+    <tr><td colspan="2">รวม {{ order.orderId }}</td><td class="n">{{ fmt.money(order.total) }}</td></tr>
+  </tbody>
+</table>
 {% endfor %}
 <p>รวมทุกใบ {{ fmt.money(totals.grand) }}</p>

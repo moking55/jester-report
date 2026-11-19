@@ -1,0 +1,78 @@
+{#
+  ใบกำกับภาษีเต็มรูป (starter ของ Jester)
+  ช่องในแบบนี้ทำตามประมวลรัษฎากร มาตรา 86/4 ตามที่ผู้พัฒนาทราบ ยังไม่ได้ให้ผู้เชี่ยวชาญด้านภาษีตรวจ
+  ก่อนใช้ออกใบกำกับภาษีจริง ตรวจกับกรมสรรพากรหรือผู้สอบบัญชีของคุณเองว่าครบถ้วน
+  (ชื่อ "ใบกำกับภาษี", ผู้ขาย/ผู้ซื้อ + เลขประจำตัวผู้เสียภาษี + สาขา, เลขที่/เล่มที่, รายการสินค้าหรือบริการ,
+  ภาษีมูลค่าเพิ่มแยกจากมูลค่า, วันที่ออก)
+#}
+{%- macro branch(code) -%}
+  {%- if code == "00000" %}สำนักงานใหญ่{% elif code %}สาขาที่ {{ code }}{% endif -%}
+{%- endmacro -%}
+<link rel="stylesheet" href="report.css">
+<div class="head">
+  <div class="seller">
+    <img src="logo.png" alt="">
+    <b>{{ data.seller.name }}</b> ({{ branch(data.seller.branch) }})<br>
+    {{ data.seller.address }}<br>
+    เลขประจำตัวผู้เสียภาษีอากร {{ data.seller.taxId }}{% if data.seller.phone %} · โทร {{ data.seller.phone }}{% endif %}
+  </div>
+  <div class="title">
+    <h1>ใบกำกับภาษี</h1>
+    <div>Tax Invoice</div>
+  </div>
+</div>
+
+<table class="meta">
+  <tr>
+    <td class="buyer">
+      <b>ผู้ซื้อ</b> {{ data.buyer.name }}{% if data.buyer.branch %} ({{ branch(data.buyer.branch) }}){% endif %}<br>
+      {{ data.buyer.address }}
+      {% if data.buyer.taxId %}<br>เลขประจำตัวผู้เสียภาษีอากร {{ data.buyer.taxId }}{% endif %}
+    </td>
+    <td class="doc">
+      {% if params.bookNo %}เล่มที่ {{ params.bookNo }}<br>{% endif %}
+      เลขที่ <b>{{ params.invoiceNo }}</b><br>
+      วันที่ {{ fmt.thai_date(params.issueDate) }}
+      <div class="code">{{ fmt.barcode(params.invoiceNo, height_mm=8) }}</div>
+    </td>
+  </tr>
+</table>
+
+<table class="items">
+  <thead>
+    <tr><th>ลำดับ</th><th>รหัส</th><th>รายการ</th><th class="n">จำนวน</th><th>หน่วย</th><th class="n">ราคาต่อหน่วย</th><th class="n">จำนวนเงิน</th></tr>
+  </thead>
+  <tbody>
+  {% for item in lists.items %}
+    <tr>
+      <td class="c">{{ loop.index }}</td><td>{{ item.code }}</td><td>{{ item.description }}</td>
+      <td class="n">{{ fmt.number(item.qty, 2) }}</td><td>{{ item.unit }}</td>
+      <td class="n">{{ fmt.money(item.unitPrice) }}</td><td class="n">{{ fmt.money(item.amount) }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<div class="foot">
+  <div class="words">
+    ({{ fmt.baht_text(totals.grand) }})
+    {% if data.promptpay %}
+    <div class="pay">
+      {{ fmt.qr(fmt.promptpay(data.promptpay, totals.grand), size_mm=28) }}
+      <div>สแกนจ่ายด้วย PromptPay<br>ยอด {{ fmt.money(totals.grand) }} บาท</div>
+    </div>
+    {% endif %}
+  </div>
+  <table class="sums">
+    <tr><td>มูลค่าสินค้าหรือบริการ</td><td class="n">{{ fmt.money(totals.subtotal) }}</td></tr>
+    <tr><td>ภาษีมูลค่าเพิ่ม {{ fmt.number(data.vatRate) }}%</td><td class="n">{{ fmt.money(totals.vat) }}</td></tr>
+    <tr class="grand"><td>จำนวนเงินรวมทั้งสิ้น</td><td class="n">{{ fmt.money(totals.grand) }}</td></tr>
+  </table>
+</div>
+
+<table class="sign">
+  <tr>
+    <td>ผู้รับสินค้า / บริการ<br><br>........................................<br>วันที่ ............................</td>
+    <td>ผู้มีอำนาจลงนาม<br><br>........................................<br>วันที่ ............................</td>
+  </tr>
+</table>
