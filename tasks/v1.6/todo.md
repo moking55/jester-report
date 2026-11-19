@@ -119,6 +119,11 @@
     (ผืนเตี้ยของ 1280×720 ทำให้การ์ดสุดท้ายอยู่ในแถบ auto-scroll) และตรวจว่ามีช่องวางก่อนปล่อยทุกครั้ง
   - ข้อจำกัด: ลากการ์ดที่อยู่ใกล้ขอบบน/ล่างของผืน auto-scroll จะเลื่อนผืน (ดูจากขอบการ์ดที่ลาก ไม่ใช่ pointer) — ตำแหน่งยังถูกเพราะชดเชย scroll
 
+- **starter `blank` มี `header.html` + `footer.html` (19 พ.ย., ผู้ใช้ขอ):** หัวกระดาษตัวอย่าง + "หน้า x/y" แบบ starter อื่น (ไม่อ้าง `data.title` เพื่อไม่ให้
+  "ไม่ถูกใช้" ของ template.html เพี้ยน); ตรวจ: pytest `tests/template_store` + `test_templates.py` + `tests/render_service` บน VM ผ่าน
+  (live test 1 ตัวล้มตอน Gotenberg ล่มขณะ VM load 17 → restart แล้ว render_service 52/52 ผ่าน); ruff สะอาด; สร้างจาก blank บน stack ใหม่
+  (api+studio `1.6.0-rc`) ได้ 6 ไฟล์ และ preview PDF มีหัวกระดาษกับ "หน้า 1/1"; E2E 6/6 ผ่าน
+
 ## Checkpoint: ปล่อย v1.6.0
 
 - [x] studio 4 คำสั่ง + E2E ผ่านทั้งหมด
