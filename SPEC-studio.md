@@ -653,3 +653,180 @@ export function renameField(files: BuilderFiles, at: FieldPath, newKey: string):
 
 designer ลากวางตัวเอกสาร (MVP ถัดไป) · ช่องโชว์/ซ่อนตามเงื่อนไข · ช่องคำนวณในฟอร์ม · อัปโหลดรูป/ไฟล์ · ตารางซ้อนตาราง ·
 กลุ่มที่มีแต่ในหน้าจอ · builder แก้ `lists`/`totals`/template · undo หลายขั้น (มีแค่ "ยกเลิกการแก้" ทั้งหมด) · หัวหน้าทีมจัดฟอร์ม · role
+
+---
+
+# v1.7: Document Designer (G1–G3)
+
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.7 (interview 19 พ.ย. 2026)
+
+## Objective
+
+dev จัดหน้าเอกสาร (`template.html`) ด้วยการลากวางบนผืน A4 ที่จำลองกระดาษจริง แทนการเขียน HTML/CSS เอง — สิ่งที่เห็นบนผืนตรงกับ PDF ที่ render
+
+**สำเร็จเมื่อ:**
+- starter ทั้ง 5 ตัวเปิดใน designer แล้วแก้ได้เกือบทั้งหน้า (ส่วนที่ยังไม่รองรับเป็น Custom Code) และ PDF เหมือนก่อนเขียนใหม่ (SPEC-template-store v1.7)
+- dev สร้างใบเสนอราคาใหม่ทั้งหน้าจาก starter `blank` (โลโก้, หัวเอกสาร 2 คอลัมน์, ตารางรายการ, สรุปยอด, QR) โดยไม่เปิด editor HTML แล้ว PDF ตรงกับผืน
+- dev แก้ HTML มือ (เพิ่ม comment, จัดบรรทัด, เขียน `{% if %}` เอง) → เปิด designer → แก้บล็อกอื่น → บันทึก: ส่วนที่ไม่ได้แก้เหมือนเดิมทุกตัวอักษร
+
+## สมมติฐาน v1.7 (ผู้ใช้ตัดสินใน interview)
+
+1. **ผู้ใช้คือ dev**; หัวหน้าทีมไม่ใช้ designer
+2. **`template.html` เป็นความจริงเดียว** แบบ site builder: designer อ่านไฟล์ → ต้นไม้บล็อก → เขียนกลับไฟล์เดียวกัน (ไม่มี `design.json`)
+3. **ส่วนที่ไม่ได้แก้คงทุกตัวอักษร** ตอนบันทึก (การเว้นบรรทัด, comment `{# #}`, Jinja ที่เขียนมือ, ลำดับ attribute) — parser ของเราเองที่จำตำแหน่งต้นฉบับ
+   ไม่ใช่ DOM ของ browser (ซึ่งย้าย `{% for %}` ออกจาก `<table>` และจัดรูปแบบใหม่)
+4. **จัดวางแบบไหลต่อกัน** บนลงล่าง แถวแบ่งคอลัมน์ได้ — ไม่มีวางตามพิกัด (ข้อมูลยาวไม่แน่นอน: ตารางต้องดันส่วนล่างและขึ้นหน้าใหม่ได้)
+5. **A4 แนวตั้ง/แนวนอน** ตาม `report.json` → `page` ที่มีอยู่ (ไม่แก้ api)
+6. **สไตล์ = `style="…"`** บน element เฉพาะ property ที่ designer รู้จัก; `class` และ property อื่นคงไว้; `report.css` อ่านอย่างเดียว
+7. **หน้าแยกเต็มจอ** `/templates/<id>/designer`, บันทึกของตัวเอง; PDF จริงดูใน modal
+
+## หน้าจอ
+
+- **ทางเข้า:** ปุ่ม **"Document Designer"** มุมขวาของหัวช่อง code editor (แสดงเสมอ ไม่ว่าเปิดไฟล์ไหน; designer แก้ `template.html`)
+  - มีไฟล์ที่ยังไม่บันทึกใน editor → ถามก่อน (แบบไปโหมดออกเอกสาร) เพราะ designer อ่านไฟล์ที่บันทึกแล้ว
+- **toolbar:** ชื่อรายงาน · "แสดงข้อมูลตัวอย่าง" (สวิตช์) · undo / redo · "Preview pdf" · สถานะบันทึก · **"บันทึก"** (Ctrl+S) · "กลับไปแก้ code"
+  - ออกทั้งที่ยังไม่บันทึก (ปุ่มหรือปิดแท็บ) → ถามก่อน
+- **ซ้าย:** palette (บล็อก) และแท็บ "ช่องข้อมูล" (ต้นไม้เดียวกับแท็บใน workspace, ลากช่องลงผืนหรือลงข้อความได้)
+- **กลาง:** ผืนกระดาษ (ดู "ผืน A4") เลื่อนได้, zoom 50–150% (ค่าเริ่มต้นพอดีความกว้าง)
+- **ขวา:** แผงคุณสมบัติของบล็อกที่เลือก
+- **Preview pdf:** `previewDraft` ด้วย `template.html` ที่ยังไม่บันทึก **ไม่ได้** (preview ใช้ draft ที่บันทึกแล้ว) → ปุ่มนี้บันทึกก่อนถ้ามีการแก้ (ถามว่า "บันทึกแล้วดู PDF?")
+  แล้วเปิด PDF ใน modal ขนาดเกือบเต็มจอ (iframe แบบเดียวกับ PDF Preview เดิม)
+- archive แล้ว → อ่านอย่างเดียว (ไม่มี palette, ไม่มีบันทึก)
+
+## ผืน A4 (G2)
+
+- ขนาดตาม `page.orientation`: 210×297 mm หรือ 297×210 mm; พื้นที่เนื้อหา = ลบ `marginsMm` (top/bottom/left/right) — วาดด้วยหน่วย `mm` ของ CSS
+- **ขอบกระดาษ** สีจาง; **โซน header/footer** ในขอบบน/ล่าง แสดง `header.html`/`footer.html` แบบอ่านอย่างเดียว (expression เป็นชิป)
+- **เส้นตัดหน้า:** เนื้อหาสูงเกินพื้นที่หนึ่งหน้า → เส้นประ "หน้า 2", "หน้า 3", … ทุกความสูงพื้นที่เนื้อหา (ประมาณการ: การตัดจริงของ Chromium เลี่ยงตัดกลางแถว
+  และซ้ำหัวตาราง — ใช้ "Preview pdf" ยืนยัน)
+- **เหมือน PDF:** เอกสารอยู่ใน Shadow DOM แยกจากสไตล์ของ Studio; ใส่ CSS เดียวกับที่ binder ใส่ (`@font-face` ของ `report.json` → `fonts.body`,
+  `body { font-family }`, `BASE_CSS`) + `report.css` ของ draft + asset (รูป/ฟอนต์) จาก route เดิมของ Studio
+- **ฟอนต์:** Studio เสิร์ฟ TH Sarabun New (Regular/Bold, ไฟล์และใบอนุญาตเดียวกับ `infra/gotenberg/fonts`, GPL v2+ with font exception)
+  ที่ `/fonts/` ให้ผืนใช้ชื่อ family เดียวกับที่ Gotenberg มี; ฟอนต์อื่นจาก asset ของรายงานใช้ได้เหมือนเดิม
+
+## บล็อก
+
+ทุกบล็อกเป็นรูปแบบ HTML ตายตัวที่ designer เขียนเองและอ่านกลับได้ — HTML ที่ไม่ตรงรูปแบบใดเป็น **Custom Code**
+
+| บล็อก | HTML ที่ designer อ่าน/เขียน | แก้ได้ |
+| --- | --- | --- |
+| ข้อความ | `<p>`, `<h1>`–`<h3>`, `<div>` ที่ข้างในมีแต่ข้อความ, `<b>`/`<i>`/`<br>` และ `{{ expr }}` | ข้อความบนผืน; ชิปช่องข้อมูล; ระดับหัวข้อ |
+| ค่าช่องข้อมูล | `<div>{{ expr }}</div>` ที่มีแค่ expression เดียว | expression (เลือกจากช่องข้อมูล), `fmt` |
+| รูป / โลโก้ | `<img src="<asset>">` | asset, ความกว้าง (mm หรือ %), จัดแนว |
+| แถวแบ่งคอลัมน์ | `<div data-jd="row">` ที่มี `<div data-jd="col">` 2–4 ตัว (`display:flex` ใน `style`) | จำนวนคอลัมน์, สัดส่วนความกว้าง, ระยะห่าง; คอลัมน์รับบล็อกอื่น |
+| ตารางรายการ | `<table>` ที่มี `<thead>` หนึ่งแถว, `<tbody>` = `{% for v in lists.X %}<tr>…</tr>{% else %}<tr>…</tr>{% endfor %}` ตามด้วยแถวท้ายตาราง (รวม) ได้ | list, คอลัมน์ (หัว, expression, จัดแนว, กว้าง), แถว "ไม่มีรายการ", แถวท้าย, เส้นกรอบ |
+| สรุปยอด | `<table data-jd="summary">` แถวละ `<td>ป้าย</td><td>{{ expr }}</td>` | แถว (ป้าย + expression), จัดชิดขวา, ตัวหนาแถวสุดท้าย |
+| QR / PromptPay / บาร์โค้ด | `<div>{{ fmt.qr(...) }}</div>` / `fmt.promptpay` / `fmt.barcode` | ค่าที่เข้ารหัส (expression), ขนาด mm |
+| เส้นคั่น | `<hr>` | ความหนา, สี (ชุดสีที่กำหนด) |
+| ช่องว่าง | `<div data-jd="space" style="height:…mm"></div>` | ความสูง |
+| ขึ้นหน้าใหม่ | `<div data-jd="page-break" style="break-after:page"></div>` | — |
+| **เงื่อนไข** | `{% if c %}…{% elif c2 %}…{% else %}…{% endif %}` ที่ครอบบล็อกทั้งก้อน (ไม่อยู่กลางข้อความ) | เงื่อนไขแต่ละสาขา (modal: เลือกช่อง + ตัวดำเนินการ หรือพิมพ์เอง), เพิ่ม/ลบสาขา; **แต่ละสาขาลากบล็อกใส่ได้** |
+| **Custom Code** | อะไรก็ได้ที่ไม่ตรงข้างบน (รวม `{% macro %}`, `{% set %}`, loop ซ้อน, `{% if %}` กลางข้อความ, ตารางแบ่งกลุ่ม) และบล็อกเปล่าที่ลากจาก palette | ดับเบิลคลิก → modal code editor (CodeMirror, HTML + Jinja) |
+
+- `data-jd="…"` คือเครื่องหมายของ designer บน element ที่จำเป็นต้องแยกแยะ (แถว/คอลัมน์/สรุป/ช่องว่าง/ขึ้นหน้า) — ไม่มีผลต่อ PDF
+- `<link rel="stylesheet" href="report.css">` บนสุดของไฟล์: ไม่ใช่บล็อก คงไว้เสมอ (designer เพิ่มให้ถ้ารายงานมี `report.css` แต่ template ไม่มี link)
+- **Custom Code บนผืน:** แสดงผล HTML ข้างในจริง (Jinja เป็นชิป / ค่าตัวอย่างตามโหมด) ในกรอบเส้นประมีป้าย "Custom Code"; ลากย้ายได้; ข้างในไม่ใช่บล็อก
+- **เงื่อนไขบนผืน:** โหมด expression แสดงทุกสาขาพร้อมป้าย "ถ้า …" / "ไม่เช่นนั้น"; โหมดข้อมูลตัวอย่างแสดงเฉพาะสาขาที่ตรงกับตัวอย่าง (ประเมินเงื่อนไขที่ประเมินได้ — ดู "ข้อมูลตัวอย่าง")
+
+### คุณสมบัติสไตล์ (เขียนลง `style=`)
+
+`font-size` (pt), `font-weight` (ปกติ/หนา), `text-align`, `color` (ชุดสี 8 สี + ดำ), `margin-top`/`margin-bottom` (mm), `width` (รูป, คอลัมน์),
+`border` ของตาราง (ไม่มี/เส้นนอก/ทุกช่อง) — property อื่นใน `style` ที่ dev เขียนเองคงไว้ตามลำดับเดิม
+
+## การแก้บนผืน
+
+- **เลือก:** คลิก; **ลาก:** จับที่ handle ของบล็อก (`@dnd-kit` + ช่อง "วางที่นี่" แบบ v1.6 รวมวางลงคอลัมน์และสาขาเงื่อนไข; วางไม่ได้ = ช่องแดง + เหตุผล)
+- **palette → ผืน:** ลากบล็อกใหม่ (ค่าเริ่มต้นที่อ่านง่าย เช่นตารางใหม่ถามเลือก list ก่อนวาง)
+- **ข้อความ:** ดับเบิลคลิกเพื่อพิมพ์บนผืน; ชิปช่องข้อมูลลบได้ทั้งก้อนแต่แก้ทีละตัวอักษรไม่ได้; เพิ่มชิปด้วยการลากจากแท็บ "ช่องข้อมูล" หรือพิมพ์ `{{` แล้วเลือก
+  (autocomplete เดียวกับ editor)
+- **ลบ:** Delete หรือปุ่ม × บนบล็อกที่เลือก
+- **undo/redo:** Ctrl+Z / Ctrl+Shift+Z หลายขั้น (ทุกการแก้ = หนึ่งขั้น; พิมพ์ข้อความต่อเนื่อง = หนึ่งขั้น) ล้างเมื่อบันทึกสำเร็จหรือโหลดใหม่
+
+## ข้อมูลตัวอย่าง
+
+- **ค่าเริ่มต้น: expression** — ชิป `{{ data.customer.name }}` (เงิน/วันที่แสดงชื่อ `fmt`)
+- **"แสดงข้อมูลตัวอย่าง":** ใช้ `prepareDraft` (view model ของ sample แรก จาก draft ที่บันทึกแล้ว) แล้วแทนค่าในฝั่ง browser สำหรับ expression ที่ประเมินได้:
+  path (`data.x.y`, `params.x`, `item.col`, `totals.x`, `loop.index`), `fmt.money`, `fmt.number`, `fmt.thai_date` — ตารางแสดงแถวตามตัวอย่าง
+  - expression อื่น (`fmt.baht_text`, `fmt.qr`, filter, คำนวณ) → ยังเป็นชิป
+  - เงื่อนไขที่ประเมินได้: path, `==`/`!=` กับค่าคงที่, `not`, `and`/`or` ของสองอย่างนี้; อื่น ๆ → แสดงทุกสาขา
+
+## บันทึก
+
+- เขียน `template.html` ด้วย `putDraftFile` + revision; `412` → หยุด, "โหลดใหม่" (การแก้หาย) — ไม่เขียนทับ
+- เขียนเฉพาะช่วงข้อความของบล็อกที่แก้/ย้าย/เพิ่ม/ลบ; ข้อความระหว่างบล็อกที่ไม่เกี่ยวคงเดิม
+- บล็อกใหม่เขียนด้วยการเยื้อง 2 ช่องว่างตามระดับที่วาง
+
+## Tech Stack v1.7
+
+ของเดิม (Next.js 16.4.6, React 19.3.1, `@dnd-kit` 3 ตัว, CodeMirror ใน Custom Code modal) · **ไม่เพิ่ม dependency** — parser HTML+Jinja เขียนเอง (ดู Open Questions)
+· ไฟล์ฟอนต์ TH Sarabun New 2 ไฟล์ + ใบอนุญาต คัดลอกเข้า `apps/studio/public/fonts/`
+
+## Commands v1.7
+
+```bash
+cd apps/studio && npm run lint && npm run typecheck && npm test && npm run build
+STUDIO_E2E_URL=http://localhost:3002 STUDIO_E2E_API_URL=http://localhost:8002 npx playwright test   # stack jester-e2e บน VM
+```
+
+## Project Structure v1.7
+
+```
+apps/studio/
+  lib/doc-parse.ts          → ใหม่: tokenizer + ต้นไม้ HTML/Jinja ที่จำ offset ต้นฉบับ; รู้จักบล็อกตามตาราง; เขียนกลับแบบแทนเฉพาะช่วง — pure
+  lib/doc-edit.ts           → ใหม่: แก้ต้นไม้ (เพิ่ม/ย้าย/ลบ/สไตล์/ข้อความ/ตาราง/เงื่อนไข) + undo stack — pure
+  lib/doc-sample.ts         → ใหม่: ประเมิน expression/เงื่อนไขชุดเล็กกับ view model ตัวอย่าง
+  components/designer/      → ใหม่: DesignerPage, PaperCanvas (Shadow DOM + เส้นตัดหน้า), Palette, PropsPanel, CustomCodeModal, PdfModal
+  app/(app)/templates/[id]/designer/page.tsx → ใหม่
+  components/Workspace.tsx  → ปุ่ม "Document Designer" ที่หัวช่อง code
+  public/fonts/             → TH Sarabun New + LICENSE
+  tests/doc-parse.test.ts, doc-edit.test.ts, doc-sample.test.ts; e2e/designer.spec.ts
+```
+
+## Code Style v1.7
+
+แก้ข้อความไฟล์ด้วยช่วง offset ไม่ใช่ serialize ทั้งต้นไม้:
+
+```ts
+/** Replace one block's source range; every byte outside it stays. */
+export function replaceBlock(source: string, block: Block, html: string): string {
+  return source.slice(0, block.start) + html + source.slice(block.end);
+}
+```
+
+## Testing Strategy v1.7
+
+- **Vitest `doc-parse`:** round-trip: อ่าน → เขียนโดยไม่แก้ = ข้อความเดิมทุกตัวอักษร สำหรับ starter ทั้ง 5 (ก่อนและหลังเขียนใหม่) และไฟล์ทดสอบที่มี comment,
+  `{% macro %}`, `{% if %}` กลางข้อความ, HTML ผิดรูป (แท็กไม่ปิด); จำแนกบล็อกทุกชนิดในตาราง; ส่วนที่ไม่รู้จักเป็น Custom Code ที่ครอบช่วงข้อความถูก
+- **Vitest `doc-edit`:** แก้บล็อกหนึ่งแล้ว diff ของไฟล์มีแค่ช่วงนั้น; ย้าย/ลบ/เพิ่มในคอลัมน์และสาขาเงื่อนไข; สไตล์คง property ที่ไม่รู้จัก; undo/redo คืนข้อความเดิมทุกตัวอักษร
+- **Vitest `doc-sample`:** ค่า path, `fmt.money`/`thai_date` ตรงกับฝั่ง api (ค่าทดสอบชุดเดียวกับ test ของ data-prep), เงื่อนไขที่ประเมินได้/ไม่ได้
+- **ความตรงของผืนกับ PDF (ด้วยมือ + สคริปต์):** starter `quotation` และ `tax-invoice` — จับภาพผืน (โหมดข้อมูลตัวอย่าง) เทียบภาพหน้าแรกของ PDF ด้วยตา + วัดตำแหน่ง
+  บล็อกหลัก (ต่างกันไม่เกิน ~2 mm) บันทึกผลใน `tasks/`
+- **E2E `designer.spec.ts`:** blank → Document Designer → ลากแถว 2 คอลัมน์, โลโก้, ข้อความที่มีชิป, ตารางผูก list, สรุปยอด, เงื่อนไขที่มีบล็อกข้างใน, Custom Code (แก้ใน modal)
+  → undo/redo → บันทึก → "Preview pdf" เปิด modal ได้ PDF → กลับหน้า code เห็น HTML ใหม่; แก้ HTML มือ (comment) แล้วเปิด designer แก้บล็อกอื่น → comment ยังอยู่
+
+## Boundaries v1.7
+
+- **Always:** ส่วนที่ไม่ได้แก้คงทุกตัวอักษร; ไม่ทิ้ง property/attribute ที่ไม่รู้จัก; ถามก่อนทิ้งการแก้; เขียนผ่าน `putDraftFile` + `If-Match`
+- **Ask first:** dependency ใหม่ (เช่น HTML parser), endpoint ใหม่ (เช่น render HTML ตัวอย่างฝั่ง api), แก้ `report.css` หรือ header/footer จาก designer
+- **Never:** ใช้ DOM ของ browser parse/serialize `template.html`; เขียนทับเมื่อ revision ไม่ตรง; รัน Jinja จริงใน browser กับข้อมูลที่ไม่ใช่ตัวอย่าง
+
+## Success Criteria v1.7
+
+1. starter ทั้ง 5 ตัว: round-trip ไม่เปลี่ยนแม้แต่ตัวอักษร; เปิดใน designer แล้วบล็อกส่วนใหญ่แก้ได้ (Custom Code เฉพาะส่วนที่ตกลงใน SPEC-template-store v1.7)
+2. ใบเสนอราคาใหม่ทั้งหน้าจาก `blank` ทำได้โดยไม่เปิด editor HTML; PDF ตรงกับผืน (ตำแหน่งบล็อกหลักต่างไม่เกิน ~2 mm)
+3. แก้บล็อกหนึ่งแล้ว diff ใน Versions แสดงเฉพาะบล็อกนั้น
+4. Custom Code แก้ได้ใน modal; เงื่อนไขลากบล็อกใส่สาขาได้
+5. lint, typecheck, test, build, E2E ทุก spec ผ่าน
+
+## Open Questions v1.7
+
+1. **parser:** เขียน tokenizer + tree เอง (แนะนำ: ไม่มี dependency, ควบคุม offset และพฤติกรรมกับ Jinja ได้เต็มที่; parse5 ทำ foster-parenting กับ `{% for %}` ในตารางเหมือน browser)
+   หรือเพิ่ม library?
+2. **loop ครอบหลายบล็อก** (`purchase-order`: `{% for order in lists.orders %}<section>…</section>{% endfor %}`): เพิ่มบล็อก **"วนซ้ำ"** (กล่องที่ลากบล็อกใส่ได้ แบบเดียวกับเงื่อนไข)
+   ในรอบนี้ (แนะนำ: ไม่อย่างนั้น starter นี้เป็น Custom Code เกือบทั้งหน้า) หรือรอบหน้า?
+3. **Preview pdf ตอนมีการแก้ที่ยังไม่บันทึก:** บันทึกก่อนแล้วดู (แนะนำ: ไม่มี endpoint ใหม่) หรือเพิ่ม endpoint preview ที่รับ `template.html` ชั่วคราว?
+
+## Not Doing v1.7
+
+กระดาษนอกจาก A4 · วางตามพิกัด · แก้ header/footer ใน designer (แสดงอย่างเดียว) · group-by ในตาราง (Custom Code) · class หรือแก้ `report.css` ·
+ประเมิน Jinja ครบชุดใน browser · หัวหน้าทีมใช้ designer · หลายคนแก้พร้อมกัน

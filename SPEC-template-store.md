@@ -375,3 +375,18 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 
 - test ใหม่: ทุก starter, ทุก parameter และทุก property ใน schema (เดินลงไปใน object และ item ของ array) มี `title` ที่ไม่ว่าง
 - test starter เดิม (validate + prepare + bind + golden) ผ่านโดยไม่แก้
+
+---
+
+# v1.7: starter อ่านได้ใน Document Designer (G4)
+
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [SPEC-studio.md](SPEC-studio.md) หัวข้อ v1.7
+
+- เขียน `template.html` ของ starter ทั้ง 5 ตัวใหม่ให้อยู่ในรูปแบบบล็อกของ designer (ตาราง "บล็อก" ใน SPEC-studio v1.7) — `report.css`, ข้อมูล, `report.json` ไม่เปลี่ยน
+  นอกจาก class ที่จำเป็นต้องย้ายเป็น `style=` เพื่อให้แก้ใน designer ได้
+- **PDF ต้องเหมือนเดิม:** render ทุก starter ด้วย sample ก่อน/หลัง แล้วเทียบภาพทีละหน้า (ต่างได้เฉพาะ anti-aliasing) — test live ใน `tests/template_store`
+- ส่วนที่ยอมเป็น Custom Code:
+  - `sales-grouped`: ตารางแบ่งกลุ่ม (`lists.records.groups` + loop ซ้อน)
+  - `tax-invoice`: `{% macro branch %}` และ `{% if %}` กลางบรรทัดที่อยู่ในข้อความ
+  - `purchase-order`: loop ครอบ section — ขึ้นกับ Open Question ข้อ 2 ของ SPEC-studio v1.7 (บล็อก "วนซ้ำ")
+- ตรวจ: pytest `tests/template_store` (starter ทุกตัวผ่าน `load_definition` + render live เทียบภาพ) และ Vitest round-trip ของ `doc-parse` กับ starter ใหม่

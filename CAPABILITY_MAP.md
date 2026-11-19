@@ -118,3 +118,22 @@ api ถือ `form.json` เป็นไฟล์ข้อความทึบ
 
 **ไม่ทำ:** designer ลากวางตัวเอกสาร (**MVP ถัดไป**, ผู้ใช้ตัดสิน 19 พ.ย. 2026) · ช่องโชว์/ซ่อนตามเงื่อนไข · ช่องคำนวณในฟอร์ม ·
 อัปโหลดรูป/ไฟล์ · ตารางซ้อนตาราง · ให้หัวหน้าทีมจัดฟอร์มเอง · role · builder แก้ `lists`/`totals`/`template.html`
+
+## v1.7: Document Designer (ร่าง 19 พ.ย. 2026 หลัง interview — รออนุมัติ)
+
+เป้า: dev จัดหน้าเอกสาร (`template.html`) ด้วยการลากวางบนผืน A4 ที่จำลองกระดาษจริง แทนการเขียน HTML/CSS เอง และ PDF ออกมาตรงกับผืน
+**`template.html` เป็นความจริงเดียว** (แบบ site builder ไม่มีไฟล์ข้อมูลแยก): ส่วนที่ designer รู้จักเป็นบล็อกแก้ได้, ส่วนอื่นเป็น "Custom Code"
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| G1 `lib/doc-parse.ts`: parser HTML+Jinja ที่จำตำแหน่งในข้อความต้นฉบับ → ต้นไม้บล็อก; เขียนกลับเฉพาะส่วนที่แก้ (ส่วนอื่นคงทุกตัวอักษร) | `studio` | — |
+| G2 ผืน A4 จำลอง: ขนาด/ขอบ/แนวตาม `report.json`, ฟอนต์ TH Sarabun New ที่ Studio เสิร์ฟ, `report.css` + CSS ของ binder, เส้นตัดหน้า, โซน header/footer | `studio` | G1 |
+| G3 หน้า Document Designer: palette, ลากวาง (`@dnd-kit` + ช่อง "วางที่นี่"), แก้ข้อความบนผืน + ชิปช่องข้อมูล, แผงคุณสมบัติ (`style=`), Custom Code modal, undo/redo, บันทึก, "Preview pdf" modal | `studio` | G1, G2 |
+| G4 starter ทั้ง 5 ตัวเขียน `template.html` ใหม่ให้ designer อ่านออก — PDF เหมือนเดิม | `template-store` | G1 |
+
+Build order: G1 → G2 → G3, G4 (G4 คู่ขนานกับ G3 ได้หลัง G1) · ปล่อยเป็น `v1.7.0` · spec: [SPEC-studio.md](SPEC-studio.md) หัวข้อ v1.7,
+[SPEC-template-store.md](SPEC-template-store.md) หัวข้อ v1.7
+**ไม่มี endpoint ใหม่:** อ่าน/เขียนไฟล์ draft ด้วย `getDraft`/`putDraftFile`, PDF ด้วย `previewDraft`, ข้อมูลตัวอย่างด้วย `prepareDraft` เดิม
+
+**ไม่ทำ:** กระดาษนอกจาก A4 · วางตามพิกัด (absolute) · แก้ header/footer ใน designer · group-by ในตาราง (เป็น Custom Code) · class หรือแก้ `report.css` ·
+ให้หัวหน้าทีมใช้ designer
