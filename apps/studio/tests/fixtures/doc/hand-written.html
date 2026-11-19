@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="report.css">
+<!-- written by hand: the designer must keep every byte of this -->
+{# a Jinja comment
+   on two lines #}
+{%- set title = data.title | default("ไม่มีชื่อ") -%}
+<div   class="head"  data-x='1'>
+  <h1 style="color:#333;  font-size: 20pt">{{ title }}</h1>
+  <p>ผู้ซื้อ {{ data.buyer.name }}{% if data.buyer.taxId %} · เลขผู้เสียภาษี {{ data.buyer.taxId }}{% endif %}</p>
+</div>
+<table class="items">
+  <thead><tr><th>รายการ</th><th class="n">จำนวนเงิน</th></tr></thead>
+  <tbody>
+  {% for item in lists.items %}
+    <tr><td>{{ item.description }}</td><td class="n">{{ fmt.money(item.amount) }}</td></tr>
+  {% else %}
+    <tr><td colspan="2">ไม่มีรายการ</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+<style>.x > .y { color: red }</style>
+<p>{{ "<b>" ~ x ~ "</b>" }} &amp; a < b</p>

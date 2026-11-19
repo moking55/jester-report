@@ -1,6 +1,6 @@
 # Tasks v1.7: Document Designer
 
-แผน: [plan.md](plan.md) · สถานะ: **รออนุมัติ**
+แผน: [plan.md](plan.md) · สถานะ: **อนุมัติ 19 พ.ย. 2026 · กำลังทำ**
 
 กติกา: commit ทุก task, ไม่ push ระหว่างทาง; ผู้ใช้ทบทวนที่ checkpoint; อนุมัติแล้ว → version 1.7.0, tag `v1.7.0`, push `master` + tag;
 ไม่สร้าง GitHub Release; VM เป็นเครื่องทดสอบล้วน
@@ -12,7 +12,7 @@
 
 ## Phase G1: model (`lib/`, pure)
 
-- [ ] **T1 `doc-parse`: tokenizer + ต้นไม้ที่จำ offset**
+- [x] **T1 `doc-parse`: tokenizer + ต้นไม้ที่จำ offset**
   - Acceptance: token = แท็ก HTML (เปิด/ปิด/self-closing, attribute คงตัวอักษร), `{{ }}`, `{% %}` (รวม `-` trim), `{# #}`, ข้อความ — แต่ละตัวมี `[start,end)`;
     ต้นไม้จับคู่แท็ก HTML และ block tag ของ Jinja (`if/elif/else`, `for/else`, `macro`, `raw`, `set` แบบ block); แท็กไม่ปิด/ซ้อนผิด → node ปิดตัวเองไม่ throw;
     `print(tree)` คืนข้อความเดิมทุกตัวอักษร

@@ -1,6 +1,6 @@
 # แผน v1.7: Document Designer
 
-สถานะ: **รออนุมัติ** · task list: [todo.md](todo.md)
+สถานะ: **อนุมัติ 19 พ.ย. 2026** · task list: [todo.md](todo.md)
 ที่มา: [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) หัวข้อ v1.7, `SPEC-studio.md` และ `SPEC-template-store.md` หัวข้อ v1.7 (อนุมัติ 19 พ.ย. 2026) · ฐาน: tag `v1.6.0`
 
 ## Overview
