@@ -112,6 +112,7 @@ Build order: D1 → D2 → D3 · ปล่อยเป็น `v1.5.0` · ลำ�
 | E3 ฟอร์มออกเอกสารอ่าน `form.json` (ชนิด input, ความกว้าง) + แท็บ "ช่องข้อมูล" ใน workspace (copy expression, เตือนช่องที่เทมเพลตไม่ได้ใช้) | `studio` | E1 |
 
 Build order: E1 → E2, E3 · ปล่อยเป็น `v1.6.0` · spec: [SPEC-studio.md](SPEC-studio.md) หัวข้อ v1.6
+**dependency ใหม่:** `@dnd-kit/core` 6.3.1, `@dnd-kit/sortable` 10.0.0, `@dnd-kit/utilities` 3.2.2 (MIT, ผู้ใช้เลือก 19 พ.ย. 2026)
 **ไม่มีงานฝั่ง api:** `form.json` ผ่านรูปแบบชื่อ `TEXT_FILE` เดิม, publish คัดลอกทุกไฟล์ของ draft, export/import zip พาไปด้วย —
 api ถือ `form.json` เป็นไฟล์ข้อความทึบ (ไม่ตรวจ ไม่ใช้ตอน render)
 

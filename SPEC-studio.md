@@ -427,7 +427,7 @@ apps/studio/
 
 # v1.6: Form builder (E1–E3)
 
-สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.6 (interview 19 พ.ย. 2026)
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** (Open Questions ปิดแล้วใน interview รอบสอง) · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.6 (interview 19 พ.ย. 2026)
 
 ## Objective
 
@@ -449,7 +449,9 @@ dev สร้างข้อมูลนำเข้าของรายงา�
 3. **builder ไม่แตะ `template.html`, header/footer, `lists`, `totals`** — มีแค่แท็บ "ช่องข้อมูล" ให้ copy expression และเตือนช่องที่ไม่ถูกใช้;
    ข้อยกเว้นเดียว: เปลี่ยนชื่อ array ที่ `lists.*.path` ชี้อยู่ (ดู "เปลี่ยนชื่อและลบ")
 4. **แก้เฉพาะ draft** ตาม flow เดิม (ฟอร์มออกเอกสารยังใช้ version ที่ publish); รายงานที่ archive แล้ว builder อ่านอย่างเดียว
-5. **ไม่มี endpoint ใหม่:** บันทึกด้วย `putDraftFile` เดิม (`If-Match` revision); api ถือ `form.json` เป็นไฟล์ข้อความทึบ
+5. **ไม่มี endpoint ใหม่:** บันทึกทีละไฟล์ด้วย `putDraftFile` เดิม (`If-Match` revision); api ถือ `form.json` เป็นไฟล์ข้อความทึบ
+6. **ลากวางด้วย `@dnd-kit`** (ผู้ใช้เลือกเพื่อความลื่นและ performance): ลากด้วยเมาส์, สัมผัส และแป้นพิมพ์ (`KeyboardSensor`)
+7. **รูปแบบไฟล์:** builder เขียน JSON ใหม่ทั้งไฟล์ (2 ช่องว่าง) — การจัดบรรทัดที่ dev เขียนมือหาย ค่าและลำดับ key ไม่หาย (ผู้ใช้รับ)
 
 ## `form.json`
 
@@ -526,8 +528,11 @@ key ใหม่: builder เสนอ `field1`, `field2`, … (ตัวถั�
 - **บนจอ:** ซ้าย palette (9 ชนิด), กลาง ผืนฟอร์มสองส่วน "ข้อมูลเอกสาร" (parameters) และ "ข้อมูล" (schema), ขวา แผงคุณสมบัติของช่องที่เลือก;
   สลับแผงขวาเป็น "ตัวอย่างฟอร์ม" = `IssueForm` จริงจากค่าที่ยังไม่บันทึก (กรอกได้ ไม่มีปุ่มออก PDF)
 - **toolbar:** "บันทึก" (ปิดเมื่อไม่มีอะไรเปลี่ยน), "ยกเลิกการแก้", "กลับไปแก้ code"; ออกจากโหมดทั้งที่ยังไม่บันทึก → ถามก่อน
-- **ลากวาง:** ลากจาก palette ลงผืน, ลากย้ายในระดับเดียวกันและข้ามกลุ่ม/เข้าตาราง (ตามกติกาชนิด), มีเส้นบอกตำแหน่งที่จะวาง
-  - **ทุกการลากทำได้ด้วยแป้นพิมพ์:** การ์ดมีปุ่ม "ขึ้น"/"ลง"/"ย้ายไป…" และ palette กด Enter = เพิ่มท้ายส่วนที่เลือก
+- **ลากวาง (`@dnd-kit`):** ลากจาก palette ลงผืน, ลากย้ายในระดับเดียวกันและข้ามกลุ่ม/เข้าตาราง (ตามกติกาชนิด), ช่องอื่นขยับหลบแบบ animation,
+  วางไม่ได้ → เด้งกลับพร้อมบอกเหตุผล; ใช้ sensor ของเมาส์ (เริ่มลากเมื่อเลื่อน ≥ 5px เพื่อให้คลิกเลือกได้), สัมผัส (กดค้าง 200ms) และแป้นพิมพ์
+  - **แป้นพิมพ์:** Space ยก/วาง, ลูกศรย้าย, Esc ยกเลิก (ของ `@dnd-kit` พร้อมข้อความประกาศภาษาไทยสำหรับ screen reader);
+    palette กด Enter = เพิ่มท้ายส่วนที่เลือก
+  - **performance:** ผืนที่มี 150 ช่อง ลากแล้วไม่กระตุก — ลากไม่ render ทั้งผืนใหม่ทุกครั้งที่เมาส์ขยับ (การ์ด `memo`, state ของ builder เปลี่ยนเมื่อวางเท่านั้น)
 - **บันทึก:** เขียนเฉพาะไฟล์ที่เปลี่ยน ทีละไฟล์ตามลำดับ `data.schema.json` → sample → `report.json` → `form.json` ด้วย revision ล่าสุดต่อกัน;
   JSON 2 ช่องว่าง + ขึ้นบรรทัดท้ายไฟล์ (รูปแบบเดียวกับ starter: การจัดบรรทัดที่ dev เขียนมือหาย แต่ค่าและลำดับ key ไม่หาย)
   - `412` (มีคนแก้ draft ก่อน) → หยุด บอกว่าไฟล์ไหนบันทึกแล้ว และให้ "โหลดใหม่" (การแก้ใน builder หาย) — ไม่เขียนทับ
@@ -551,8 +556,17 @@ key ใหม่: builder เสนอ `field1`, `field2`, … (ตัวถั�
 
 ## Tech Stack v1.6
 
-Next.js 16.4.6 + React เดิม, `useImmer` สำหรับ state ของ builder, CSS Modules · ลากวาง: HTML5 Drag and Drop ของ browser + ปุ่มแป้นพิมพ์
-(ไม่เพิ่ม dependency — ดู Open Questions ข้อ 1)
+Next.js 16.4.6 + React 19.3.1 เดิม, `useImmer` สำหรับ state ของ builder, CSS Modules
+
+**dependency ใหม่ (ผู้ใช้อนุมัติ 19 พ.ย. 2026), pin version ตรง:**
+
+| package | version | license | หมายเหตุ |
+| --- | --- | --- | --- |
+| `@dnd-kit/core` | 6.3.1 | MIT | peer `react >=16.8` |
+| `@dnd-kit/sortable` | 10.0.0 | MIT | peer `@dnd-kit/core ^6.3.0` |
+| `@dnd-kit/utilities` | 3.2.2 | MIT | `CSS.Transform` |
+
+release ล่าสุดธ.ค. 2024 (ตรวจ 19 พ.ย. 2026) — เสถียรแต่ออกช้า; ใช้เฉพาะใน `FormBuilder` เพื่อเปลี่ยนได้ถ้าเลิกดูแล
 
 ## Commands v1.6
 
@@ -599,16 +613,17 @@ export function renameField(files: BuilderFiles, at: FieldPath, newKey: string):
   เปลี่ยน key อัปเดต required, form.json, sample, `lists.path` (รวม list ลูก); ลบ array ที่ list ชี้ = ปฏิเสธ;
   เพิ่มช่องบังคับแล้ว sample ยังผ่าน; parameter บังคับ + default = ล้าง default; key ซ้ำ/ผิดรูปแบบ = ปฏิเสธ;
   `oneOf`/`$ref` เป็นการ์ดอ่านอย่างเดียวและไม่เปลี่ยน
+- **performance (ด้วยมือในเบราว์เซอร์, บันทึกผลใน `tasks/`):** schema ทดสอบ 150 ช่อง → ลากข้ามผืนด้วย Performance panel ของ Chrome ไม่มี long task > 50ms ระหว่างลาก
 - **Vitest `form-layout`, `field-refs`, `form`:** form.json เสีย/pointer เก่าถูกข้าม; widget/width ถึง Field; expression ถูกรวม list ลูก; เตือนไม่ถูกใช้
 - **E2E `form-builder.spec.ts`:** สร้างจาก `blank` → โหมดออกแบบฟอร์ม → ลากครบ 9 ชนิด (ตาราง 3 คอลัมน์รวมเงิน) + 2 parameters ด้วยเมาส์
-  และย้ายหนึ่งช่องด้วยแป้นพิมพ์ → บันทึก → Problems ว่าง (`validateDraft` จริง) → แก้ `title` ใน `data.schema.json` มือ → กลับโหมดฟอร์มเห็นป้ายใหม่ →
+  และย้ายหนึ่งช่องด้วยแป้นพิมพ์ (Space, ลูกศร, Space) → บันทึก → Problems ว่าง (`validateDraft` จริง) → แก้ `title` ใน `data.schema.json` มือ → กลับโหมดฟอร์มเห็นป้ายใหม่ →
   publish → "ออกเอกสาร" เห็นช่องตามลำดับ, textarea, radio, ความกว้างครึ่ง → กรอก → ได้ `application/pdf`
 - lint, typecheck, test, build ผ่าน; E2E ทุก spec ผ่านบน stack ใหม่
 
 ## Boundaries v1.6
 
 - **Always:** เขียนผ่าน `putDraftFile` + `If-Match`; ไม่ทิ้ง keyword ที่ไม่รู้จัก; ทุก key ผ่านกติกา `Name` ก่อนเขียน; ถามก่อนทิ้งการแก้ที่ยังไม่บันทึก
-- **Ask first:** เพิ่ม dependency (เช่น `@dnd-kit`), endpoint ใหม่ (เช่นบันทึกหลายไฟล์แบบ atomic), ให้ api ตรวจ `form.json`
+- **Ask first:** dependency อื่นนอกจาก `@dnd-kit` สามตัวข้างบน, endpoint ใหม่ (เช่นบันทึกหลายไฟล์แบบ atomic), ให้ api ตรวจ `form.json`
 - **Never:** แก้ `template.html`/header/footer/`lists`/`totals` เอง (ยกเว้น `lists.*.path` ตอนเปลี่ยนชื่อ); เขียนทับเมื่อ revision ไม่ตรง
 
 ## Success Criteria v1.6
@@ -617,16 +632,15 @@ export function renameField(files: BuilderFiles, at: FieldPath, newKey: string):
 2. แก้ JSON มือแล้ว builder เห็นตรงกัน; builder บันทึกแล้วค่าที่ไม่รู้จักยังอยู่ครบ (round-trip ทุก starter)
 3. เปลี่ยนชื่อ/ลบช่องไม่ทำให้ sample หรือ `lists.path` เสีย และเตือนก่อนเมื่อเทมเพลตอาจใช้ช่องนั้น
 4. ฟอร์มออกเอกสารใช้ชนิด input และความกว้างจาก `form.json`; version เก่าไม่เปลี่ยน
-5. ลากวางทุกอย่างทำด้วยแป้นพิมพ์ได้
+5. ลากวางทุกอย่างทำด้วยเมาส์, สัมผัส และแป้นพิมพ์ได้; ผืน 150 ช่องลากไม่กระตุก
 6. lint, typecheck, test, build, E2E ผ่าน
 
 ## Open Questions v1.6
 
-1. **ลากวาง:** HTML5 DnD ของ browser + ปุ่มแป้นพิมพ์ (แนะนำ: ไม่เพิ่ม dependency; ข้อเสีย: animation น้อย, จอสัมผัสใช้ได้แค่ปุ่ม)
-   หรือเพิ่ม `@dnd-kit/core` + `@dnd-kit/sortable` (ลื่นกว่า, รองรับสัมผัส/แป้นพิมพ์ในตัว, +dependency)?
-2. **บันทึกหลายไฟล์:** ทีละไฟล์ด้วย `putDraftFile` (แนะนำ: ไม่มีงาน api; ล้มกลางทาง draft อาจค้างครึ่งทาง แต่กดบันทึกซ้ำได้)
-   หรือเพิ่ม endpoint บันทึกหลายไฟล์ใน transaction เดียว (ปลอดภัยกว่า, เพิ่มงาน `template-store` + `public-api`)?
-3. **รูปแบบ JSON หลังบันทึก:** builder เขียนใหม่ทั้งไฟล์แบบ 2 ช่องว่าง — การจัดบรรทัดที่ dev เขียนมือหาย (ค่าและลำดับ key ไม่หาย) รับได้ไหม?
+ไม่มี — ตัดสินใน interview รอบสอง 19 พ.ย. 2026:
+1. ลากวาง: `@dnd-kit` (ไม่ใช่ HTML5 DnD) เพื่อความลื่น, สัมผัส และ performance
+2. บันทึก: ทีละไฟล์ด้วย `putDraftFile` เดิม (ไม่เพิ่ม endpoint atomic)
+3. รูปแบบ JSON: เขียนใหม่ทั้งไฟล์แบบ 2 ช่องว่าง (ไม่ใช้ parser ที่รักษารูปแบบ)
 
 ## Not Doing v1.6
 
