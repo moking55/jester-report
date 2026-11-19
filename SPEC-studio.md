@@ -422,3 +422,213 @@ apps/studio/
 ## Not Doing v1.5
 
 เลขรันอัตโนมัติ · ลบทีละใบ · ห้ามแก้/ห้ามลบเพื่อเป็นหลักฐาน · ออกซ้ำจากใบเดิม (เติมฟอร์มจากใบเก่า) · role
+
+---
+
+# v1.6: Form builder (E1–E3)
+
+สถานะ: **ร่าง 19 พ.ย. 2026 — รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.6 (interview 19 พ.ย. 2026)
+
+## Objective
+
+dev สร้างข้อมูลนำเข้าของรายงานด้วยการลากวางใน Studio แทนการเขียน `data.schema.json` และ `parameters` ใน `report.json` เอง
+แล้วหัวหน้าทีมที่กด "ออกเอกสาร" ได้ฟอร์มที่จัดตามนั้น
+
+**สำเร็จเมื่อ:** dev สร้างรายงานใหม่จาก starter `blank` → ลากช่องครบทุกชนิด (รวมตารางรายการ) โดยไม่เปิดไฟล์ JSON → publish →
+หัวหน้ากรอกฟอร์มแล้วได้ PDF; dev แก้ `data.schema.json` ด้วยมือ → เปิด builder อีกครั้งเห็นค่าที่แก้
+
+## สมมติฐาน v1.6 (ผู้ใช้ตัดสินใน interview)
+
+1. **ผู้ใช้ builder คือ dev** — หัวหน้าทีมไม่จัดฟอร์มเอง; ไม่มี role
+2. **ไฟล์จริงคือความจริงเดียว:** builder อ่านจาก draft ทุกครั้งที่เปิดโหมด และเขียนกลับไปที่ `data.schema.json` + `parameters` ใน `report.json` โดยตรง
+   - ลำดับช่อง = ลำดับ key ใน schema/parameters (ไม่เก็บซ้ำใน `form.json`)
+   - กลุ่ม = `object` ใน schema (ไม่มีกลุ่มที่มีแต่ในหน้าจอ)
+   - สิ่งที่ JSON Schema ไม่มีที่เก็บ (ชนิด input, ความกว้าง) อยู่ใน `form.json`
+   - ส่วนที่ builder ไม่เข้าใจ (`oneOf`, `$ref`, `type` หลายชนิด, keyword อื่นที่ไม่อยู่ในตาราง) แสดงเป็นการ์ด "แก้ใน JSON" อ่านอย่างเดียว
+     และ **ค่าถูกเก็บไว้ครบ** ตอนเขียนกลับ (เช่น `additionalProperties`, `examples`, `$comment`)
+3. **builder ไม่แตะ `template.html`, header/footer, `lists`, `totals`** — มีแค่แท็บ "ช่องข้อมูล" ให้ copy expression และเตือนช่องที่ไม่ถูกใช้;
+   ข้อยกเว้นเดียว: เปลี่ยนชื่อ array ที่ `lists.*.path` ชี้อยู่ (ดู "เปลี่ยนชื่อและลบ")
+4. **แก้เฉพาะ draft** ตาม flow เดิม (ฟอร์มออกเอกสารยังใช้ version ที่ publish); รายงานที่ archive แล้ว builder อ่านอย่างเดียว
+5. **ไม่มี endpoint ใหม่:** บันทึกด้วย `putDraftFile` เดิม (`If-Match` revision); api ถือ `form.json` เป็นไฟล์ข้อความทึบ
+
+## `form.json`
+
+ไฟล์ข้อความใน draft (ไม่บังคับ, ชื่อตายตัว) — ไม่มีไฟล์ = ทุกช่องใช้ค่าเริ่มต้นตามชนิดใน schema (พฤติกรรม v1.4 ทุกอย่าง)
+
+```json
+{
+  "formVersion": 1,
+  "fields": {
+    "/params/note":           { "widget": "textarea" },
+    "/data/customer/address": { "widget": "textarea", "width": "full" },
+    "/data/customer/taxId":   { "width": "half" },
+    "/data/payment":          { "widget": "radio" },
+    "/data/items/unitPrice":  { "widget": "money" }
+  }
+}
+```
+
+- key = JSON pointer ของช่อง: `/params/<key>` หรือ `/data/...`; คอลัมน์ในตาราง = pointer ของ array ต่อด้วยชื่อคอลัมน์ (ไม่มี index)
+- `widget`: `textarea` (string), `radio` (enum), `money` (decimal: แสดงหลักพันเมื่อออกจากช่อง, ค่าที่ส่งยังเป็นข้อความเดิม เช่น `"1250.50"`) — อื่น ๆ ใช้ค่าเริ่มต้นตามชนิด
+- `width`: `full` | `half` | `third` (ค่าเริ่มต้น `full`; ไม่มีผลกับคอลัมน์ในตาราง)
+- อ่านแบบผ่อนปรน: parse ไม่ได้, `formVersion` ไม่ใช่ 1, pointer ที่ไม่มีช่องแล้ว, ค่าที่ไม่รู้จัก → **ข้าม** (ฟอร์มยังเปิดได้)
+  และ builder แสดงคำเตือนบนสุด; บันทึกครั้งถัดไป builder เขียนใหม่ในรูปแบบที่ถูกต้อง (pointer ที่ไม่มีช่องถูกลบ)
+
+## ชนิดช่องใน builder
+
+| palette | ใน `data.schema.json` | ใน `parameters` | `form.json` |
+| --- | --- | --- | --- |
+| ข้อความ | `{"type": "string"}` | `type: string` | — |
+| ข้อความหลายบรรทัด | `{"type": "string"}` | `type: string` | `widget: textarea` |
+| ตัวเลข | `{"type": "number"}` หรือ `"integer"` (สวิตช์ "จำนวนเต็ม") | `type: integer` เท่านั้น | — |
+| เงิน | `{"type": "string", "format": "decimal"}` | `type: decimal` | `widget: money` |
+| วันที่ | `{"type": "string", "format": "date"}` | `type: date` | — |
+| ตัวเลือก | `{"type": "string", "enum": [...]}` | `type: enum`, `values` | `widget: radio` ถ้าเลือก radio |
+| checkbox | `{"type": "boolean"}` | `type: boolean` | — |
+| กลุ่ม | `{"type": "object", "properties": {}}` | — (parameters ไม่มีกลุ่ม) | — |
+| ตารางรายการ | `{"type": "array", "items": {"type": "object", "properties": {}}}` | — | — |
+
+- คอลัมน์ในตาราง = ช่องชนิด scalar เท่านั้น (ไม่มีกลุ่มหรือตารางในตาราง); ลากกลุ่ม/ตารางลงตาราง → ไม่รับพร้อมบอกเหตุผล
+- กลุ่มซ้อนกลุ่มได้; ตารางอยู่ในกลุ่มได้; parameters รับเฉพาะชนิดที่มีคอลัมน์ "ใน parameters"
+
+### คุณสมบัติที่แก้ได้ (แผงขวา)
+
+| คุณสมบัติ | schema | parameter | หมายเหตุ |
+| --- | --- | --- | --- |
+| key | ชื่อ property | ชื่อ parameter | `^[A-Za-z_][A-Za-z0-9_]*$` (กติกา `Name` ของ api), ไม่ซ้ำในระดับเดียวกัน |
+| ป้าย | `title` | `title` (≤ 80) | ว่าง = ลบ key |
+| คำอธิบาย | `description` | `description` (≤ 300) | ว่าง = ลบ key |
+| บังคับกรอก | `required` ของ object แม่ | `required: true` | parameter: เปิดบังคับแล้ว `default` ถูกล้าง (api ห้ามมีทั้งคู่) |
+| ค่าเริ่มต้น | `default` | `default` | ตรวจชนิดก่อนเขียน |
+| ต่ำสุด/สูงสุด | `minimum`/`maximum` | — | ตัวเลข |
+| ความยาว | `minLength`/`maxLength` | `maxLength` | ข้อความ |
+| pattern | `pattern` | — | ตรวจว่า `new RegExp(p, "u")` อ่านได้ |
+| ตัวเลือก | `enum` | `values` | อย่างน้อย 1 ค่า ไม่ซ้ำ |
+| จำนวนแถว | `minItems`/`maxItems` | — | ตาราง |
+| ชนิด input / ความกว้าง | — | — | `form.json` |
+
+key ใหม่: builder เสนอ `field1`, `field2`, … (ตัวถัดไปที่ไม่ซ้ำ) — dev แก้ได้ทันที
+
+## เปลี่ยนชื่อและลบ
+
+- **เปลี่ยน key:** แก้ใน `properties`/`parameters` (คงลำดับ), `required`, pointer ใน `form.json`, key ในทุก sample ที่ `data.samples` ระบุ,
+  และ `lists.*.path` (รวม list ลูก) ที่ชี้ array นั้นหรือ array ข้างใน
+- **ลบ:** เอาออกจาก schema, `required`, `form.json`, ทุก sample; array ที่ `lists.*.path` ชี้อยู่ **ลบไม่ได้** พร้อมบอกชื่อ list (ต้องแก้ `report.json` เอง)
+- **เพิ่มช่องบังคับกรอก (หรือเปิดบังคับ):** ทุก sample ที่ยังไม่มีค่าได้ค่าตัวอย่างตามชนิด — `default` ถ้ามี; ไม่มี → `"ตัวอย่าง"`, `0`, `"0.00"`,
+  วันนี้, ค่าแรกของตัวเลือก, `false`, `{}` พร้อมช่องบังคับข้างใน, `minItems` แถว — เพื่อไม่ให้เกิด `SAMPLE_INVALID`
+- **ก่อนเปลี่ยน key หรือลบ:** ถ้าพบข้อความ `.<key>` หรือ `["<key>"]` ในไฟล์ `.html` ของ draft หรือใน expression ของ `report.json` →
+  dialog ยืนยันพร้อมรายชื่อไฟล์ ("เทมเพลตอาจยังใช้ช่องนี้: template.html") — builder **ไม่แก้** ไฟล์เหล่านั้น
+- หลังบันทึก builder เรียก `validateDraft` เดิมแล้วแสดงจำนวน problem ใน toolbar; expression ที่อ้างช่องเก่าเห็นในแท็บ Problems
+
+## โหมด "ออกแบบฟอร์ม" (E2)
+
+- URL `/templates/<id>?mode=form`; ปุ่ม "ออกแบบฟอร์ม" ใน toolbar ของ workspace (โหมด code) — มีไฟล์ที่ยังไม่บันทึก → ถามก่อน (เหมือนโหมดออกเอกสาร)
+- **บนจอ:** ซ้าย palette (9 ชนิด), กลาง ผืนฟอร์มสองส่วน "ข้อมูลเอกสาร" (parameters) และ "ข้อมูล" (schema), ขวา แผงคุณสมบัติของช่องที่เลือก;
+  สลับแผงขวาเป็น "ตัวอย่างฟอร์ม" = `IssueForm` จริงจากค่าที่ยังไม่บันทึก (กรอกได้ ไม่มีปุ่มออก PDF)
+- **toolbar:** "บันทึก" (ปิดเมื่อไม่มีอะไรเปลี่ยน), "ยกเลิกการแก้", "กลับไปแก้ code"; ออกจากโหมดทั้งที่ยังไม่บันทึก → ถามก่อน
+- **ลากวาง:** ลากจาก palette ลงผืน, ลากย้ายในระดับเดียวกันและข้ามกลุ่ม/เข้าตาราง (ตามกติกาชนิด), มีเส้นบอกตำแหน่งที่จะวาง
+  - **ทุกการลากทำได้ด้วยแป้นพิมพ์:** การ์ดมีปุ่ม "ขึ้น"/"ลง"/"ย้ายไป…" และ palette กด Enter = เพิ่มท้ายส่วนที่เลือก
+- **บันทึก:** เขียนเฉพาะไฟล์ที่เปลี่ยน ทีละไฟล์ตามลำดับ `data.schema.json` → sample → `report.json` → `form.json` ด้วย revision ล่าสุดต่อกัน;
+  JSON 2 ช่องว่าง + ขึ้นบรรทัดท้ายไฟล์ (รูปแบบเดียวกับ starter: การจัดบรรทัดที่ dev เขียนมือหาย แต่ค่าและลำดับ key ไม่หาย)
+  - `412` (มีคนแก้ draft ก่อน) → หยุด บอกว่าไฟล์ไหนบันทึกแล้ว และให้ "โหลดใหม่" (การแก้ใน builder หาย) — ไม่เขียนทับ
+  - ล้มกลางทาง → บอกไฟล์ที่บันทึกแล้ว/ยังไม่บันทึก; กดบันทึกซ้ำได้ (เขียนต่อเฉพาะที่ยังต่าง)
+- archive แล้ว: ผืนอ่านอย่างเดียว ไม่มี palette และปุ่มบันทึก
+
+## ฟอร์มออกเอกสารอ่าน `form.json` (E3)
+
+- `formSpec(reportJson, schemaJson, formJson?)` เพิ่ม `widget` และ `width` ให้ `Field`; ช่องจัดเป็น grid 6 คอลัมน์ (`full` = 6, `half` = 3, `third` = 2)
+- `textarea` → `<textarea>`; `radio` → กลุ่ม radio; `money` → ช่อง decimal ที่แสดงหลักพันเมื่อออกจากช่อง (ค่าภายในและที่ส่งยังเป็น `"1250.50"`)
+- version ที่ไม่มี `form.json` (ทุก version ก่อน v1.6) → ฟอร์มเหมือน v1.4 ทุกอย่าง
+
+## แท็บ "ช่องข้อมูล" (E3)
+
+- แท็บใหม่ข้าง Problems ในโหมด code: ต้นไม้ของทุกช่อง (ป้ายไทย + expression) ปุ่ม "คัดลอก" ต่อแถว
+  - parameter → `{{ params.quoteId }}`; ช่องใน schema → `{{ data.customer.name }}`
+  - array ที่มี `lists.<name>` ชี้ → `{% for item in lists.<name> %}…{% endfor %}` และคอลัมน์ → `{{ item.<col> }}`; ไม่มี list ชี้ → `data.<path>`
+  - เงิน → `{{ fmt.money(...) }}`, วันที่ → `{{ fmt.thai_date(...) }}`
+- **เตือน "ไม่ถูกใช้":** ช่อง scalar ที่ไม่พบ `.<key>` ในไฟล์ `.html` ใดของ draft และไม่พบใน expression ของ `report.json` → ป้ายสีเหลือง
+  (ตรวจแบบข้อความ ไม่ parse Jinja — เตือนพลาดได้เมื่อเข้าถึงแบบ dynamic เช่น `data[k]`; บอกไว้ในคำอธิบายของแท็บ)
+
+## Tech Stack v1.6
+
+Next.js 16.4.6 + React เดิม, `useImmer` สำหรับ state ของ builder, CSS Modules · ลากวาง: HTML5 Drag and Drop ของ browser + ปุ่มแป้นพิมพ์
+(ไม่เพิ่ม dependency — ดู Open Questions ข้อ 1)
+
+## Commands v1.6
+
+```bash
+cd apps/studio && npm run lint && npm run typecheck && npm test && npm run build
+STUDIO_E2E_URL=http://localhost:3002 API_URL=http://localhost:8002 npx playwright test   # stack jester-e2e บน VM
+```
+
+## Project Structure v1.6
+
+```
+apps/studio/
+  lib/schema-edit.ts        → ใหม่: model ของ builder (ไฟล์ → ต้นไม้ช่อง, เพิ่ม/แก้/ย้าย/เปลี่ยนชื่อ/ลบ, เขียนกลับเป็นข้อความไฟล์) — pure
+  lib/form-layout.ts        → ใหม่: อ่าน/เขียน form.json แบบผ่อนปรน
+  lib/form.ts               → formSpec รับ form.json; Field มี widget/width
+  lib/field-refs.ts         → ใหม่: expression ของแต่ละช่อง, ตรวจ "ไม่ถูกใช้", ค้นการอ้างก่อนเปลี่ยนชื่อ/ลบ
+  components/FormBuilder.tsx (+ .module.css) → ใหม่: palette, ผืนลากวาง, แผงคุณสมบัติ, ตัวอย่างฟอร์ม
+  components/FieldsTab.tsx  → ใหม่: แท็บ "ช่องข้อมูล"
+  components/IssueForm.tsx  → widget/width
+  components/Workspace.tsx  → โหมด form + ปุ่ม + แท็บ
+  app/(app)/templates/[id]/page.tsx → อ่าน mode=form
+  tests/schema-edit.test.ts, tests/form-layout.test.ts, tests/field-refs.test.ts, tests/form.test.ts (เพิ่ม)
+  e2e/form-builder.spec.ts  → ใหม่
+```
+
+## Code Style v1.6
+
+model เป็นฟังก์ชัน pure รับข้อความไฟล์ คืนข้อความไฟล์ใหม่ — UI ไม่จัดการ JSON เอง:
+
+```ts
+/** Rename a field everywhere the builder owns it; template files are reported, never changed. */
+export function renameField(files: BuilderFiles, at: FieldPath, newKey: string): Result<BuilderFiles> {
+  // properties order kept, required, form.json pointers, samples, lists.*.path
+}
+```
+
+- แก้ object เดิมแบบ immutable เพื่อเก็บ keyword ที่ไม่รู้จัก (ไม่สร้าง schema ใหม่จากต้นไม้ของ builder)
+- ตัวเลขใน sample/default ไม่ผ่าน float: เงินเป็น string อยู่แล้ว; `number`/`integer` เขียนจากข้อความที่ผ่าน regex (หลักเดียวกับ `lib/form.ts`)
+
+## Testing Strategy v1.6
+
+- **Vitest `schema-edit`:** round-trip ทุก starter (อ่าน → เขียนโดยไม่แก้ = ค่าเท่าเดิมทุก key รวม keyword ที่ไม่รู้จัก);
+  เพิ่มทุกชนิดทั้งใน schema และ parameters; ย้ายในระดับเดียวกัน/ข้ามกลุ่ม/เข้าตาราง (ปฏิเสธกลุ่มในตาราง);
+  เปลี่ยน key อัปเดต required, form.json, sample, `lists.path` (รวม list ลูก); ลบ array ที่ list ชี้ = ปฏิเสธ;
+  เพิ่มช่องบังคับแล้ว sample ยังผ่าน; parameter บังคับ + default = ล้าง default; key ซ้ำ/ผิดรูปแบบ = ปฏิเสธ;
+  `oneOf`/`$ref` เป็นการ์ดอ่านอย่างเดียวและไม่เปลี่ยน
+- **Vitest `form-layout`, `field-refs`, `form`:** form.json เสีย/pointer เก่าถูกข้าม; widget/width ถึง Field; expression ถูกรวม list ลูก; เตือนไม่ถูกใช้
+- **E2E `form-builder.spec.ts`:** สร้างจาก `blank` → โหมดออกแบบฟอร์ม → ลากครบ 9 ชนิด (ตาราง 3 คอลัมน์รวมเงิน) + 2 parameters ด้วยเมาส์
+  และย้ายหนึ่งช่องด้วยแป้นพิมพ์ → บันทึก → Problems ว่าง (`validateDraft` จริง) → แก้ `title` ใน `data.schema.json` มือ → กลับโหมดฟอร์มเห็นป้ายใหม่ →
+  publish → "ออกเอกสาร" เห็นช่องตามลำดับ, textarea, radio, ความกว้างครึ่ง → กรอก → ได้ `application/pdf`
+- lint, typecheck, test, build ผ่าน; E2E ทุก spec ผ่านบน stack ใหม่
+
+## Boundaries v1.6
+
+- **Always:** เขียนผ่าน `putDraftFile` + `If-Match`; ไม่ทิ้ง keyword ที่ไม่รู้จัก; ทุก key ผ่านกติกา `Name` ก่อนเขียน; ถามก่อนทิ้งการแก้ที่ยังไม่บันทึก
+- **Ask first:** เพิ่ม dependency (เช่น `@dnd-kit`), endpoint ใหม่ (เช่นบันทึกหลายไฟล์แบบ atomic), ให้ api ตรวจ `form.json`
+- **Never:** แก้ `template.html`/header/footer/`lists`/`totals` เอง (ยกเว้น `lists.*.path` ตอนเปลี่ยนชื่อ); เขียนทับเมื่อ revision ไม่ตรง
+
+## Success Criteria v1.6
+
+1. รายงานใหม่จาก `blank` มีฟอร์มครบ 9 ชนิดโดยไม่เปิดไฟล์ JSON, validate ไม่มี problem, ออก PDF ได้
+2. แก้ JSON มือแล้ว builder เห็นตรงกัน; builder บันทึกแล้วค่าที่ไม่รู้จักยังอยู่ครบ (round-trip ทุก starter)
+3. เปลี่ยนชื่อ/ลบช่องไม่ทำให้ sample หรือ `lists.path` เสีย และเตือนก่อนเมื่อเทมเพลตอาจใช้ช่องนั้น
+4. ฟอร์มออกเอกสารใช้ชนิด input และความกว้างจาก `form.json`; version เก่าไม่เปลี่ยน
+5. ลากวางทุกอย่างทำด้วยแป้นพิมพ์ได้
+6. lint, typecheck, test, build, E2E ผ่าน
+
+## Open Questions v1.6
+
+1. **ลากวาง:** HTML5 DnD ของ browser + ปุ่มแป้นพิมพ์ (แนะนำ: ไม่เพิ่ม dependency; ข้อเสีย: animation น้อย, จอสัมผัสใช้ได้แค่ปุ่ม)
+   หรือเพิ่ม `@dnd-kit/core` + `@dnd-kit/sortable` (ลื่นกว่า, รองรับสัมผัส/แป้นพิมพ์ในตัว, +dependency)?
+2. **บันทึกหลายไฟล์:** ทีละไฟล์ด้วย `putDraftFile` (แนะนำ: ไม่มีงาน api; ล้มกลางทาง draft อาจค้างครึ่งทาง แต่กดบันทึกซ้ำได้)
+   หรือเพิ่ม endpoint บันทึกหลายไฟล์ใน transaction เดียว (ปลอดภัยกว่า, เพิ่มงาน `template-store` + `public-api`)?
+3. **รูปแบบ JSON หลังบันทึก:** builder เขียนใหม่ทั้งไฟล์แบบ 2 ช่องว่าง — การจัดบรรทัดที่ dev เขียนมือหาย (ค่าและลำดับ key ไม่หาย) รับได้ไหม?
+
+## Not Doing v1.6
+
+designer ลากวางตัวเอกสาร (MVP ถัดไป) · ช่องโชว์/ซ่อนตามเงื่อนไข · ช่องคำนวณในฟอร์ม · อัปโหลดรูป/ไฟล์ · ตารางซ้อนตาราง ·
+กลุ่มที่มีแต่ในหน้าจอ · builder แก้ `lists`/`totals`/template · undo หลายขั้น (มีแค่ "ยกเลิกการแก้" ทั้งหมด) · หัวหน้าทีมจัดฟอร์ม · role
