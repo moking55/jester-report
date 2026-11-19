@@ -611,9 +611,9 @@ export type NewBlock =
 export function newBlockHtml(b: NewBlock): string {
   switch (b.kind) {
     case "text":
-      return "<p>ข้อความ</p>";
+      return '<p style="margin-top: 0mm; margin-bottom: 2mm">ข้อความ</p>'; // the browser gives a <p> 1em above and below; start small
     case "heading":
-      return "<h2>หัวข้อ</h2>";
+      return '<h2 style="margin-top: 2mm; margin-bottom: 3mm">หัวข้อ</h2>';
     case "field":
       return `<div>{{ ${b.expr} }}</div>`;
     case "image":
