@@ -15,7 +15,7 @@ import {
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList, type Rect } from "@/lib/doc-blocks";
-import { addBox, addListItem, boxSize, fromList, setBoxRect, toList, insertBlock, moveBlock, newBlockHtml, removeBlock, removeListItem, readStyle, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
+import { addBox, addListItem, boxSize, fromList, setBoxRect, toList, insertBlock, moveBlock, newBlockHtml, removeBlock, removeListItem, readStyle, replaceIn, setAttr, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
 import { fontNames } from "@/lib/doc-render";
 import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
 import { useEditor } from "@/lib/editor-bus";
@@ -239,6 +239,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   const [panes, setPanes] = useState(DEFAULT_PANES);
   const [guideShown, setGuideShown] = useState(true); // the free sheet's guide picture: shown while designing, never printed
   const imagePicker = useRef<HTMLInputElement>(null);
+  const replacing = useRef<string | null>(null); // the key of the image block whose picture the picker is choosing
   const imageAt = useRef<{ list: string; index: number; rect?: Rect } | null>(null); // where a dropped image goes once uploaded (rect: on a free sheet)
   const latest = useRef({ src, blocks });
   useEffect(() => {
@@ -575,6 +576,11 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     src,
     apply,
     duplicate: () => duplicate(),
+    pickImage: () => {
+      if (!current || !onUpload) return;
+      replacing.current = keyOf(current);
+      imagePicker.current?.click();
+    },
     list: {
       kind: current?.detail.kind === "list" ? (current.detail.ordered ? "ol" : "ul") : null,
       // a paragraph or a list, in the body, when no text is being typed in (Enter finishes that first)
@@ -773,6 +779,15 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             e.target.value = "";
             const at = imageAt.current;
             imageAt.current = null;
+            const swap = replacing.current;
+            replacing.current = null;
+            if (file && swap && onUpload) {
+              const name = await onUpload(file);
+              const { src: now, blocks: tree } = latest.current;
+              const target = allBlocks(tree).find((b) => keyOf(b) === swap && b.kind === "image");
+              if (name && target) apply(setAttr(now, target, "src", name));
+              return;
+            }
             if (!file || !at || !onUpload) return;
             const name = await onUpload(file);
             const { src: now, blocks: tree } = latest.current;

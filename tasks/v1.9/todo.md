@@ -57,11 +57,11 @@
 
 ## Phase C: toolbar ส่วนของบล็อก
 
-- [ ] **T8 ทุกบล็อก (ทำสำเนา/ลบ) + ข้อความ (ระดับ H1–H3/ปกติ) + ค่าช่องข้อมูล (รูปแบบตัวเลข)**
+- [x] **T8 ทุกบล็อก (ทำสำเนา/ลบ) + ข้อความ (ระดับ H1–H3/ปกติ) + ค่าช่องข้อมูล (รูปแบบตัวเลข)**
   - Acceptance: ทำสำเนา = ต่อท้ายบล็อกเดิมหนึ่งขั้น undo; ระดับใช้ `setTextTag`; รูปแบบครอบ/ถอด `fmt.*` ตาม spec, อื่น ๆ เทา
   - Verify: vitest (`duplicateBlock`, `setFieldFormat`) + dev
   - Files: `lib/doc-edit.ts`, `components/designer/toolbar-actions.ts`, tests
-- [ ] **T9 รูป, แถวแบ่งคอลัมน์, ตารางรายการ, ตารางเปล่า, สรุปยอด**
+- [x] **T9 รูป, แถวแบ่งคอลัมน์, ตารางรายการ, ตารางเปล่า, สรุปยอด**
   - Acceptance: ปุ่มตามตาราง spec เรียก edit เดิม (`addColumn`, `gridAddRow`, `mergeColumns`, …); รูป: อัปโหลด + กว้าง 25/50/100%; แถว: แบ่ง 2/3 เท่ากัน
   - Verify: vitest (edit ใหม่ถ้ามี) + dev
   - Files: `components/designer/toolbar-actions.ts`, `lib/doc-edit.ts`, tests

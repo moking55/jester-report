@@ -1,8 +1,48 @@
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Copy, Eraser, Italic, List, ListOrdered, Trash2, Underline } from "lucide-react";
+import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
+  BetweenHorizontalStart,
+  BetweenVerticalStart,
+  Bold,
+  Columns3,
+  Copy,
+  Equal,
+  Eraser,
+  Grid3x3,
+  Heading,
+  ImagePlus,
+  Italic,
+  List,
+  ListOrdered,
+  ListPlus,
+  TableColumnsSplit,
+  TableRowsSplit,
+  Trash2,
+  Underline,
+} from "lucide-react";
 import { createElement } from "react";
 
 import type { Block } from "@/lib/doc-blocks";
-import { replaceIn, type Edited, type Result } from "@/lib/doc-edit";
+import {
+  addColumn,
+  addRowColumn,
+  addSummaryRow,
+  equalColumns,
+  gridAddColumn,
+  gridAddRow,
+  gridBorders,
+  gridHeader,
+  gridRemoveColumn,
+  gridRemoveRow,
+  readStyle,
+  removeColumn,
+  replaceIn,
+  setStyle,
+  type Edited,
+  type Result,
+} from "@/lib/doc-edit";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
 import { FORMAT_NAME, readFieldFormat, writeFieldFormat, type FieldFormat } from "@/lib/field-format";
 import type { EditorHandle } from "@/lib/editor-bus";
@@ -29,6 +69,7 @@ export type ToolContext = {
   src: string; // template.html as it is now
   apply: (r: Result<Edited> | Edited) => void; // one undo step
   duplicate: () => void; // a copy after the selected block
+  pickImage: () => void; // choose a picture to replace the selected image's
   list: { can: boolean; kind: "ul" | "ol" | null; toggle: (ordered: boolean) => void }; // a paragraph as a list, a list back
   setStyle: (props: Record<string, string | null>) => void; // write the selected block's style (one undo step)
   remove: () => void;
@@ -126,7 +167,69 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
       ],
     };
   }
-  return null;
+  const act = (id: string, label: string, icon: typeof Bold, run: () => Result<Edited> | Edited, disabled = false, pressed?: boolean) => ({
+    id,
+    label,
+    icon,
+    disabled: off || disabled,
+    pressed,
+    onClick: () => ctx.apply(run()),
+  });
+  const styleOf = (): Record<string, string> => (b.style?.range ? Object.fromEntries(readStyle(ctx.src.slice(b.style.range.start, b.style.range.end))) : {});
+  switch (b.detail.kind) {
+    case "image":
+      return {
+        id: "kind",
+        label: "รูป",
+        items: [
+          { id: "upload", label: "อัปโหลดรูปใหม่", icon: ImagePlus, disabled: off, onClick: ctx.pickImage },
+          select("width", "ความกว้าง", styleOf().width ?? "", [["25%", "25%"], ["50%", "50%"], ["75%", "75%"], ["100%", "100%"]], off || !!b.style?.readOnly, (v) => ctx.apply(setStyle(ctx.src, b, { width: v || null }))),
+        ],
+      };
+    case "row": {
+      const cols = b.node.kind === "element" ? b.node.children.filter((c) => c.kind === "element").length : 0;
+      return {
+        id: "kind",
+        label: "แถวแบ่งคอลัมน์",
+        items: [act("addcol", "เพิ่มคอลัมน์", Columns3, () => addRowColumn(ctx.src, b), cols >= 4), act("equal", "สัดส่วนคอลัมน์เท่ากัน", Equal, () => equalColumns(ctx.src, b))],
+      };
+    }
+    case "table": {
+      const d = b.detail;
+      const last = d.cells.length - 1;
+      return {
+        id: "kind",
+        label: "ตารางรายการ",
+        items: [
+          act("addcol", "เพิ่มคอลัมน์ท้าย", BetweenVerticalStart, () => addColumn(ctx.src, b, last, "หัวคอลัมน์", `{{ ${d.loop.variable} }}`)),
+          act("delcol", "ลบคอลัมน์ท้าย", TableColumnsSplit, () => removeColumn(ctx.src, b, last), last < 1),
+          select("border", "เส้นตาราง", styleOf().border ?? "", [["1px solid #000", "เส้นนอก"], ["none", "ไม่มี"]], off || !!b.style?.readOnly, (v) => ctx.apply(setStyle(ctx.src, b, { border: v || null }))),
+        ],
+      };
+    }
+    case "grid": {
+      const d = b.detail;
+      const rows = d.rows.length;
+      const cols = d.rows[0].cells.length;
+      const bordered = d.rows.every((r) => r.cells.every((c) => /(?:^|;)\s*border\s*:/.test(c.node.attrs.find((a) => a.name === "style")?.value ?? "")));
+      return {
+        id: "kind",
+        label: "ตารางเปล่า",
+        items: [
+          act("addrow", "เพิ่มแถวท้าย", BetweenHorizontalStart, () => gridAddRow(ctx.src, b, rows - 1)),
+          act("delrow", "ลบแถวท้าย", TableRowsSplit, () => gridRemoveRow(ctx.src, b, rows - 1), rows <= 1),
+          act("addcol", "เพิ่มคอลัมน์ท้าย", BetweenVerticalStart, () => gridAddColumn(ctx.src, b, cols - 1)),
+          act("delcol", "ลบคอลัมน์ท้าย", TableColumnsSplit, () => gridRemoveColumn(ctx.src, b, cols - 1), cols <= 1),
+          act("head", "แถวแรกเป็นหัวตาราง", Heading, () => gridHeader(ctx.src, b, !d.head), false, d.head),
+          act("borders", "เส้นตาราง", Grid3x3, () => gridBorders(ctx.src, b, !bordered), false, bordered),
+        ],
+      };
+    }
+    case "summary":
+      return { id: "kind", label: "สรุปยอด", items: [act("addrow", "เพิ่มแถว", ListPlus, () => addSummaryRow(ctx.src, b))] };
+    default:
+      return null;
+  }
 }
 
 export function listTools(ctx: ToolContext): ToolGroup {

@@ -872,3 +872,36 @@ export function removeListItem(src: string, block: Block, i: number): Result<Edi
   const patch = { start: from, end: items[i].range.end, text: "" };
   return ok({ src: applyPatches(src, [patch]), at: { start: block.start, end: block.end - (patch.end - patch.start) } });
 }
+
+// ---- rows of columns and summary rows (v1.9 toolbar) -------------------------------------------------
+
+/** Every column of a row of columns the same width (flex: 1). */
+export function equalColumns(src: string, block: Block): Result<Edited> {
+  if (block.kind !== "row" || block.node.kind !== "element") return fail("ไม่ใช่แถวแบ่งคอลัมน์");
+  let out = src;
+  let at: Block = block;
+  const count = at.node.kind === "element" ? at.node.children.filter((c) => c.kind === "element").length : 0;
+  for (let i = 0; i < count; i++) {
+    const r = setColumnFlex(out, at, i, 1);
+    if (!r.ok) return r;
+    out = r.value.src;
+    const again = readBlocks(out);
+    const found = flatten(again.items).find((b) => b.start === block.start && b.kind === "row");
+    if (!found) return fail("อ่านแถวกลับไม่ได้");
+    at = found;
+  }
+  return ok({ src: out, at: { start: block.start, end: at.end } });
+}
+
+const flatten = (items: Block[]): Block[] => items.flatMap((b) => [b, ...b.lists.flatMap((l) => flatten(l.list.items))]);
+
+/** The summary row after the last one, a copy of it (label and value to be changed). */
+export function addSummaryRow(src: string, block: Block): Result<Edited> {
+  if (block.detail.kind !== "summary" || !block.detail.rows.length) return fail("ไม่ใช่สรุปยอด");
+  const last = block.detail.rows[block.detail.rows.length - 1];
+  const start = src.lastIndexOf("<tr", last.label.range.start);
+  const end = src.indexOf("</tr>", last.value.range.end) + 5;
+  const lead = src.slice(src.lastIndexOf("\n", start - 1) + 1, start);
+  const text = `\n${/^[ \t]*$/.test(lead) ? lead : ""}${src.slice(start, end)}`;
+  return ok(replaceIn(src, block, { start: end, end }, text));
+}

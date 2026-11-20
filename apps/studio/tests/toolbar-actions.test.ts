@@ -5,7 +5,7 @@ import { readBlocks } from "@/lib/doc-blocks";
 import { kindTools, paragraphTools, textTools, type ToolContext } from "@/components/designer/toolbar-actions";
 
 const calls: Record<string, string | null>[] = [];
-const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], src: "", apply: () => undefined, duplicate: () => undefined, list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
+const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], src: "", apply: () => undefined, duplicate: () => undefined, pickImage: () => undefined, list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
 const button = (g: ToolGroup, id: string) => g.items.find((i) => i.id === id) as ToolButton;
 
 describe("toolbar text and paragraph tools", () => {

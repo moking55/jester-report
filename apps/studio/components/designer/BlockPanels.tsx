@@ -11,6 +11,7 @@ import { checkCode } from "@/lib/doc-check";
 import {
   addBranch,
   addColumn,
+  addSummaryRow,
   addDetailRow,
   removeDetailRow,
   addRowColumn,
@@ -448,11 +449,7 @@ export function BlockPanel(props: Props) {
           {!readOnly && last && (
             <button
               type="button"
-              onClick={() => {
-                const row = rowRange(src, last.label, last.value);
-                const indent = src.slice(src.lastIndexOf("\n", row.start - 1) + 1, row.start);
-                apply(replaceIn(src, block, { start: row.end, end: row.end }, `\n${/^[ \t]*$/.test(indent) ? indent : ""}${src.slice(row.start, row.end)}`));
-              }}
+              onClick={() => apply(addSummaryRow(src, block))}
             >
               + แถว
             </button>
