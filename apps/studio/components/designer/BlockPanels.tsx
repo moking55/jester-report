@@ -258,7 +258,7 @@ export function BlockPanel(props: Props) {
       );
     }
     case "grid": {
-      const cols = d.rows[0].cells.length;
+      const cols = d.cols;
       return (
         <div className={styles.props}>
           <p className={styles.hint}>

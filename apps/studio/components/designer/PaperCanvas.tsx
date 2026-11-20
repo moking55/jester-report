@@ -312,6 +312,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
                       cellEditor?.(b, r, c) ??
                       createElement(cell.node.name, {
                         key: c,
+                        colSpan: cell.span && cell.span > 1 ? cell.span : undefined,
                         style: styleObject(attrOf(cell.node, "style") ?? ""),
                         className: attrOf(cell.node, "class"),
                         title: onCell ? "ดับเบิลคลิกเพื่อพิมพ์" : undefined,

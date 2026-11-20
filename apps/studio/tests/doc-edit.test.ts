@@ -312,9 +312,9 @@ describe("fixed tables (v1.7 รอบแก้ข้อ 7)", () => {
     expect(b.detail.kind === "grid" && [b.detail.rows.length, b.detail.rows[0].cells.length, b.detail.head]).toEqual([3, 2, false]);
   });
 
-  it("anything outside the model is Custom Code: colspan, uneven rows, a block in a cell", () => {
+  it("anything outside the model is Custom Code: rowspan, uneven rows, a block in a cell", () => {
     for (const html of [
-      '<table data-jd="grid"><tr><td colspan="2">a</td></tr></table>',
+      '<table data-jd="grid"><tr><td rowspan="2">a</td></tr></table>',
       '<table data-jd="grid"><tr><td>a</td><td>b</td></tr><tr><td>c</td></tr></table>',
       '<table data-jd="grid"><tr><td><div>a</div></td></tr></table>',
     ])

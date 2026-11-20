@@ -449,41 +449,112 @@ export function gridRemoveRow(src: string, block: Block, row: number): Result<Ed
   return tableEdit(src, block, [{ ...removal(src, g.rows[row].range), text: "" }]);
 }
 
-/** An empty column after column `after` (-1: at the end), each new cell shaped like its neighbour. */
-export function gridAddColumn(src: string, block: Block, after = -1): Result<Edited> {
+const spanOf = (c: GridCell) => c.span ?? 1;
+
+/** The cell of a fixed table's row that covers column `col` (counting spans), its index and the column it starts at. */
+export function gridCellAt(row: { cells: GridCell[] }, col: number): { cell: GridCell; index: number; start: number } | null {
+  let at = 0;
+  for (const [index, cell] of row.cells.entries()) {
+    if (col >= at && col < at + spanOf(cell)) return { cell, index, start: at };
+    at += spanOf(cell);
+  }
+  return null;
+}
+
+const emptyLike = (src: string, c: GridCell) => `${openAs(src, c, c.node.name).replace(/\s+colspan\s*=\s*(["']?)\d+\1/i, "")}&nbsp;</${c.node.name}>`;
+
+/** An empty column at column `at` (0 … cols): a cell that spans across that place grows by one instead. */
+export function gridInsertColumn(src: string, block: Block, at: number): Result<Edited> {
   const g = gridOf(block);
-  if (!g) return fail("ไม่ใช่ตารางเปล่า");
-  const col = after < 0 ? g.rows[0].cells.length - 1 : after;
+  if (!g || at < 0 || at > g.cols) return fail("ไม่มีคอลัมน์นี้");
   return tableEdit(
     src,
     block,
     g.rows.map((r) => {
-      const c = r.cells[col];
-      return { start: c.range.end, end: c.range.end, text: `${openAs(src, c, c.node.name)}&nbsp;</${c.node.name}>` };
+      if (at === g.cols) {
+        const last = r.cells[r.cells.length - 1];
+        return { start: last.range.end, end: last.range.end, text: emptyLike(src, last) };
+      }
+      const hit = gridCellAt(r, at)!;
+      if (hit.start === at) return { start: hit.cell.range.start, end: hit.cell.range.start, text: emptyLike(src, hit.cell) };
+      return setColspan(src, hit.cell.range, spanOf(hit.cell) + 1);
     }),
   );
 }
 
+/** An empty column after column `after` (-1: at the end). */
+export function gridAddColumn(src: string, block: Block, after = -1): Result<Edited> {
+  const g = gridOf(block);
+  if (!g) return fail("ไม่ใช่ตารางเปล่า");
+  return gridInsertColumn(src, block, after < 0 ? g.cols : Math.min(after + 1, g.cols));
+}
+
+/** Column `col` out: a cell spanning it gets one narrower. */
 export function gridRemoveColumn(src: string, block: Block, col: number): Result<Edited> {
   const g = gridOf(block);
-  if (!g || col < 0 || col >= g.rows[0].cells.length) return fail("ไม่มีคอลัมน์นี้");
-  if (g.rows[0].cells.length <= 1) return fail("ตารางต้องมีอย่างน้อย 1 คอลัมน์");
-  return tableEdit(src, block, g.rows.map((r) => ({ ...r.cells[col].range, text: "" })));
+  if (!g || col < 0 || col >= g.cols) return fail("ไม่มีคอลัมน์นี้");
+  if (g.cols <= 1) return fail("ตารางต้องมีอย่างน้อย 1 คอลัมน์");
+  return tableEdit(
+    src,
+    block,
+    g.rows.map((r) => {
+      const hit = gridCellAt(r, col)!;
+      return spanOf(hit.cell) > 1 ? setColspan(src, hit.cell.range, spanOf(hit.cell) - 1) : { ...hit.cell.range, text: "" };
+    }),
+  );
+}
+
+/** Whether column `col` can trade places with its neighbour: in every row both are cells of their own. */
+export function gridCanMoveColumn(block: Block, col: number, dir: -1 | 1): boolean {
+  const g = gridOf(block);
+  const other = col + dir;
+  if (!g || other < 0 || other >= g.cols) return false;
+  return g.rows.every((r) => spanOf(gridCellAt(r, col)!.cell) === 1 && spanOf(gridCellAt(r, other)!.cell) === 1);
 }
 
 export function gridMoveColumn(src: string, block: Block, col: number, dir: -1 | 1): Result<Edited> {
   const g = gridOf(block);
-  const other = col + dir;
-  if (!g || other < 0 || other >= g.rows[0].cells.length) return fail("ย้ายต่อไม่ได้");
+  if (!g || !gridCanMoveColumn(block, col, dir)) return fail("ย้ายต่อไม่ได้ (คอลัมน์คร่อมช่องที่รวมอยู่)");
   const text = (c: GridCell) => src.slice(c.range.start, c.range.end);
   return tableEdit(
     src,
     block,
-    g.rows.flatMap((r) => [
-      { ...r.cells[col].range, text: text(r.cells[other]) },
-      { ...r.cells[other].range, text: text(r.cells[col]) },
-    ]),
+    g.rows.flatMap((r) => {
+      const a = gridCellAt(r, col)!.cell;
+      const b = gridCellAt(r, col + dir)!.cell;
+      return [
+        { ...a.range, text: text(b) },
+        { ...b.range, text: text(a) },
+      ];
+    }),
   );
+}
+
+/** The cell at (row, col) and the one on its right become one cell spanning both; their texts join with a space. */
+export function gridMergeRight(src: string, block: Block, row: number, col: number): Result<Edited> {
+  const g = gridOf(block);
+  const r = g?.rows[row];
+  const hit = r ? gridCellAt(r, col) : null;
+  const next = hit && r ? r.cells[hit.index + 1] : null;
+  if (!hit || !next) return fail("ไม่มีช่องทางขวาให้รวม");
+  const textOf = (c: GridCell) => src.slice(c.inner.start, c.inner.end);
+  const blank = (t: string) => !t.replace(/&nbsp;|\s/g, "");
+  const joined = [textOf(hit.cell), textOf(next)].filter((t) => !blank(t)).join(" ") || "&nbsp;";
+  const open = setColspan(src, { start: hit.cell.node.open.start, end: hit.cell.node.open.end }, spanOf(hit.cell) + spanOf(next));
+  return tableEdit(src, block, [open, { ...hit.cell.inner, text: joined }, { start: hit.cell.range.end, end: next.range.end, text: "" }]);
+}
+
+/** A cell that spans columns back to one cell per column (the new ones empty). */
+export function gridSplit(src: string, block: Block, row: number, col: number): Result<Edited> {
+  const g = gridOf(block);
+  const r = g?.rows[row];
+  const hit = r ? gridCellAt(r, col) : null;
+  if (!hit || spanOf(hit.cell) < 2) return fail("ช่องนี้ไม่ได้รวมอยู่");
+  const more = Array.from({ length: spanOf(hit.cell) - 1 }, () => emptyLike(src, hit.cell)).join("");
+  return tableEdit(src, block, [
+    setColspan(src, { start: hit.cell.node.open.start, end: hit.cell.node.open.end }, 1),
+    { start: hit.cell.range.end, end: hit.cell.range.end, text: more },
+  ]);
 }
 
 /** The first row as header cells (<th>) or back to <td>. */

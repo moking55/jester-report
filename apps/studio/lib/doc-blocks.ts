@@ -47,7 +47,7 @@ export type Block = Range & {
 };
 
 export type Cell = { range: Range; inner: Range }; // a <th>/<td>: the whole cell and its content
-export type GridCell = Cell & { node: ElementNode };
+export type GridCell = Cell & { node: ElementNode; span?: number }; // span: colspan of a fixed table's cell (v1.10)
 export type Detail =
   | { kind: "text"; tag: string; inner: Range }
   | { kind: "field" | "code"; expr: Range; inner: string }
@@ -65,7 +65,7 @@ export type Detail =
       detailRow: { range: Range; cell: ElementNode } | null; // v1.8: a second row under every row, holding blocks
     }
   | { kind: "summary"; rows: { label: Cell; value: Cell }[] }
-  | { kind: "grid"; rows: { range: Range; cells: GridCell[] }[]; head: boolean } // head: the first row is <th>
+  | { kind: "grid"; rows: { range: Range; cells: GridCell[] }[]; head: boolean; cols: number } // head: the first row is <th>; cols: columns, counting spans
   | { kind: "list"; ordered: boolean; items: GridCell[] } // the <li>s
   | { kind: "condition"; branches: { tag: Range; keyword: string; test: string }[] }
   | { kind: "repeat"; tag: Range; variable: string; iterable: string }
@@ -200,15 +200,19 @@ function gridDetail(src: string, el: ElementNode): Detail | null {
     const cells: GridCell[] = [];
     for (const c of solid(src, tr.children)) {
       const ok = c.kind === "element" && (c.name === "td" || (i === 0 && c.name === "th"));
-      if (!ok || c.broken || attr(c, "colspan") || attr(c, "rowspan") || !c.children.every((k) => isInline(src, k))) return null;
-      cells.push({ range: { start: c.start, end: c.end }, inner: inner(c), node: c });
+      if (!ok || c.broken || attr(c, "rowspan") || !c.children.every((k) => isInline(src, k))) return null;
+      const spanText = attr(c, "colspan");
+      const span = spanText === null || spanText === undefined ? 1 : /^[1-9]\d?$/.test(spanText) ? Number(spanText) : 0;
+      if (!span) return null;
+      cells.push({ range: { start: c.start, end: c.end }, inner: inner(c), node: c, span });
     }
-    if (!cells.length || (out.length && cells.length !== out[0].cells.length)) return null;
+    const width = cells.reduce((n, x) => n + (x.span ?? 1), 0);
+    if (!cells.length || (out.length && width !== out[0].cells.reduce((n, x) => n + (x.span ?? 1), 0))) return null;
     if (i === 0) head = cells[0].node.name === "th";
     if (cells.some((c) => (c.node.name === "th") !== (i === 0 && head))) return null;
     out.push({ range: { start: tr.start, end: tr.end }, cells });
   }
-  return out.length ? { kind: "grid", rows: out, head } : null;
+  return out.length ? { kind: "grid", rows: out, head, cols: out[0].cells.reduce((n, x) => n + (x.span ?? 1), 0) } : null;
 }
 
 function summaryDetail(src: string, el: ElementNode): Detail | null {

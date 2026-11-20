@@ -4,7 +4,7 @@
 
 ## Phase A: ตาราง
 
-- [ ] **C1 ตารางเปล่ารับ colspan; รวม/แยกช่อง**
+- [x] **C1 ตารางเปล่ารับ colspan; รวม/แยกช่อง**
   - Acceptance: ตารางเปล่าที่ทุกแถวรวม span เท่ากันอ่านเป็นตารางเปล่า (`GridCell.span`); ผืนวาด colspan; `gridMergeRight`, `gridSplit`;
     เพิ่ม/ลบ/เลื่อนคอลัมน์ และเพิ่ม/ลบแถว นับคอลัมน์จริงเมื่อมีช่องรวม; test เดิมของตารางเปล่าผ่านไม่แก้
   - Verify: `npx vitest run tests/grid-span.test.ts tests/doc-edit.test.ts tests/doc-blocks.test.ts`

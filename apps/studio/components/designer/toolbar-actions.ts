@@ -228,7 +228,7 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
     case "grid": {
       const d = b.detail;
       const rows = d.rows.length;
-      const cols = d.rows[0].cells.length;
+      const cols = d.cols;
       const bordered = d.rows.every((r) => r.cells.every((c) => /(?:^|;)\s*border\s*:/.test(c.node.attrs.find((a) => a.name === "style")?.value ?? "")));
       return {
         id: "kind",
