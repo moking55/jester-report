@@ -165,6 +165,7 @@
 
 .props {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* a wide child (a long file name in a select) never widens the panel */
   gap: 10px;
 }
 
@@ -189,6 +190,7 @@
 
 .prop {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 3px;
   color: var(--color-textMuted);
   font-size: 0.9em;
@@ -197,6 +199,9 @@
 .prop input,
 .prop select,
 .prop textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
   font: inherit;
   color: var(--color-text);
   padding: 4px 6px;
@@ -619,7 +624,7 @@
 
 .freeGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px 8px;
 }
 
