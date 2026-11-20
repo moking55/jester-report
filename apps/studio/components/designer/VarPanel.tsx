@@ -113,7 +113,7 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
       </label>
       <label className={styles.prop}>
         ประเภท
-        <select
+        <select aria-label="ประเภท"
           value={v.type}
           disabled={readOnly}
           onChange={(e) => {
@@ -131,7 +131,7 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
       </label>
       <label className={styles.prop}>
         ตั้งค่าแบบ
-        <select
+        <select aria-label="ตั้งค่าแบบ"
           value={conditional ? "if" : "one"}
           disabled={readOnly}
           onChange={(e) => change(e.target.value === "if" ? { ...v, rows: [{ test: "", value: v.otherwise }], otherwise: "" } : { ...v, rows: [], otherwise: v.rows[0]?.value ?? v.otherwise }, e.target.value !== "if")}
