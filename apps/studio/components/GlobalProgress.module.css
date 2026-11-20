@@ -1,0 +1,74 @@
+/* The global loading bar: fixed to the very top of the window, over everything. Diagonal stripes in the theme's primary
+   colour (a light and a dark band of it), moving; the tables and panes below scroll on their own and nothing else sticks. */
+.bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  width: auto;
+  height: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-100%);
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  background-color: var(--color-primary);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--color-primary) 60%, white) 0 10px,
+    var(--color-primary) 10px 20px
+  );
+  background-size: 28.28px 28.28px; /* 20 px of stripe period along the diagonal, so the loop is seamless */
+  animation: slide 0.8s linear infinite;
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-primary) 50%, transparent);
+}
+
+.bar[data-busy="true"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* classic: a glossy tube, like the Aero progress bar */
+:root[data-look="aero"] .bar {
+  height: 8px;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 55%, rgba(0, 0, 0, 0.12)),
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--color-primary) 55%, white) 0 10px,
+      color-mix(in srgb, var(--color-primary) 85%, white) 10px 20px
+    );
+  background-size:
+    auto,
+    28.28px 28.28px;
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  animation-name: slide-aero;
+}
+
+@keyframes slide {
+  to {
+    background-position: 28.28px 0;
+  }
+}
+
+@keyframes slide-aero {
+  to {
+    background-position:
+      0 0,
+      28.28px 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

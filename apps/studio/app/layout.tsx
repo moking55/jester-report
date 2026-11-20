@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { GlobalProgress } from "@/components/GlobalProgress";
 import { RegisterSw } from "@/components/RegisterSw";
 import { activeTheme } from "@/lib/current";
 import { themeCss } from "@/lib/theme";
@@ -22,6 +23,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         <style id="jester-theme" dangerouslySetInnerHTML={{ __html: themeCss(theme?.tokens) }} />
       </head>
       <body>
+        <GlobalProgress />
         {children}
         <RegisterSw version={pkg.version} />
       </body>
