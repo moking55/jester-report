@@ -8,7 +8,7 @@ name: jester
 services:
   studio:
     build: ../apps/studio
-    image: jester/studio:1.7.0
+    image: jester/studio:1.8.1
     environment:
       JESTER_API_URL: http://api:8000
       JESTER_STUDIO_KEY: ${JESTER_STUDIO_KEY:?set JESTER_STUDIO_KEY in infra/.env}
@@ -23,7 +23,7 @@ services:
 
   api:
     build: ../apps/api
-    image: jester/api:1.7.0
+    image: jester/api:1.8.1
     environment:
       DATABASE_URL: postgresql://jester:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in infra/.env}@postgres:5432/jester
       JESTER_S3_ENDPOINT: http://rustfs:9000
