@@ -80,14 +80,15 @@
 
 ## Phase D: ตรวจรวม
 
-- [~] **T12 E2E: toolbar + ตัวแปร**
+- [x] **T12 E2E: toolbar + ตัวแปร**
   - Acceptance: spec ใหม่ครอบ Success Criteria 1–5 (ตัวหนาเฉพาะส่วน/รายการ/เงินใน PDF, กดปุ่มครบทุกชนิดบล็อก, สถานะ 3 กรณี, vat ผืน = PDF, set เขียนมือไม่ถูกแก้)
   - Verify: Playwright จาก Windows บน rc stack
   - Files: `e2e/toolbar.spec.ts` (ครอบ toolbar + ตัวแปร ในไฟล์เดียว)
-  - สถานะ: เขียนแล้ว typecheck/lint ผ่าน **ยังไม่ได้รัน** — VM 10.0.1.29 เข้าไม่ได้ (นอกเครือข่ายออฟฟิศ 20 พ.ย. 2026)
-- [ ] **T13 ตรวจรวม + rc**
+  - ผล: ผ่านบน stack rc สด (เครื่องทดสอบใหม่ moking55@192.168.30.26); E2E เจอบั๊กจริง 2 ข้อที่แก้แล้ว: แผงตัวแปรเดาประเภทใหม่หลังบันทึกเอง, บล็อกที่ปล่อยท้ายหน้าไปอยู่ก่อน {% set %} (api ตอบ TEMPLATE_UNKNOWN_VAR)
+- [x] **T13 ตรวจรวม + rc**
   - Acceptance: studio 4 คำสั่ง; E2E ทุก spec ผ่านบน stack สด 1.9.0-rc ไม่ retry; starter 5 ตัว PDF เท่ากับ v1.8.1
   - Verify: ผล Playwright + เทียบ PDF
+  - ผล: studio typecheck/lint/vitest 421/build ผ่าน; E2E 13/13 ผ่านบน stack สด 1.9.0-rc ไม่ retry (1.7 นาที); api, infra ไม่เปลี่ยนจาก v1.8.1 (`git diff v1.8.1..HEAD -- apps/api infra` ว่าง) จึงได้ PDF ของ starter จาก api/binder/engine ชุดเดิม
 
 ## Checkpoint: ปล่อย v1.9.0
 

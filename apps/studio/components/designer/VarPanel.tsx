@@ -4,7 +4,15 @@ import { useState } from "react";
 
 import type { Block } from "@/lib/doc-blocks";
 import { setTagArgs, type Edited, type Result } from "@/lib/doc-edit";
-import { convertValue, readVar, TYPE_NAME, writeVar, type Var, type VarRow, type VarType } from "@/lib/doc-var";
+import {
+  convertValue,
+  readVar,
+  TYPE_NAME,
+  writeVar,
+  type Var,
+  type VarRow,
+  type VarType,
+} from "@/lib/doc-var";
 
 import styles from "./Designer.module.css";
 import { TemplateField } from "./BlockPanels";
@@ -22,7 +30,23 @@ type Props = {
   apply: (r: Result<Edited> | Edited) => void;
 };
 
-function Line({ label, value, onChange, onCommit, readOnly, list, placeholder }: { label: string; value: string; onChange: (v: string) => void; onCommit: () => void; readOnly: boolean; list?: string; placeholder?: string }) {
+function Line({
+  label,
+  value,
+  onChange,
+  onCommit,
+  readOnly,
+  list,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  onCommit: () => void;
+  readOnly: boolean;
+  list?: string;
+  placeholder?: string;
+}) {
   return (
     <input
       aria-label={label}
@@ -33,19 +57,34 @@ function Line({ label, value, onChange, onCommit, readOnly, list, placeholder }:
       disabled={readOnly}
       onChange={(e) => onChange(e.target.value)}
       onBlur={onCommit}
-      onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      onKeyDown={(e) =>
+        e.key === "Enter" && (e.target as HTMLInputElement).blur()
+      }
     />
   );
 }
 
 export function VarPanel(props: Props) {
   const v0 = readVar(props.inner);
-  if (!v0) return <p className={styles.hint}>แท็ก set นี้ designer ยังอ่านเป็นตัวแปรไม่ได้ แก้เป็นโค้ดได้</p>;
+  if (!v0)
+    return (
+      <p className={styles.hint}>
+        แท็ก set นี้ designer ยังอ่านเป็นตัวแปรไม่ได้ แก้เป็นโค้ดได้
+      </p>
+    );
   // one draft per block; it starts again only when the tag changes from elsewhere (an undo, the code view)
   return <Draft key={props.block.path.join(".")} {...props} v0={v0} />;
 }
 
-function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0: Var }) {
+function Draft({
+  block,
+  src,
+  inner,
+  fields,
+  readOnly,
+  apply,
+  v0,
+}: Props & { v0: Var }) {
   const [v, setV] = useState<Var>(v0);
   const [error, setError] = useState<string | null>(null);
   // the tag as this draft last saw it, and as it last wrote it: its own save keeps the draft (and the type chosen);
@@ -72,7 +111,11 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
     setV(next);
     if (now) commit(next);
   };
-  const setRow = (i: number, patch: Partial<VarRow>) => change({ ...v, rows: v.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)) });
+  const setRow = (i: number, patch: Partial<VarRow>) =>
+    change({
+      ...v,
+      rows: v.rows.map((r, j) => (j === i ? { ...r, ...patch } : r)),
+    });
   const move = (i: number, by: number) => {
     const rows = [...v.rows];
     [rows[i], rows[i + by]] = [rows[i + by], rows[i]];
@@ -94,7 +137,21 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
         }}
       />
     ) : (
-      <Line label={label} value={text} onChange={(t) => setV(build(t))} onCommit={() => commit(v)} readOnly={readOnly} list="jd-var-fields" placeholder={v.type === "number" ? "เช่น data.total * 7 / 100" : v.type === "bool" ? "เช่น data.paid" : undefined} />
+      <Line
+        label={label}
+        value={text}
+        onChange={(t) => setV(build(t))}
+        onCommit={() => commit(v)}
+        readOnly={readOnly}
+        list="jd-var-fields"
+        placeholder={
+          v.type === "number"
+            ? "เช่น data.total * 7 / 100"
+            : v.type === "bool"
+              ? "เช่น data.paid"
+              : undefined
+        }
+      />
     );
 
   const conditional = v.rows.length > 0;
@@ -102,24 +159,42 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
     <div className={styles.props}>
       <datalist id="jd-var-fields">
         {fields.map((f) => (
-          <option key={f.expression} value={f.expression.replace(/^\{\{\s*|\s*\}\}$/g, "")}>
+          <option
+            key={f.expression}
+            value={f.expression.replace(/^\{\{\s*|\s*\}\}$/g, "")}
+          >
             {f.label}
           </option>
         ))}
       </datalist>
       <label className={styles.prop}>
         ชื่อตัวแปร
-        <Line label="ชื่อตัวแปร" value={v.name} onChange={(name) => change({ ...v, name })} onCommit={() => commit(v)} readOnly={readOnly} />
+        <Line
+          label="ชื่อตัวแปร"
+          value={v.name}
+          onChange={(name) => change({ ...v, name })}
+          onCommit={() => commit(v)}
+          readOnly={readOnly}
+        />
       </label>
       <label className={styles.prop}>
         ประเภท
-        <select aria-label="ประเภท"
+        <select
+          aria-label="ประเภท"
           value={v.type}
           disabled={readOnly}
           onChange={(e) => {
             const to = e.target.value as VarType;
             const conv = (x: string) => convertValue(x, v.type, to);
-            change({ ...v, type: to, rows: v.rows.map((r) => ({ ...r, value: conv(r.value) })), otherwise: conv(v.otherwise) }, true);
+            change(
+              {
+                ...v,
+                type: to,
+                rows: v.rows.map((r) => ({ ...r, value: conv(r.value) })),
+                otherwise: conv(v.otherwise),
+              },
+              true,
+            );
           }}
         >
           {(Object.keys(TYPE_NAME) as VarType[]).map((t) => (
@@ -131,10 +206,26 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
       </label>
       <label className={styles.prop}>
         ตั้งค่าแบบ
-        <select aria-label="ตั้งค่าแบบ"
+        <select
+          aria-label="ตั้งค่าแบบ"
           value={conditional ? "if" : "one"}
           disabled={readOnly}
-          onChange={(e) => change(e.target.value === "if" ? { ...v, rows: [{ test: "", value: v.otherwise }], otherwise: "" } : { ...v, rows: [], otherwise: v.rows[0]?.value ?? v.otherwise }, e.target.value !== "if")}
+          onChange={(e) =>
+            change(
+              e.target.value === "if"
+                ? {
+                    ...v,
+                    rows: [{ test: "", value: v.otherwise }],
+                    otherwise: "",
+                  }
+                : {
+                    ...v,
+                    rows: [],
+                    otherwise: v.rows[0]?.value ?? v.otherwise,
+                  },
+              e.target.value !== "if",
+            )
+          }
         >
           <option value="one">ค่าเดียว</option>
           <option value="if">ตามเงื่อนไข</option>
@@ -144,17 +235,52 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
         <div key={i} className={styles.varRow}>
           <span className={styles.varRowHead}>
             ถ้า
-            <Line label={`เงื่อนไขข้อ ${i + 1}`} value={r.test} onChange={(test) => setRow(i, { test })} onCommit={() => commit(v)} readOnly={readOnly} list="jd-var-fields" placeholder="เช่น data.paid" />
+            <Line
+              label={`เงื่อนไขข้อ ${i + 1}`}
+              value={r.test}
+              onChange={(test) => setRow(i, { test })}
+              onCommit={() => commit(v)}
+              readOnly={readOnly}
+              list="jd-var-fields"
+              placeholder="เช่น data.paid"
+            />
           </span>
-          {value(`ค่าข้อ ${i + 1}`, r.value, (t) => ({ ...v, rows: v.rows.map((x, j) => (j === i ? { ...x, value: t } : x)) }))}
+          {value(`ค่าข้อ ${i + 1}`, r.value, (t) => ({
+            ...v,
+            rows: v.rows.map((x, j) => (j === i ? { ...x, value: t } : x)),
+          }))}
           {!readOnly && (
             <span className={styles.row}>
-              <button type="button" aria-label={`เลื่อนข้อ ${i + 1} ขึ้น`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
-              <button type="button" aria-label={`เลื่อนข้อ ${i + 1} ลง`} disabled={i === v.rows.length - 1} onClick={() => move(i, 1)}>↓</button>
+              <button
+                type="button"
+                aria-label={`เลื่อนข้อ ${i + 1} ขึ้น`}
+                disabled={i === 0}
+                onClick={() => move(i, -1)}
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                aria-label={`เลื่อนข้อ ${i + 1} ลง`}
+                disabled={i === v.rows.length - 1}
+                onClick={() => move(i, 1)}
+              >
+                ↓
+              </button>
               <button
                 type="button"
                 aria-label={`ลบเงื่อนไขข้อ ${i + 1}`}
-                onClick={() => (v.rows.length === 1 ? change({ ...v, rows: [], otherwise: r.value || v.otherwise }, true) : change({ ...v, rows: v.rows.filter((_, j) => j !== i) }, true))}
+                onClick={() =>
+                  v.rows.length === 1
+                    ? change(
+                        { ...v, rows: [], otherwise: r.value || v.otherwise },
+                        true,
+                      )
+                    : change(
+                        { ...v, rows: v.rows.filter((_, j) => j !== i) },
+                        true,
+                      )
+                }
               >
                 ✕
               </button>
@@ -163,18 +289,33 @@ function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0:
         </div>
       ))}
       {conditional && !readOnly && (
-        <button type="button" className={styles.secondary} onClick={() => change({ ...v, rows: [...v.rows, { test: "", value: "" }] })}>
+        <button
+          type="button"
+          className={styles.secondary}
+          onClick={() =>
+            change({ ...v, rows: [...v.rows, { test: "", value: "" }] })
+          }
+        >
           + เพิ่มเงื่อนไข
         </button>
       )}
-      {value(conditional ? "ไม่เช่นนั้น" : "ค่า", v.otherwise, (t) => ({ ...v, otherwise: t }))}
+      {value(conditional ? "ไม่เช่นนั้น" : "ค่า", v.otherwise, (t) => ({
+        ...v,
+        otherwise: t,
+      }))}
       {error && (
         <p role="alert" className={styles.inlineAlert}>
           {error}
         </p>
       )}
       <p className={styles.hint}>
-        {v.type === "text" ? "พิมพ์ข้อความได้เลย ใช้ค่าจากข้อมูลด้วย {{ … }} (พิมพ์ {{ เพื่อเลือก) · " : v.type === "number" ? "ตัวเลข หรือคำนวณ + - * / ( ) และ (…) | round(n) · ใช้เลขเต็มเท่านั้น (7 / 100 แทน 0.07) · " : v.type === "bool" ? "เงื่อนไขแบบเดียวกับบล็อกเงื่อนไข · " : ""}
+        {v.type === "text"
+          ? "พิมพ์ข้อความได้เลย ใช้ค่าจากข้อมูลด้วย {{ … }} (พิมพ์ {{ เพื่อเลือก) · "
+          : v.type === "number"
+            ? "ตัวเลข หรือคำนวณ + - * / ( ) และ (…) | round(n) · ใช้เลขเต็มเท่านั้น (7 / 100 แทน 0.07) · "
+            : v.type === "bool"
+              ? "เงื่อนไขแบบเดียวกับบล็อกเงื่อนไข · "
+              : ""}
         ไม่แสดงบนกระดาษ ใช้ชื่อนี้ในบล็อกถัดไปได้
       </p>
     </div>
