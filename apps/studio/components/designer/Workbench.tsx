@@ -45,7 +45,7 @@ type Props = {
   edit: (src: string) => void;
   onReport?: (reportJson: string) => void; // report.json with new page margins (one undo step)
   part?: "body" | "header" | "footer"; // the file `src` is: a header or footer has a smaller set of blocks (v1.8)
-  onZone?: (part: "header" | "footer") => void; // double-click on the paper's header or footer zone
+  onZone?: (part: "body" | "header" | "footer") => void; // double-click on a zone of the paper; on the document while a zone is edited
   onUpload?: (file: File) => Promise<string | null>; // an image into the draft's assets; its name, or null
   readOnly: boolean;
   files: Record<string, string>;

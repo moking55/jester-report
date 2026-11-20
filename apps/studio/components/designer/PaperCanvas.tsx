@@ -38,7 +38,7 @@ type Props = {
   onCell?: (block: Block, row: number, col: number) => void; // double-click on a fixed table's cell
   list?: ListFrame; // wraps each list's children (drop slots) — T7
   part?: "body" | "header" | "footer"; // which file `blocks` and `src` are (v1.8); the others are drawn as they are
-  onZone?: (part: "header" | "footer") => void; // double-click on the header or footer zone
+  onZone?: (part: "body" | "header" | "footer") => void; // double-click on a zone opens it; while one is edited, a double-click on the document goes back to the body
   // a free-layout sheet (v1.8): how a box is drawn (selection, handles), a rect that replaces its own while it is dragged,
   // lines drawn over the sheet (snap guides), and a click on the empty sheet
   renderBox?: RenderBox;
@@ -362,7 +362,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         </div>
       );
     if (!onZone && !files[name]) return null;
-    const open = () => part === "body" && onZone?.(zone);
+    const open = () => part !== zone && onZone?.(zone);
     if (!files[name])
       return (
         <div className="jd-margin jd-zone-hint" style={place} onDoubleClick={open}>
@@ -384,6 +384,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
             <style>{css}</style>
             <div
               className="jd-sheet"
+              onDoubleClick={(e) => part !== "body" && !(e.target as Element).closest(".jd-margin") && onZone?.("body")} // like Word: back to the document
               style={{
                 width: `${paper.widthMm}mm`,
                 minHeight: `${sheetMin}mm`,

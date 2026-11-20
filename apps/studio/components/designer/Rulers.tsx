@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 import { MARGIN_LIMITS, PX_PER_MM, type Margins, type Paper } from "@/lib/paper";
 
@@ -35,22 +35,24 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
   const [live, setLive] = useState<{ side: Side; x: number; y: number; margins: Margins } | null>(null);
   const m = live?.margins ?? paper.margins;
   const W = paper.widthMm;
-  // a roll is as tall as its content: the vertical ruler follows the sheet
+  // the sheet is as tall as its content (a roll, or the pages a flow document runs over): the vertical ruler follows it
   const page = useRef<HTMLDivElement>(null);
   const [measured, setMeasured] = useState(0);
   useEffect(() => {
     const el = page.current;
-    if (!el || !paper.roll) return;
+    if (!el) return;
     const ro = new ResizeObserver(() => setMeasured(Math.round(el.offsetHeight / PX_PER_MM)));
     ro.observe(el);
     return () => ro.disconnect();
-  }, [paper.roll]);
-  const H = paper.roll ? Math.max(measured, 20) : paper.heightMm;
+  }, []);
+  const H = paper.roll ? Math.max(measured, 20) : Math.max(measured, paper.heightMm);
+  const pageH = paper.roll ? H : paper.heightMm; // one page: the margins repeat on each
+  const pages = paper.roll ? 1 : Math.max(1, Math.round(H / pageH));
   const marginsAdjustable = !readOnly && paper.layout === "flow"; // a free layout has no margins
 
   const marker = (side: Side) => {
     const across = side === "left" || side === "right";
-    const at = side === "left" ? m.left : side === "right" ? W - m.right : side === "top" ? m.top : H - m.bottom;
+    const at = side === "left" ? m.left : side === "right" ? W - m.right : side === "top" ? m.top : pageH - m.bottom;
     const name = { left: "ขอบซ้าย", right: "ขอบขวา", top: "ขอบบน", bottom: "ขอบล่าง" }[side];
     return (
       <div
@@ -113,8 +115,12 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
       </div>
       <div className={styles.rulerSide}>
       <div className={`${styles.ruler} ${styles.rulerV}`} style={{ height: `${H}mm` }} aria-label="ไม้บรรทัดแนวตั้ง (mm)">
-        <div className={styles.rulerShade} style={{ top: 0, height: `${m.top}mm` }} />
-        <div className={styles.rulerShade} style={{ bottom: 0, height: `${m.bottom}mm` }} />
+        {Array.from({ length: pages }, (_, i) => (
+          <Fragment key={i}>
+            <div className={styles.rulerShade} style={{ top: `${i * pageH}mm`, height: `${m.top}mm` }} />
+            <div className={styles.rulerShade} style={{ top: `${(i + 1) * pageH - m.bottom}mm`, height: `${m.bottom}mm` }} />
+          </Fragment>
+        ))}
         {labels(H).map((cm) => (
           <span key={cm} className={styles.rulerLabel} style={{ top: `${cm * 10}mm` }}>
             {cm || ""}
@@ -131,7 +137,7 @@ export function Rulers({ paper, zoom, readOnly, onMargins, children }: Props) {
             style={
               live.side === "left" || live.side === "right"
                 ? { left: `${live.side === "left" ? m.left : W - m.right}mm`, top: 0, bottom: 0, width: 0 }
-                : { top: `${live.side === "top" ? m.top : H - m.bottom}mm`, left: 0, right: 0, height: 0 }
+                : { top: `${live.side === "top" ? m.top : pageH - m.bottom}mm`, left: 0, right: 0, height: 0 }
             }
           >
             <span>{m[live.side]} mm</span>
