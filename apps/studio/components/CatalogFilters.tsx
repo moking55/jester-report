@@ -19,6 +19,9 @@ export function CatalogFilters({ q, status, archived }: Props) {
   const router = useRouter();
   const path = usePathname();
   const [text, setText] = useState(q);
+  // the choices show at once; the page follows the URL a moment later (the page remounts this when the URL's choices change)
+  const [stat, setStat] = useState(status);
+  const [arch, setArch] = useState(archived);
   const go = (next: Partial<Props>) => {
     const v = { q, status, archived, ...next };
     const params = new URLSearchParams();
@@ -45,7 +48,14 @@ export function CatalogFilters({ q, status, archived }: Props) {
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
-      <select aria-label="สถานะ" value={status} onChange={(e) => go({ status: e.target.value })}>
+      <select
+        aria-label="สถานะ"
+        value={stat}
+        onChange={(e) => {
+          setStat(e.target.value);
+          go({ status: e.target.value });
+        }}
+      >
         {STATUSES.map(([v, l]) => (
           <option key={v} value={v}>
             {l}
@@ -53,7 +63,14 @@ export function CatalogFilters({ q, status, archived }: Props) {
         ))}
       </select>
       <label className={styles.check}>
-        <input type="checkbox" checked={archived} onChange={(e) => go({ archived: e.target.checked })} />
+        <input
+          type="checkbox"
+          checked={arch}
+          onChange={(e) => {
+            setArch(e.target.checked);
+            go({ archived: e.target.checked });
+          }}
+        />
         แสดงที่ archive
       </label>
     </div>

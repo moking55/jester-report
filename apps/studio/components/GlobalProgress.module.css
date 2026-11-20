@@ -25,13 +25,13 @@
     var(--color-primary) 6px 12px
   );
   background-size: 16.97px 16.97px; /* 12 px of stripe period along the diagonal, so the loop is seamless */
-  animation: slide 0.8s linear infinite;
   box-shadow: 0 1px 3px color-mix(in srgb, var(--color-primary) 50%, transparent);
 }
 
 .bar[data-busy="true"] {
   opacity: 1;
   transform: none;
+  animation: slide 0.8s linear infinite; /* only while shown: an idle page runs no animation at all */
 }
 
 /* classic: a glossy tube, like the Aero progress bar */
@@ -50,6 +50,9 @@
   box-shadow:
     0 0 8px color-mix(in srgb, var(--color-primary) 60%, transparent),
     inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+}
+
+:root[data-look="aero"] .bar[data-busy="true"] {
   animation-name: slide-aero;
 }
 
@@ -68,7 +71,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bar {
+  .bar[data-busy="true"] {
     animation: none;
   }
 }

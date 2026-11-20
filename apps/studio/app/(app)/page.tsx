@@ -125,7 +125,7 @@ export default async function CatalogPage({
       </p>
       <div className={styles.bar}>
         <CreateTemplate className={styles.create} />
-        <CatalogFilters q={q} status={status} archived={withArchived} />
+        <CatalogFilters key={`${status}|${withArchived}`} q={q} status={status} archived={withArchived} />
       </div>
       {shown.length === 0 ? (
         <p className={styles.sub}>
