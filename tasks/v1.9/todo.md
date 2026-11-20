@@ -29,7 +29,7 @@
     ปุ่มเทาเมื่อใช้ไม่ได้; ล้นกว้าง = กลุ่มท้ายพับเข้า "…"; ใช้ได้ทั้งแบบคงที่/อิสระ/header-footer
   - Verify: vitest (การพับกลุ่มเป็น pure function) + build; dev ที่ 1280 px ไม่ล้น
   - Files: `package.json`, `package-lock.json`, `components/designer/Toolbar.tsx`, `components/designer/Workbench.tsx`, `Designer.module.css`
-- [ ] **T5 รูปแบบระดับคำ: หนา/เอียง/ขีดเส้นใต้/สี/ล้างรูปแบบ**
+- [x] **T5 รูปแบบระดับคำ: หนา/เอียง/ขีดเส้นใต้/สี/ล้างรูปแบบ**
   - Acceptance: ขณะพิมพ์ ลากเลือกแล้วกด = ห่อ/ถอด `<strong>` `<em>` `<u>` `<span style="color">` เฉพาะช่วงนั้น; ชิปไม่ถูกผ่า; Ctrl+B/I/U;
     ปุ่มกดค้างตามรูปแบบที่ caret; บันทึกแล้ว PDF หนาเฉพาะส่วน
   - Verify: vitest `tests/doc-text.test.ts` (ห่อ/ถอด/คร่อมชิป/คร่อม tag/ล้าง) + Playwright บน dev

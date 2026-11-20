@@ -17,6 +17,7 @@ import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList, type Rect } from "@/lib/doc-blocks";
 import { addBox, boxSize, insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
 import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
+import { useEditor } from "@/lib/editor-bus";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 import { paperOf, setMargins } from "@/lib/paper";
@@ -31,7 +32,7 @@ import { boxRects, FreeBoxPanel, GuidePanel, useFree } from "./FreeCanvas";
 import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { Toolbar } from "./Toolbar";
-import { blockTools } from "./toolbar-actions";
+import { blockTools, textTools } from "./toolbar-actions";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
 import { Rulers } from "./Rulers";
@@ -517,13 +518,14 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
       : KIND_NAME[flat.find((b) => keyOf(b) === active.slice(2))?.kind ?? "custom"]
     : "";
 
-  const picked = current; // the toolbar's view of the selection
+  const editorNow = useEditor(); // the text being typed in: the toolbar formats its selection
+  const tool = { block: current, readOnly, editor: editorNow, remove: () => remove() }; // what the toolbar's buttons work on
   return (
     <DndContext id={dndId} sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish} autoScroll={{ threshold: { x: 0, y: 0.08 } }}>
       <DragCtx.Provider value={{ active, drop, pointer: pointerDrag, selected }}>
         <div className={styles.workbench}>
         {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
-        {!readOnly && <Toolbar groups={[blockTools({ block: picked, readOnly, remove: () => remove() })]} />}
+        {!readOnly && <Toolbar groups={[textTools(tool), blockTools(tool)]} />}
         <div className={styles.workbenchRow}>
         {!readOnly && (
           <aside

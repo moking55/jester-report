@@ -4,6 +4,8 @@ import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } 
 import { createPortal } from "react-dom";
 
 import type { ElementNode, Range } from "@/lib/doc-parse";
+import { clear as clearFormat, stateAt, toggle as toggleFormat, type Format } from "@/lib/doc-format";
+import { editorBus } from "@/lib/editor-bus";
 import { domUnits, newChipHtml, readInlineIf, readInner, writeInlineIf, writeInner, type InlineIf } from "@/lib/doc-text";
 
 import styles from "./Designer.module.css";
@@ -86,6 +88,43 @@ export function TextEditor({ el, inner, src, fields, onDone }: Props) {
     sel?.collapseToEnd();
   }, [start]);
 
+  // the toolbar formats the selected words through this (SPEC-studio.md v1.9)
+  useEffect(() => {
+    const e = ref.current!;
+    const range = () => {
+      const sel = selectionIn(e);
+      const r = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+      return sel && r && e.contains(r.commonAncestorContainer) ? { sel, r } : null;
+    };
+    const show = (next: globalThis.Range | null, sel: Selection) => {
+      if (next) {
+        sel.removeAllRanges();
+        sel.addRange(next);
+      }
+      editorBus.notify();
+    };
+    editorBus.set({
+      toggle: (f, color) => {
+        const at = range();
+        if (at && !at.r.collapsed) show(toggleFormat(e, at.r, f, color), at.sel);
+      },
+      clear: () => {
+        const at = range();
+        if (at && !at.r.collapsed) show(clearFormat(e, at.r), at.sel);
+      },
+      state: () => {
+        const at = range();
+        return at ? { selected: !at.r.collapsed, format: stateAt(e, at.r) } : null;
+      },
+    });
+    const look = () => editorBus.notify();
+    document.addEventListener("selectionchange", look);
+    return () => {
+      document.removeEventListener("selectionchange", look);
+      editorBus.set(null);
+    };
+  }, []);
+
   // after pressing (and maybe dragging) a field from the palette, typing goes on here
   useEffect(() => {
     const back = () => {
@@ -148,6 +187,22 @@ export function TextEditor({ el, inner, src, fields, onDone }: Props) {
     if (e.key === "Escape" && suggest) {
       e.preventDefault();
       setSuggest(null);
+      return;
+    }
+    const mod = (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey;
+    const shortcut: Record<string, Format> = { b: "bold", i: "italic", u: "underline" };
+    if (mod && shortcut[e.key.toLowerCase()]) {
+      e.preventDefault();
+      const sel = selectionIn(ref.current!);
+      const r = sel && sel.rangeCount ? sel.getRangeAt(0) : null;
+      if (sel && r && !r.collapsed) {
+        const next = toggleFormat(ref.current!, r, shortcut[e.key.toLowerCase()]);
+        if (next) {
+          sel.removeAllRanges();
+          sel.addRange(next);
+        }
+        editorBus.notify();
+      }
       return;
     }
     if (e.key === "Enter" && e.shiftKey) {

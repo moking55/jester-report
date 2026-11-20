@@ -669,7 +669,8 @@
   background: var(--fill-bar);
   border-bottom: 1px solid var(--color-border);
   min-height: 34px;
-  overflow: hidden;
+  position: relative;
+  z-index: 5;
 }
 
 .toolGroup {
@@ -736,4 +737,42 @@
 .toolPopover .toolGroup {
   border-right: 0;
   padding-right: 0;
+}
+
+/* the colour button: a bar under the letter shows the colour at the selection */
+.colorBar {
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  bottom: 3px;
+  height: 3px;
+  border-radius: 1px;
+}
+
+.toolButton:has(.colorBar) {
+  position: relative;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(4, 22px);
+  gap: 4px;
+}
+
+.swatch {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.swatchClear {
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+  padding: 3px 8px;
+  cursor: pointer;
 }
