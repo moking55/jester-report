@@ -14,7 +14,7 @@ export const TYPE_NAME: Record<VarType, string> = { text: "ข้อความ
 type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 
 /** Index of the first top-level (outside quotes and brackets) ` word ` in `expr`, or -1. */
-function topLevel(expr: string, word: string, from = 0): number {
+export function topLevel(expr: string, word: string, from = 0): number {
   let depth = 0;
   let quote = "";
   for (let i = from; i < expr.length; i++) {
@@ -31,7 +31,7 @@ function topLevel(expr: string, word: string, from = 0): number {
 }
 
 /** `(x)` as x, only when the parentheses are one pair around everything. */
-function unwrap(expr: string): string {
+export function unwrap(expr: string): string {
   const e = expr.trim();
   if (!e.startsWith("(") || !e.endsWith(")")) return e;
   let depth = 0;
@@ -49,7 +49,7 @@ function unwrap(expr: string): string {
 }
 
 /** `A if c else B` as [A, c, B], or null. */
-function ternary(expr: string): [string, string, string] | null {
+export function ternary(expr: string): [string, string, string] | null {
   const e = expr.trim();
   const at = topLevel(e, "if");
   if (at < 0) return null;
@@ -107,6 +107,7 @@ function valueOf(type: VarType, value: string, what: string): Result<string> {
   if (type === "text") return { ok: true, value: textToArg(value) };
   if (!v) return { ok: false, error: `${what}: ใส่ค่า` };
   if (BAD.test(v)) return { ok: false, error: `${what}: ใส่เฉพาะนิพจน์ ไม่ต้องมี {{ }} หรือ {% %}` };
+  if (type === "number" && /(^|[^\w.])\d+\.\d/.test(v)) return { ok: false, error: `${what}: เลขทศนิยมในนิพจน์ใช้ไม่ได้ (ข้อมูลเป็น Decimal) เขียนเป็น data.x * 7 / 100 แทน 0.07` };
   if (type === "number" && !(NUMERIC.test(v) && !/["']/.test(v))) return { ok: false, error: `${what}: ตัวเลขใช้ได้เฉพาะตัวเลข ชื่อ + - * / ( ) และ | round(n)` };
   return { ok: true, value: topLevel(v, "if") >= 0 ? `(${v})` : v };
 }

@@ -40,6 +40,7 @@ import type { Range } from "@/lib/doc-parse";
 
 import styles from "./Designer.module.css";
 import type { Suggestion } from "./TextEditor";
+import { VarPanel } from "./VarPanel";
 
 // The properties of each kind of block (SPEC-studio.md "v1.7" บล็อก): what the panel next to the paper edits.
 // Every change is a range replace in template.html (lib/doc-edit), one undo step, committed on blur or Enter.
@@ -81,7 +82,7 @@ function Field({ label, value, onCommit, readOnly, list, mono }: { label: string
 /**
  * Text with {{ … }} for values (a QR code's text): typing {{ lists the fields; Enter or leaving the box commits.
  */
-function TemplateField({ label, value, onCommit, readOnly, fields }: { label: string; value: string; onCommit: (v: string) => void; readOnly: boolean; fields: Suggestion[] }) {
+export function TemplateField({ label, value, onCommit, readOnly, fields }: { label: string; value: string; onCommit: (v: string) => void; readOnly: boolean; fields: Suggestion[] }) {
   const [text, setText] = useState(value);
   const [seen, setSeen] = useState(value);
   const [open, setOpen] = useState<{ from: number; to: number; query: string; index: number; rect: DOMRect } | null>(null);
@@ -517,21 +518,8 @@ export function BlockPanel(props: Props) {
           <p className={styles.hint}>ลากบล็อกลงใน &quot;ทุกแถว&quot; บนกระดาษ ใช้ชื่อแต่ละแถวในช่องข้อมูล</p>
         </div>
       );
-    case "set": {
-      const m = /^set\s+([A-Za-z_]\w*)\s*=\s*([\s\S]*)$/.exec(d.inner.trim());
-      const write = (name: string, expr: string) => {
-        if (!/^[A-Za-z_]\w*$/.test(name.trim())) return apply(fail("ชื่อตัวแปรต้องเป็นตัวอักษรอังกฤษ/ตัวเลข/_"));
-        if (!expr.trim() || /%\}|\{%/.test(expr)) return apply(fail("ค่าไม่ถูกต้อง"));
-        apply(setTagArgs(src, block, block, "set", `${name.trim()} = ${expr.trim()}`));
-      };
-      return m ? (
-        <div className={styles.props}>
-          <Field label="ชื่อตัวแปร" value={m[1]} mono readOnly={readOnly} onCommit={(v) => write(v, m[2])} />
-          <Field label="ค่า (expression)" value={m[2]} mono readOnly={readOnly} onCommit={(v) => write(m[1], v)} />
-          <p className={styles.hint}>ไม่แสดงบนกระดาษ ใช้ชื่อนี้ในบล็อกถัดไปได้</p>
-        </div>
-      ) : null;
-    }
+    case "set":
+      return <VarPanel block={block} src={src} inner={d.inner} fields={fields} readOnly={readOnly} apply={apply} />;
     case "none":
       return block.kind === "custom" ? (
         <div className={styles.props}>

@@ -39,7 +39,7 @@ describe("doc-var: a {% set %} as a typed variable", () => {
   it("writes it back the way it reads", () => {
     for (const src of [
       'a = "ชำระแล้ว" if data.paid else ("เกินกำหนด" if data.late else "ค้างชำระ")',
-      "vat = data.subtotal * 0.07",
+      "vat = data.subtotal * 7 / 100",
       'a = "hello"',
       'a = "INV-" ~ (data.no) ~ "-A"',
       "paid = data.total > 0 if data.x else false",
@@ -60,6 +60,8 @@ describe("doc-var: a {% set %} as a typed variable", () => {
     expect(writeVar({ ...base, name: "1x" })).toMatchObject({ ok: false });
     expect(writeVar({ ...base, otherwise: "" })).toMatchObject({ ok: false });
     expect(writeVar({ ...base, otherwise: "abc + 'x'" })).toMatchObject({ ok: false });
+    expect(writeVar({ ...base, otherwise: "data.total * 0.07" })).toMatchObject({ ok: false, error: expect.stringContaining("Decimal") });
+    expect(writeVar({ ...base, otherwise: "data.total * 7 / 100" })).toMatchObject({ ok: true });
     expect(writeVar({ ...base, otherwise: "1 %} x {%" })).toMatchObject({ ok: false });
     expect(writeVar({ ...base, rows: [{ test: "", value: "2" }] })).toMatchObject({ ok: false });
     expect(writeVar({ ...base, type: "bool", otherwise: "{{ x }}" })).toMatchObject({ ok: false });

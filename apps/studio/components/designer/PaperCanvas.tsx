@@ -5,7 +5,7 @@ import { createElement, useEffect, useLayoutEffect, useMemo, useRef, useState } 
 
 import type { Block, BlockList } from "@/lib/doc-blocks";
 import { BASE_CSS, fontFaces, renderSource, scopeReportCss, type RenderMode } from "@/lib/doc-render";
-import { lookup, test, type Scope } from "@/lib/doc-sample";
+import { lookup, test, withSet, type Scope } from "@/lib/doc-sample";
 import { readStyle } from "@/lib/doc-edit";
 import { pageBreaks, paperOf, PX_PER_MM } from "@/lib/paper";
 import type { Rect } from "@/lib/doc-blocks";
@@ -183,7 +183,13 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
   const css = `${PAPER_CSS}${fontFaces(files["report.json"]).split("\n").slice(2).join("\n")}${BASE_CSS}${scopeReportCss(files["report.css"] ?? "")}\n${zoneCss}`;
 
   const renderList = (l: BlockList, scope: Scope | null, id: string): React.ReactNode => {
-    const children = l.items.filter(visible).map((b) => renderBlock(b, scope));
+    // a {% set %} draws nothing but its value is there for what follows it (with the sample)
+    let sc = scope;
+    const children: React.ReactNode[] = [];
+    for (const b of l.items) {
+      if (b.kind === "set" && b.detail.kind === "set" && sc) sc = withSet(sc, b.detail.inner);
+      else if (visible(b)) children.push(renderBlock(b, sc));
+    }
     if (list) return list({ list: l, id, children });
     return children.length ? children : <div className="jd-empty">ว่าง</div>;
   };

@@ -3,6 +3,10 @@
 // fmt.number, fmt.thai_date; simple tests with ==, !=, not, and, or. Anything else stays an expression chip.
 // Values come from prepareDraft's view model, where every decimal is a string; numbers stay exact (BigInt).
 
+import { joined } from "./code-arg";
+import { calc, decText, parseDec, type Dec } from "./doc-calc";
+import { ternary, unwrap } from "./doc-var";
+
 export type Scope = Record<string, unknown>;
 export type Shown = { ok: true; text: string } | { ok: false };
 
@@ -75,7 +79,7 @@ const show = (v: unknown): Shown => {
 /** The text an expression gives with the sample, or not ok when this evaluator cannot tell. */
 export function evaluate(expr: string, scope: Scope): Shown {
   const e = expr.trim();
-  if (PATH.test(e)) return show(lookup(scope, e));
+  if (PATH.test(e)) return unknown(scope, e) ? { ok: false } : show(lookup(scope, e));
   const call = /^fmt\.(money|number|thai_date)\(\s*([^,()]+?)\s*(?:,\s*(\d+)\s*)?\)$/.exec(e);
   if (!call) return { ok: false };
   const [, fn, arg, placesText] = call;
@@ -126,5 +130,64 @@ export function test(cond: string, scope: Scope): boolean | undefined {
     if (!PATH.test(cmp[1].trim()) || !right.ok) return undefined;
     return cmp[2] === "==" ? same(left, right.value) : !same(left, right.value);
   }
-  return PATH.test(c) ? truthy(lookup(scope, c)) : undefined;
+  return PATH.test(c) && !unknown(scope, c) ? truthy(lookup(scope, c)) : undefined;
+}
+
+// ---- variables ({% set %}): computed with the sample, in document order ----
+
+const UNKNOWN = "$unknown"; // names of variables this evaluator could not work out
+
+const unknown = (scope: Scope, path: string) => ((scope[UNKNOWN] as string[] | undefined) ?? []).includes(path.split(/[.[]/)[0]);
+
+/** A value as text the way Jinja prints it, or null when it is not a plain value. */
+const printed = (v: unknown): string | null =>
+  v === null || v === undefined ? "" : typeof v === "string" || typeof v === "number" ? String(v) : null;
+
+/** What an expression is with the sample (a string, a decimal string, a boolean, a looked-up value), or not ok. */
+export function compute(expr: string, scope: Scope): { ok: true; value: unknown } | { ok: false } {
+  const e = expr.trim();
+  if (!e) return { ok: false };
+  const branch = ternary(e);
+  if (branch) {
+    const t = test(branch[1], scope);
+    return t === undefined ? { ok: false } : compute(t ? branch[0] : unwrap(branch[2]), scope);
+  }
+  const parts = joined(e);
+  if (parts.length > 1) {
+    let text = "";
+    for (const p of parts) {
+      const r = compute(unwrap(p), scope);
+      const t = r.ok ? printed(r.value) : null;
+      if (t === null) return { ok: false };
+      text += t;
+    }
+    return { ok: true, value: text };
+  }
+  const lit = literal(e);
+  if (lit.ok && !/^-?\d/.test(e)) return lit; // a string, true/false/none (a number is arithmetic below)
+  if (e.startsWith("(") && unwrap(e) !== e) return compute(unwrap(e), scope);
+  if (PATH.test(e)) return unknown(scope, e) ? { ok: false } : { ok: true, value: lookup(scope, e) };
+  if (/^fmt\./.test(e)) {
+    const shown = evaluate(e, scope);
+    return shown.ok ? { ok: true, value: shown.text } : { ok: false };
+  }
+  const value = (path: string): Dec | null => {
+    if (unknown(scope, path)) return null;
+    const v = lookup(scope, path);
+    return typeof v === "string" ? parseDec(v) : typeof v === "number" && Number.isInteger(v) ? parseDec(String(v)) : null;
+  };
+  const d = calc(e, value);
+  return d ? { ok: true, value: decText(d) } : { ok: false };
+}
+
+/** The scope after a `{% set name = value %}` (`inner` is the tag's text), or the same scope when it is not one. */
+export function withSet(scope: Scope, inner: string): Scope {
+  const m = /^set\s+([A-Za-z_]\w*)\s*=\s*([\s\S]*)$/.exec(inner.trim());
+  if (!m) return scope;
+  const r = compute(m[2], scope);
+  const names = ((scope[UNKNOWN] as string[] | undefined) ?? []).filter((n) => n !== m[1]);
+  const next: Scope = { ...scope, [UNKNOWN]: r.ok ? names : [...names, m[1]] };
+  if (r.ok) next[m[1]] = r.value;
+  else delete next[m[1]];
+  return next;
 }

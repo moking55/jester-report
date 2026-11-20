@@ -16,6 +16,7 @@ import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, 
 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList, type Rect } from "@/lib/doc-blocks";
 import { addBox, boxSize, insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
+import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 import { paperOf, setMargins } from "@/lib/paper";
@@ -279,11 +280,15 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   // {% set %} blocks draw nothing on the paper: they are listed beside it, and their names are fields to put in text
   const variables = useMemo(
     () =>
-      allBlocks(blocks).flatMap((b) => {
-        const m = b.kind === "set" && b.detail.kind === "set" ? /^set\s+([A-Za-z_]\w*)\s*=\s*([\s\S]*)$/.exec(b.detail.inner.trim()) : null;
-        return m ? [{ block: b, name: m[1], expr: m[2].trim() }] : [];
+      allBlocks(blocks).flatMap((b, _i, all) => {
+        const v = b.kind === "set" && b.detail.kind === "set" ? readVar(b.detail.inner) : null;
+        if (!v) return [];
+        // used in a {{ }} or {% %} above its first {% set %}: it is not set yet there
+        const first = all.find((o) => o.kind === "set" && o.detail.kind === "set" && readVar(o.detail.inner)?.name === v.name);
+        const early = first === b && new RegExp(`(\{\{|\{%)[^}%]*\b${v.name}\b`).test(src.slice(0, b.start));
+        return [{ block: b, name: v.name, type: v.type, summary: varSummary(v), early }];
       }),
-    [blocks],
+    [blocks, src],
   );
   const fields = useMemo(
     () => [...(part === "body" ? [] : PAGE_FIELDS), ...variables.map((v) => ({ label: `ตัวแปร ${v.name}`, expression: `{{ ${v.name} }}` })), ...suggestions(files)],
@@ -540,10 +545,10 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                     key={keyOf(v.block)}
                     type="button"
                     className={`${styles.varItem} ${selected === keyOf(v.block) ? styles.varItemOn : ""}`}
-                    title={`{% set ${v.name} = ${v.expr} %}`}
+                    title={`${TYPE_NAME[v.type]}${v.early ? " · ใช้ก่อนตั้งค่า" : ""}`}
                     onClick={() => setSelected(keyOf(v.block))}
                   >
-                    {v.name} = <code>{v.expr}</code>
+                    {v.early && "⚠ "}{v.name} = <code>{v.summary}</code>
                   </button>
                 ))}
               </>

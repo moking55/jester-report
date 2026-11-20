@@ -4,23 +4,23 @@
 
 ## Phase A: ตัวแปร
 
-- [ ] **T1 `lib/doc-var.ts`: อ่าน/เขียนค่าของ set เป็นประเภท + แถวเงื่อนไข**
+- [x] **T1 `lib/doc-var.ts`: อ่าน/เขียนค่าของ set เป็นประเภท + แถวเงื่อนไข**
   - Acceptance: `readVar(inner) → { name, type: text|number|bool|expr, rows, otherwise } | null` และ `writeVar(...)`; ternary ต่อกันหลายชั้นไป-กลับตรง;
     ตัวเลขรับเฉพาะ ตัวเลข/ชื่อ/`+ - * / ( )`/`| round(n)`; ค่าเขียนมือแปลก = `expr` และ `writeVar(readVar(x)) === x`
   - Verify: `npx vitest run tests/doc-var.test.ts`
   - Files: `lib/doc-var.ts`, `tests/doc-var.test.ts`
-- [ ] **T2 แผงตัวแปร + รายการข้างผืน + เตือนใช้ก่อนตั้ง**
+- [x] **T2 แผงตัวแปร + รายการข้างผืน + เตือนใช้ก่อนตั้ง**
   - Acceptance: แผงมีชื่อ, ค่า (ค่าเดียว/แถว `ถ้า → ค่า` เพิ่ม/ลบ/เลื่อน + `ไม่เช่นนั้น`) ตามประเภท (ข้อความใช้ `TemplateField`); ค่าผิดรูปไม่บันทึก + เตือน;
     รายการข้างผืนแสดงชื่อ/ประเภท/ค่าย่อหรือ "ตามเงื่อนไข n ข้อ"; ชิปตัวแปรที่อยู่ก่อน set ของมันมีขีดเตือน
   - Verify: vitest (workbench helpers) + Playwright บน dev: ตั้งสถานะ 2 เงื่อนไข → template มีแท็กเดียวตามคาด
   - Files: `components/designer/BlockPanels.tsx`, `components/designer/Workbench.tsx`, `components/designer/PaperCanvas.tsx`, tests
-- [ ] **T3 ผืนคำนวณตัวแปรกับข้อมูลตัวอย่าง**
+- [x] **T3 ผืนคำนวณตัวแปรกับข้อมูลตัวอย่าง**
   - Acceptance: `evaluate` รองรับ literal, `~`, `+ - * /`, `( )`, `| round(n)`, ternary; ผืนเติม scope ตามลำดับเอกสาร (ใน repeat ต่อแถว); คำนวณไม่ได้ = ชิปชื่อ
   - Verify: vitest `tests/doc-sample.test.ts` (กรณีใหม่) + dev: `vat = data.subtotal * 0.07` แสดงค่าบนผืน
   - Files: `lib/doc-sample.ts`, `components/designer/PaperCanvas.tsx`, tests
 
 ### Checkpoint A
-- [ ] studio 4 คำสั่งผ่าน · ตัวแปรใช้งานได้ครบด้วยแผง (ส่วน toolbar ของตัวแปรอยู่ T10)
+- [x] studio 4 คำสั่งผ่าน · ตัวแปรใช้งานได้ครบด้วยแผง (ส่วน toolbar ของตัวแปรอยู่ T10)
 
 ## Phase B: toolbar ส่วนจัดรูปแบบ
 
