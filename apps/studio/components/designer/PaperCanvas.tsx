@@ -104,8 +104,8 @@ const PAPER_CSS = `
 .jd-gl { position: absolute; pointer-events: none; z-index: 5; border: 0 solid #e0357a; }
 .jd-gl-x { top: 0; bottom: 0; border-left-width: 1px; } .jd-gl-y { left: 0; right: 0; border-top-width: 1px; }
 .jd-guide { position: absolute; inset: 0; outline: 1px dashed #c8d3e0; pointer-events: none; }
-.jd-chip { display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: bottom; padding: 0 3px; border-radius: 4px;
-  font-size: 0.85em; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line, never wider than its place */
+.jd-chip { display: inline-block; max-width: 100%; box-sizing: border-box; vertical-align: top; padding: 0 3px; border-radius: 4px;
+  font-size: inherit; line-height: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line of the text it sits in: never taller, never wider than its place */
 .jd-expr { background: #e6f0ff; color: #1f4fa3; }
 .jd-tag { background: #fff0db; color: #8a5300; }
 .jd-editing { outline: 2px solid #f0a020; outline-offset: 2px; cursor: text; }
