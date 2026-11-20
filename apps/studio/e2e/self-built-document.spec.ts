@@ -167,7 +167,7 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
     const root = document.querySelector("[data-paper]")!.shadowRoot!;
     (root.querySelector(`[data-jd-list="${id}"]`)!.closest("[data-jd-block]") as HTMLElement).click();
   }, col1);
-  await page.getByRole("toolbar").getByRole("button", { name: "เพิ่มคอลัมน์", exact: true }).click();
+  await page.getByRole("toolbar").getByLabel("จำนวนคอลัมน์").selectOption("3");
   await expect(panel(page).getByLabel("สัดส่วนคอลัมน์ 3")).toBeVisible();
   await panel(page).getByRole("button", { name: "รวมกับคอลัมน์ขวา" }).nth(1).click();
   await expect(panel(page).getByLabel("สัดส่วนคอลัมน์ 3")).toHaveCount(0);
