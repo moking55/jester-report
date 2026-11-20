@@ -80,10 +80,11 @@
 
 ## Phase D: ตรวจรวม
 
-- [ ] **T12 E2E: toolbar + ตัวแปร**
+- [~] **T12 E2E: toolbar + ตัวแปร**
   - Acceptance: spec ใหม่ครอบ Success Criteria 1–5 (ตัวหนาเฉพาะส่วน/รายการ/เงินใน PDF, กดปุ่มครบทุกชนิดบล็อก, สถานะ 3 กรณี, vat ผืน = PDF, set เขียนมือไม่ถูกแก้)
   - Verify: Playwright จาก Windows บน rc stack
-  - Files: `e2e/toolbar.spec.ts`, `e2e/variables.spec.ts`
+  - Files: `e2e/toolbar.spec.ts` (ครอบ toolbar + ตัวแปร ในไฟล์เดียว)
+  - สถานะ: เขียนแล้ว typecheck/lint ผ่าน **ยังไม่ได้รัน** — VM 10.0.1.29 เข้าไม่ได้ (นอกเครือข่ายออฟฟิศ 20 พ.ย. 2026)
 - [ ] **T13 ตรวจรวม + rc**
   - Acceptance: studio 4 คำสั่ง; E2E ทุก spec ผ่านบน stack สด 1.9.0-rc ไม่ retry; starter 5 ตัว PDF เท่ากับ v1.8.1
   - Verify: ผล Playwright + เทียบ PDF

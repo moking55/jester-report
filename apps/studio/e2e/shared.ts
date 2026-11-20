@@ -23,7 +23,7 @@ export async function login(page: Page) {
   await expect(page.getByRole("heading", { name: "รายงาน" })).toBeVisible({ timeout: 30_000 });
 }
 
-export type PdfPage = { widthMm: number; heightMm: number; text: string; images: number };
+export type PdfPage = { widthMm: number; heightMm: number; text: string; images: number; fonts: string[] };
 
 /**
  * A PDF's pages (size, text, pictures) read with pypdf through `python`; null when python or pypdf is not there, so the
@@ -35,7 +35,10 @@ export function pdfInfo(pdf: Buffer): PdfPage[] | null {
     "import sys, io, json",
     "from pypdf import PdfReader",
     "r = PdfReader(io.BytesIO(sys.stdin.buffer.read()))",
-    'print(json.dumps([{"widthMm": float(p.mediabox.width) * 25.4 / 72, "heightMm": float(p.mediabox.height) * 25.4 / 72, "text": p.extract_text(), "images": len(p.images)} for p in r.pages]))',
+    "def fonts(p):",
+    "    f = p['/Resources'].get('/Font', {}) if '/Resources' in p else {}",
+    "    return sorted({str(v.get_object().get('/BaseFont', '')) for v in f.values()})",
+    'print(json.dumps([{"widthMm": float(p.mediabox.width) * 25.4 / 72, "heightMm": float(p.mediabox.height) * 25.4 / 72, "text": p.extract_text(), "images": len(p.images), "fonts": fonts(p)} for p in r.pages]))',
   ].join("\n");
   try {
     const out = execFileSync("python", ["-c", script], { input: pdf, encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
