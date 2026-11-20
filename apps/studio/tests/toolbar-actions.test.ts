@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import type { ToolButton, ToolGroup } from "@/components/designer/Toolbar";
-import { paragraphTools, textTools, type ToolContext } from "@/components/designer/toolbar-actions";
+import { readBlocks } from "@/lib/doc-blocks";
+import { kindTools, paragraphTools, textTools, type ToolContext } from "@/components/designer/toolbar-actions";
 
 const calls: Record<string, string | null>[] = [];
-const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
+const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], src: "", apply: () => undefined, duplicate: () => undefined, list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
 const button = (g: ToolGroup, id: string) => g.items.find((i) => i.id === id) as ToolButton;
 
 describe("toolbar text and paragraph tools", () => {
@@ -41,5 +42,35 @@ describe("toolbar text and paragraph tools", () => {
 
   it("are off for a read-only document", () => {
     expect(button(textTools({ ...base, decls: {}, readOnly: true }), "bold").disabled).toBe(true);
+  });
+});
+
+describe("kind tools", () => {
+  const withBlock = (src: string, apply: (r: unknown) => void) => ({ ...base, src, block: readBlocks(src).items[0], apply });
+  const node = (g: ToolGroup | null, id: string) => (g?.items.find((i) => i.id === id) as unknown as { node: { props: { value: string; disabled: boolean; onChange: (e: { target: { value: string } }) => void } } }).node.props;
+
+  it("text: a heading level through the tag", () => {
+    const got: unknown[] = [];
+    const g = kindTools(withBlock("<p>ก</p>", (r) => got.push(r)));
+    const level = node(g, "level");
+    expect(level.value).toBe("p");
+    level.onChange({ target: { value: "h2" } });
+    expect(got).toMatchObject([{ ok: true, value: { src: "<h2>ก</h2>" } }]);
+  });
+
+  it("field: wraps and unwraps fmt, leaves other expressions grey", () => {
+    const got: { src: string }[] = [];
+    const g = kindTools(withBlock("<div>{{ totals.grand }}</div>", (r) => got.push(r as { src: string })));
+    const format = node(g, "format");
+    expect(format.value).toBe("plain");
+    format.onChange({ target: { value: "money" } });
+    expect(got[0].src).toBe("<div>{{ fmt.money(totals.grand) }}</div>");
+    const other = kindTools(withBlock("<div>{{ data.a | upper }}</div>", () => undefined));
+    expect(node(other, "format").disabled).toBe(true);
+  });
+
+  it("has nothing for a kind without tools yet, or no selection", () => {
+    expect(kindTools(base)).toBeNull();
+    expect(kindTools(withBlock("<hr>", () => undefined))).toBeNull();
   });
 });

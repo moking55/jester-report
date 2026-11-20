@@ -2,11 +2,14 @@ import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Copy, Eraser, I
 import { createElement } from "react";
 
 import type { Block } from "@/lib/doc-blocks";
+import { replaceIn, type Edited, type Result } from "@/lib/doc-edit";
+import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
+import { FORMAT_NAME, readFieldFormat, writeFieldFormat, type FieldFormat } from "@/lib/field-format";
 import type { EditorHandle } from "@/lib/editor-bus";
 
 import { ColorTool } from "./ColorTool";
 import styles from "./Designer.module.css";
-import type { ToolGroup } from "./Toolbar";
+import type { ToolGroup, ToolNode } from "./Toolbar";
 
 // What the toolbar's buttons do (SPEC-studio.md v1.9). Each group is built from what is selected and what is being
 // typed; the buttons call the same edits as the panel beside the paper, so there is one way to do each thing.
@@ -23,6 +26,9 @@ export type ToolContext = {
   readOnly: boolean;
   editor: EditorHandle | null; // the text being typed in, if any
   fonts: string[]; // the fonts of the report
+  src: string; // template.html as it is now
+  apply: (r: Result<Edited> | Edited) => void; // one undo step
+  duplicate: () => void; // a copy after the selected block
   list: { can: boolean; kind: "ul" | "ol" | null; toggle: (ordered: boolean) => void }; // a paragraph as a list, a list back
   setStyle: (props: Record<string, string | null>) => void; // write the selected block's style (one undo step)
   remove: () => void;
@@ -77,6 +83,52 @@ export function textTools(ctx: ToolContext): ToolGroup {
 }
 
 /** Bulleted and numbered list: a paragraph becomes one (a line per item), the same button turns it back. */
+/** A list the toolbar offers (a level, a format): its options and what picking one does. */
+function select(id: string, label: string, value: string, options: [string, string][], disabled: boolean, onPick: (v: string) => void): ToolNode {
+  const shown = value && !options.some(([v]) => v === value) ? [...options, [value, value] as [string, string]] : options;
+  return {
+    id,
+    node: createElement(
+      "select",
+      { className: styles.toolSelect, "aria-label": label, title: label, value, disabled, onChange: (e: { target: { value: string } }) => onPick(e.target.value) },
+      [["", label] as [string, string], ...shown].map(([v, l]) => createElement("option", { key: v, value: v }, l)),
+    ),
+  };
+}
+
+/** What only this kind of block has: a heading level for text, a number format for a field, … */
+export function kindTools(ctx: ToolContext): ToolGroup | null {
+  const b = ctx.block;
+  if (!b) return null;
+  const off = ctx.readOnly;
+  if (b.kind === "text" && b.detail.kind === "text") {
+    const name = b.node.kind === "element" ? b.node.name : "p";
+    return {
+      id: "kind",
+      label: "ข้อความ",
+      items: [
+        select("level", "ระดับ", name === "div" ? "" : name, TEXT_LEVELS.map(([v, l]) => [v, l]), off || name === "div", (v) => v && ctx.apply(setTextTag(ctx.src, b, v))),
+      ],
+    };
+  }
+  if (b.kind === "field" && b.detail.kind === "field") {
+    const d = b.detail;
+    const now = readFieldFormat(d.inner);
+    const names = (Object.keys(FORMAT_NAME) as FieldFormat[]).map((f): [string, string] => [f, FORMAT_NAME[f]]);
+    return {
+      id: "kind",
+      label: "ค่าช่องข้อมูล",
+      items: [
+        select("format", "รูปแบบ", now?.format ?? "", names, off || !now, (v) => {
+          if (!v || !now) return;
+          ctx.apply(replaceIn(ctx.src, b, d.expr, `{{ ${writeFieldFormat(now.path, v as FieldFormat, now.places)} }}`));
+        }),
+      ],
+    };
+  }
+  return null;
+}
+
 export function listTools(ctx: ToolContext): ToolGroup {
   const button = (id: string, label: string, icon: typeof List, ordered: boolean) => ({
     id,
@@ -131,7 +183,7 @@ export function blockTools(ctx: ToolContext): ToolGroup {
     id: "block",
     label: "บล็อกที่เลือก",
     items: [
-      { id: "duplicate", label: "ทำสำเนา", icon: Copy, keys: "Ctrl+D", disabled: true, onClick: () => undefined },
+      { id: "duplicate", label: "ทำสำเนา", icon: Copy, keys: "Ctrl+D", disabled: none, onClick: ctx.duplicate },
       { id: "remove", label: "ลบ", icon: Trash2, keys: "Delete", disabled: none, onClick: ctx.remove },
     ],
   };

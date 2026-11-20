@@ -15,7 +15,7 @@ import {
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList, type Rect } from "@/lib/doc-blocks";
-import { addBox, addListItem, boxSize, fromList, toList, insertBlock, moveBlock, newBlockHtml, removeBlock, removeListItem, readStyle, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
+import { addBox, addListItem, boxSize, fromList, setBoxRect, toList, insertBlock, moveBlock, newBlockHtml, removeBlock, removeListItem, readStyle, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
 import { fontNames } from "@/lib/doc-render";
 import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
 import { useEditor } from "@/lib/editor-bus";
@@ -33,7 +33,7 @@ import { boxRects, FreeBoxPanel, GuidePanel, useFree } from "./FreeCanvas";
 import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { Toolbar } from "./Toolbar";
-import { blockTools, canFormat, listTools, paragraphTools, textTools, type ToolContext } from "./toolbar-actions";
+import { blockTools, canFormat, kindTools, listTools, paragraphTools, textTools, type ToolContext } from "./toolbar-actions";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
 import { Rulers } from "./Rulers";
@@ -443,6 +443,20 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     apply(moveBlock(src, current, list, i + dir));
   }
 
+  /** A copy right after the selected block; in a free sheet, shifted 5 mm so it shows. */
+  function duplicate() {
+    if (!current) return;
+    const parentKey = current.path.slice(0, -1);
+    const list = parentKey.length === 0 ? blocks : listById(blocks, `${parentKey.slice(0, -1).join(".")}/${parentKey[parentKey.length - 1]}`);
+    if (!list) return;
+    const i = list.items.findIndex((b) => b.start === current.start);
+    const out = insertBlock(src, list, i + 1, src.slice(current.start, current.end));
+    const rect = current.rect;
+    const copy = rect && out.at ? allBlocks(readBlocks(out.src)).find((b) => b.start === out.at!.start) : null;
+    const moved = copy && rect ? setBoxRect(out.src, copy, { x: rect.x + 5, y: rect.y + 5 }) : null;
+    apply(moved?.ok ? { src: moved.value.src, at: out.at } : out);
+  }
+
   function remove() {
     if (!current) return;
     if (current.kind === "custom" && !window.confirm("ลบ Custom Code นี้?")) return;
@@ -454,10 +468,12 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
       const t = e.composedPath()[0] as HTMLElement | undefined;
-      if (e.key !== "Delete" || readOnly || !current) return;
+      const copy = (e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "d";
+      if ((e.key !== "Delete" && !copy) || readOnly || !current) return;
       if (t && (t.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(t.tagName))) return;
       e.preventDefault();
-      remove();
+      if (copy) duplicate();
+      else remove();
     };
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
@@ -556,6 +572,9 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     readOnly,
     editor: editorNow,
     fonts: fontNames(files["report.json"]),
+    src,
+    apply,
+    duplicate: () => duplicate(),
     list: {
       kind: current?.detail.kind === "list" ? (current.detail.ordered ? "ol" : "ul") : null,
       // a paragraph or a list, in the body, when no text is being typed in (Enter finishes that first)
@@ -636,7 +655,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
         )}
         <div className={styles.paperColumn}>
         {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
-        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), listTools(tool), blockTools(tool)]} />}
+        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), listTools(tool), ...(kindTools(tool) ? [kindTools(tool)!] : []), blockTools(tool)]} />}
         <div ref={scroller} className={styles.paperScroll} onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
           {message && (
             <p role="alert" className={styles.inlineAlert}>
