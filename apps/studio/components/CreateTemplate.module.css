@@ -267,3 +267,69 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* classic (Frutiger Aero): the layout cards are glossy buttons, the chosen one a pressed, glowing blue glass */
+:root[data-look="aero"] .card {
+  border: 1px solid var(--line-button);
+  background: var(--fill-button);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 3px rgba(10, 60, 110, 0.25);
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+}
+
+:root[data-look="aero"] .card svg {
+  stroke: #3d7ea8;
+}
+
+:root[data-look="aero"] .card:hover:not(:disabled) {
+  border-color: var(--line-primary);
+  background: var(--fill-button-hover);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 8px rgba(60, 170, 240, 0.45);
+}
+
+:root[data-look="aero"] .card[aria-checked="true"],
+:root[data-look="aero"] .card[aria-checked="true"]:hover {
+  border-color: var(--line-primary);
+  background: var(--fill-selected);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 60, 120, 0.3),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 0 10px rgba(60, 170, 240, 0.55);
+}
+
+:root[data-look="aero"] .card[aria-checked="true"] svg {
+  stroke: var(--line-primary);
+}
+
+:root[data-look="aero"] .card[aria-checked="true"]::after {
+  background: var(--fill-primary);
+  border: 1px solid var(--line-primary);
+  box-shadow: var(--glow-primary);
+  text-shadow: var(--text-shadow-primary);
+}
+
+/* the orientation switch and the fields follow the same glass */
+:root[data-look="aero"] .segments {
+  border-color: var(--line-button);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+:root[data-look="aero"] .segment {
+  background: var(--fill-button);
+}
+
+:root[data-look="aero"] .segment:has(input:checked) {
+  background: var(--fill-selected);
+  color: var(--color-primary);
+  box-shadow: inset 0 2px 4px rgba(0, 60, 120, 0.25);
+}
+
+:root[data-look="aero"] .field select,
+:root[data-look="aero"] .field input {
+  border-color: var(--line-button);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 3px rgba(10, 60, 110, 0.18);
+}
