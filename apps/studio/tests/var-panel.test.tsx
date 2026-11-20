@@ -9,13 +9,15 @@ import type { Edited, Result } from "@/lib/doc-edit";
 afterEach(cleanup);
 
 /** The panel over a template that its edits change, as the designer does. */
-function Harness({ start, out }: { start: string; out: { src: string } }) {
+function Harness({ start, onSrc }: { start: string; onSrc: (src: string) => void }) {
   const [src, setSrc] = useState(start);
-  out.src = src;
   const block = readBlocks(src).items[0];
   const apply = (r: Result<Edited> | Edited) => {
     const e = "ok" in r ? (r.ok ? r.value : null) : r;
-    if (e) setSrc(e.src);
+    if (e) {
+      setSrc(e.src);
+      onSrc(e.src);
+    }
   };
   return block.detail.kind === "set" ? <VarPanel block={block} src={src} inner={block.detail.inner} fields={[]} readOnly={false} apply={apply} /> : null;
 }
@@ -23,7 +25,7 @@ function Harness({ start, out }: { start: string; out: { src: string } }) {
 describe("VarPanel", () => {
   it("keeps the type chosen while the conditional rows are filled in one by one", () => {
     const out = { src: "" };
-    render(<Harness start="{% set status = 1 %}" out={out} />);
+    render(<Harness start="{% set status = 1 %}" onSrc={(src) => (out.src = src)} />);
     fireEvent.change(screen.getByLabelText("ประเภท"), { target: { value: "text" } });
     fireEvent.change(screen.getByLabelText("ตั้งค่าแบบ"), { target: { value: "if" } });
     const test = screen.getByLabelText("เงื่อนไขข้อ 1");
