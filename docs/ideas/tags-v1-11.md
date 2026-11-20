@@ -33,7 +33,7 @@
 - `POST /v1/render` เพิ่ม `tags?: string[]` (เสริม; ไม่ส่ง = ใช้ tag ของรายงานตอนนั้น); ผล = **สำเนา** ณ ตอนออก (ไม่ผูกต่อ: แก้ tag รายงานทีหลังไม่ย้อนเปลี่ยนเอกสารเก่า)
 - `GET /v1/tags` → `[{tag, templates, documents}]` เรียงตามจำนวนใช้ สำหรับ autocomplete และแถบ filter
 - duplicate รายงาน: คัดลอก tag; export/import zip: `manifest.tags` (เสริม; zip เก่าที่ไม่มีนำเข้าได้ ไม่เปลี่ยน `formatVersion`)
-- OpenAPI (`apps/studio/app/(app)/api/openapi.yaml` และ public-api.yaml) ปรับพร้อมกัน ตามกติกา contract เดิม
+- OpenAPI (`apps/api/openapi/public-api.yaml`; ชุดที่ Studio เสิร์ฟที่ `apps/studio/app/(app)/api/openapi.yaml` ปรับตาม) ปรับพร้อมกัน ตามกติกา contract เดิม
 
 ## Studio
 
