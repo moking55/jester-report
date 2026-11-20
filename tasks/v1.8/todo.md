@@ -88,5 +88,5 @@
 ## Checkpoint: ปล่อย v1.8.0
 
 - [x] studio 4 คำสั่ง + pytest + E2E ผ่านทั้งหมด
-- [ ] ผู้ใช้ลอง
-- [ ] อนุมัติ → version 1.8.0, tag `v1.8.0`, push, deploy บน VM
+- [x] ผู้ใช้ลอง
+- [x] อนุมัติ → version 1.8.0, tag `v1.8.0`, push, deploy บน VM
