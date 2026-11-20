@@ -85,10 +85,10 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   // upload a GIF whose name has spaces from the image's panel: it gets a name the api takes and the block uses it
   await list(page, col1).locator("img").click();
   const chooser = page.waitForEvent("filechooser");
-  await panel(page).getByRole("button", { name: "อัปโหลดรูป…" }).click();
+  await page.getByRole("toolbar").getByRole("button", { name: "อัปโหลดรูปใหม่" }).click();
   const gif = Buffer.from("R0lGODlhAQABAIAAAExpcf8AACH5BAUAAAAALAAAAAABAAEAAAICTAEAOw==", "base64");
   await (await chooser).setFiles({ name: "logo new 2.gif", mimeType: "image/gif", buffer: gif });
-  await expect(panel(page)).toContainText('อัปโหลด "logo new 2.gif" เป็น logo-new-2.gif');
+  await expect(page.getByRole("alert").filter({ hasText: 'อัปโหลด "logo new 2.gif" เป็น logo-new-2.gif' })).toBeVisible();
   await expect(list(page, col1).locator("img")).toHaveAttribute("src", /name=logo-new-2\.gif/);
 
   // type in the new text on the paper; "{{" offers the fields, the pick is a chip
@@ -165,7 +165,7 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
     const root = document.querySelector("[data-paper]")!.shadowRoot!;
     (root.querySelector(`[data-jd-list="${id}"]`)!.closest("[data-jd-block]") as HTMLElement).click();
   }, col1);
-  await panel(page).getByRole("button", { name: "+ คอลัมน์" }).click();
+  await page.getByRole("toolbar").getByRole("button", { name: "เพิ่มคอลัมน์", exact: true }).click();
   await expect(panel(page).getByLabel("สัดส่วนคอลัมน์ 3")).toBeVisible();
   await panel(page).getByRole("button", { name: "รวมกับคอลัมน์ขวา" }).nth(1).click();
   await expect(panel(page).getByLabel("สัดส่วนคอลัมน์ 3")).toHaveCount(0);
@@ -232,7 +232,7 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   await page.getByRole("button", { name: "Document Designer" }).click();
   await expect(page).toHaveURL(new RegExp(`/templates/${ID}/designer$`), { timeout: 30_000 });
   await list(page, "root").locator("h1").first().click();
-  await panel(page).getByLabel("ระดับ").selectOption("h2");
+  await page.getByRole("toolbar").getByLabel("ระดับ").selectOption("h2");
   await page.getByRole("button", { name: "บันทึก", exact: true }).click();
   await expect(page.getByRole("status").filter({ hasText: /^บันทึกแล้ว$/ })).toBeVisible({ timeout: 30_000 });
   await page.getByRole("button", { name: "กลับไปแก้ code" }).click();

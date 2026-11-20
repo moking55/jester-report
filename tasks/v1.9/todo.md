@@ -70,13 +70,13 @@
     แบบอิสระ: ลำดับซ้อน 4 ปุ่ม + จัดแนวกับกระดาษ 6 ปุ่ม
   - Verify: vitest (`alignBox`) + dev
   - Files: `components/designer/toolbar-actions.ts`, `lib/doc-edit.ts`, `components/designer/FreeCanvas.tsx`, tests
-- [ ] **T11 แผงขวา: เอาปุ่มที่ย้ายไป toolbar ออก**
+- [x] **T11 แผงขวา: เอาปุ่มที่ย้ายไป toolbar ออก**
   - Acceptance: ไม่มีปุ่มซ้ำสองที่; แผงเหลือค่าที่ต้องพิมพ์ตามคอลัมน์ "แผงขวา" ของ spec; toolbar 1280 px ไม่ล้น
   - Verify: vitest + E2E เดิมที่ใช้ปุ่มในแผงแก้ selector ให้ผ่าน
   - Files: `components/designer/BlockPanels.tsx`, `components/designer/FreeCanvas.tsx`, `e2e/*.spec.ts`
 
 ### Checkpoint C
-- [ ] studio 4 คำสั่งผ่าน · ทุกชนิดบล็อกมีปุ่มตามตาราง spec
+- [x] studio 4 คำสั่งผ่าน · ทุกชนิดบล็อกมีปุ่มตามตาราง spec
 
 ## Phase D: ตรวจรวม
 

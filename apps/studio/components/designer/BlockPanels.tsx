@@ -6,23 +6,18 @@ import { createPortal } from "react-dom";
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 
 import type { Block, Cell } from "@/lib/doc-blocks";
-import { readCode, writeCode, type CodeBlock, type CodeType } from "@/lib/code-block";
+import { readCode, writeCode, type CodeBlock } from "@/lib/code-block";
 import { checkCode } from "@/lib/doc-check";
 import {
-  addBranch,
   addColumn,
-  addSummaryRow,
   addDetailRow,
   removeDetailRow,
-  addRowColumn,
   columnWidths,
   readStyle,
   setTableSizes,
   tableCells,
   gridAddColumn,
   gridAddRow,
-  gridBorders,
-  gridHeader,
   gridMoveColumn,
   gridRemoveColumn,
   gridRemoveRow,
@@ -238,17 +233,11 @@ export function BlockPanel(props: Props) {
               )}
             </div>
           ))}
-          {!readOnly && (
-            <button type="button" disabled={cols.length >= 4} onClick={() => apply(addRowColumn(src, block))}>
-              + คอลัมน์
-            </button>
-          )}
         </div>
       );
     }
     case "grid": {
       const cols = d.rows[0].cells.length;
-      const bordered = d.rows.every((r) => r.cells.every((c) => /(?:^|;)\s*border\s*:/.test(c.node.attrs.find((a) => a.name === "style")?.value ?? "")));
       return (
         <div className={styles.props}>
           <p className={styles.hint}>
@@ -256,12 +245,6 @@ export function BlockPanel(props: Props) {
           </p>
           {!readOnly && (
             <>
-              <label className={styles.check}>
-                <input type="checkbox" checked={d.head} onChange={(e) => apply(gridHeader(src, block, e.target.checked))} /> แถวแรกเป็นหัวตาราง
-              </label>
-              <label className={styles.check}>
-                <input type="checkbox" checked={bordered} onChange={(e) => apply(gridBorders(src, block, e.target.checked))} /> เส้นตาราง
-              </label>
               <h3>แถว</h3>
               {d.rows.map((_, r) => (
                 <div key={r} className={styles.row}>
@@ -328,14 +311,6 @@ export function BlockPanel(props: Props) {
         <div className={styles.props}>
           {type ? (
             <>
-              <label className={styles.prop}>
-                ชนิด
-                <select value={type} disabled={readOnly} onChange={(e) => code && write({ ...code, type: e.target.value as CodeType })}>
-                  <option value="qr">QR code</option>
-                  <option value="promptpay">QR PromptPay</option>
-                  <option value="barcode">บาร์โค้ด</option>
-                </select>
-              </label>
               <TemplateField label={type === "promptpay" ? "เบอร์/เลขผู้เสียภาษี" : "ข้อความในโค้ด"} value={text} fields={fields} readOnly={readOnly} onCommit={(v) => code && write({ ...code, text: v })} />
               {type === "promptpay" && (
                 <TemplateField label="ยอดเงิน (เว้นว่างได้)" value={amountText} fields={fields} readOnly={readOnly} onCommit={(v) => code && write({ ...code, amount: v })} />
@@ -364,7 +339,6 @@ export function BlockPanel(props: Props) {
               ))}
             </select>
           </label>
-          {!readOnly && props.onUpload && <ImageUpload onUpload={props.onUpload} onDone={(name) => apply(setAttr(src, block, "src", name))} />}
         </div>
       );
     }
@@ -420,7 +394,6 @@ export function BlockPanel(props: Props) {
     }
     case "summary": {
       const text = (c: Cell) => src.slice(c.inner.start, c.inner.end);
-      const last = d.rows[d.rows.length - 1];
       return (
         <div className={styles.props}>
           {d.rows.map((r, i) => (
@@ -434,14 +407,6 @@ export function BlockPanel(props: Props) {
               )}
             </div>
           ))}
-          {!readOnly && last && (
-            <button
-              type="button"
-              onClick={() => apply(addSummaryRow(src, block))}
-            >
-              + แถว
-            </button>
-          )}
         </div>
       );
     }
@@ -470,19 +435,7 @@ export function BlockPanel(props: Props) {
               </div>
             ),
           )}
-          {!readOnly && (
-            <div className={styles.row}>
-              <button type="button" onClick={() => apply(addBranch(src, block, "elif", "true"))}>
-                + ไม่เช่นนั้นถ้า
-              </button>
-              {!d.branches.some((b) => b.keyword === "else") && (
-                <button type="button" onClick={() => apply(addBranch(src, block, "else"))}>
-                  + ไม่เช่นนั้น
-                </button>
-              )}
-            </div>
-          )}
-          <p className={styles.hint}>ลากบล็อกลงในแต่ละสาขาบนกระดาษ</p>
+          <p className={styles.hint}>ลากบล็อกลงในแต่ละสาขาบนกระดาษ (เพิ่มสาขาจากแถบเครื่องมือ)</p>
           {cond !== null && d.branches[cond] && (
             <ConditionModal
               fields={fields}

@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { Block, BlockList, Rect } from "@/lib/doc-blocks";
-import { moveBoxOrder, setBoxRect, setGuide, removeBlock, type Edited, type Result } from "@/lib/doc-edit";
+import { setBoxRect, setGuide, removeBlock, type Edited, type Result } from "@/lib/doc-edit";
 import styles from "./Designer.module.css";
 import { snapMove, snapResize, type Guide, type Handle } from "@/lib/snap";
 
@@ -218,7 +218,7 @@ function BoxView({
 type PanelOpts = { src: string; readOnly: boolean; apply: (r: Result<Edited>) => void };
 
 /** X / Y / width / height of the selected box in mm, and its place in the stack (SPEC v1.8 "แผงแบบอิสระ"). */
-export function FreeBoxPanel({ block, sheet, src, readOnly, apply }: PanelOpts & { block: Block; sheet: Block }) {
+export function FreeBoxPanel({ block, src, readOnly, apply }: PanelOpts & { block: Block }) {
   const r = block.rect;
   const field = (label: string, k: keyof Rect, off = false) => (
     <label className={styles.prop} key={k}>
@@ -239,7 +239,6 @@ export function FreeBoxPanel({ block, sheet, src, readOnly, apply }: PanelOpts &
       />
     </label>
   );
-  const order = (to: "front" | "back" | "up" | "down") => apply(moveBoxOrder(src, block, sheet, to));
   return (
     <div data-free-panel>
       <h4>ตำแหน่งและขนาด (mm)</h4>
@@ -250,14 +249,6 @@ export function FreeBoxPanel({ block, sheet, src, readOnly, apply }: PanelOpts &
         {field("กว้าง", "w")}
         {field("สูง", "h", block.kind === "line")}
       </div>
-      {!readOnly && (
-        <div className={styles.row}>
-          <button type="button" onClick={() => order("front")}>ยกขึ้นหน้าสุด</button>
-          <button type="button" onClick={() => order("up")}>ขึ้นหนึ่งชั้น</button>
-          <button type="button" onClick={() => order("down")}>ลงหนึ่งชั้น</button>
-          <button type="button" onClick={() => order("back")}>ส่งไปหลังสุด</button>
-        </div>
-      )}
     </div>
   );
 }

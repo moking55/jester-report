@@ -19,7 +19,7 @@ import { addBox, addListItem, boxSize, fromList, setBoxRect, toList, insertBlock
 import { fontNames } from "@/lib/doc-render";
 import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
 import { useEditor } from "@/lib/editor-bus";
-import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
+import { setTextTag } from "@/lib/doc-text";
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 import { paperOf, setMargins } from "@/lib/paper";
 import { followPointer, placeNow, snapshot, type Place, type Snapshot } from "@/lib/drop-place";
@@ -711,28 +711,10 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
                   </button>
                     </>
                   )}
-                  <button type="button" className={styles.danger} onClick={remove}>
-                    ลบ (Delete)
-                  </button>
                 </div>
               )}
-              {current.kind === "text" && current.node.kind === "element" && (
-                <label className={styles.prop}>
-                  ระดับ
-                  <select value={current.node.name} disabled={readOnly} onChange={(e) => apply(setTextTag(src, current, e.target.value))}>
-                    {TEXT_LEVELS.map(([v, l]) => (
-                      <option key={v} value={v}>
-                        {l}
-                      </option>
-                    ))}
-                    {!TEXT_LEVELS.some(([v]) => v === (current.node.kind === "element" ? current.node.name : "")) && (
-                      <option value={current.node.name}>{current.node.name}</option>
-                    )}
-                  </select>
-                </label>
-              )}
               {free && freeSheet.sheet && (current.kind === "box" || current.kind === "rect" || current.kind === "line") && (
-                <FreeBoxPanel block={current} sheet={freeSheet.sheet} src={src} readOnly={readOnly} apply={apply} />
+                <FreeBoxPanel block={current} src={src} readOnly={readOnly} apply={apply} />
               )}
               {free && current.kind === "box" && innerOf(current) && (
                 <BlockPanel block={innerOf(current)!} src={src} files={files} assets={assets} readOnly={readOnly} fields={fields} apply={apply} onCode={() => setCoding(innerOf(current)!.start)} onUpload={onUpload} />
@@ -787,7 +769,10 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
               const name = await onUpload(file);
               const { src: now, blocks: tree } = latest.current;
               const target = allBlocks(tree).find((b) => keyOf(b) === swap && b.kind === "image");
-              if (name && target) apply(setAttr(now, target, "src", name));
+              if (name && target) {
+                apply(setAttr(now, target, "src", name));
+                setMessage(name === file.name ? null : `อัปโหลด "${file.name}" เป็น ${name}`); // the api may give the picture another name
+              }
               return;
             }
             if (!file || !at || !onUpload) return;
