@@ -30,6 +30,8 @@ import { PaperCanvas, visible, type BlockFrame, type ListFrame } from "./PaperCa
 import { boxRects, FreeBoxPanel, GuidePanel, useFree } from "./FreeCanvas";
 import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
+import { Toolbar } from "./Toolbar";
+import { blockTools } from "./toolbar-actions";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
 import { Rulers } from "./Rulers";
@@ -515,9 +517,14 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
       : KIND_NAME[flat.find((b) => keyOf(b) === active.slice(2))?.kind ?? "custom"]
     : "";
 
+  const picked = current; // the toolbar's view of the selection
   return (
     <DndContext id={dndId} sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish} autoScroll={{ threshold: { x: 0, y: 0.08 } }}>
       <DragCtx.Provider value={{ active, drop, pointer: pointerDrag, selected }}>
+        <div className={styles.workbench}>
+        {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
+        {!readOnly && <Toolbar groups={[blockTools({ block: picked, readOnly, remove: () => remove() })]} />}
+        <div className={styles.workbenchRow}>
         {!readOnly && (
           <aside
             ref={area}
@@ -717,6 +724,8 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             }}
           />
         )}
+        </div>
+        </div>
         <DragOverlay dropAnimation={null}>{active ? <div className={styles.overlay}>{label}</div> : null}</DragOverlay>
       </DragCtx.Provider>
     </DndContext>

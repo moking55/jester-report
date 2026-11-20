@@ -24,7 +24,7 @@
 
 ## Phase B: toolbar ส่วนจัดรูปแบบ
 
-- [ ] **T4 toolbar shell + `lucide-react`**
+- [x] **T4 toolbar shell + `lucide-react`**
   - Acceptance: `npm i lucide-react` (pin version); `Toolbar.tsx` แถวที่สองใต้แถบบน ติดตลอด; กลุ่ม + เส้นคั่น; ไอคอน + tooltip ไทย + คีย์ลัด;
     ปุ่มเทาเมื่อใช้ไม่ได้; ล้นกว้าง = กลุ่มท้ายพับเข้า "…"; ใช้ได้ทั้งแบบคงที่/อิสระ/header-footer
   - Verify: vitest (การพับกลุ่มเป็น pure function) + build; dev ที่ 1280 px ไม่ล้น
