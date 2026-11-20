@@ -503,6 +503,34 @@
   background-position: right, right;
 }
 
+/* the vertical ruler, one piece per page: page 2 on starts at its "หน้า n" line on the paper */
+.rulerVBox {
+  position: relative;
+  width: 6.5mm;
+}
+
+.rulerVPage {
+  position: absolute;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+}
+
+.rulerVPage > .ruler {
+  position: absolute;
+  left: 0;
+}
+
+.rulerVPage + .rulerVPage::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed #d33;
+}
+
 .rulerShade {
   position: absolute;
   inset: 0;

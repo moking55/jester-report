@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dragMargin } from "@/components/designer/Rulers";
+import { dragMargin, rulerPages } from "@/components/designer/Rulers";
 
 import { codeBox, compactLabel, fontFaces, renderSource, scopeReportCss } from "@/lib/doc-render";
 import { fitMargins, pageBreaks, pageOf, paperOf, setMargins } from "@/lib/paper";
@@ -129,5 +129,17 @@ describe("sizes (v1.8)", () => {
     expect(fitMargins({ top: 20, bottom: 20, left: 15, right: 15 }, 100, 50)).toEqual({ top: 15, bottom: 15, left: 15, right: 15 });
     expect(fitMargins({ top: 20, bottom: 20, left: 15, right: 15 }, 210, 297)).toEqual({ top: 20, bottom: 20, left: 15, right: 15 });
     expect(fitMargins({ top: 3, bottom: 3, left: 2, right: 2 }, 58, null)).toEqual({ top: 3, bottom: 3, left: 2, right: 2 });
+  });
+});
+
+describe("rulerPages", () => {
+  it("page 2 on starts at its page line on the paper, counted from its top margin", () => {
+    const paper = paperOf(JSON.stringify({ page: { size: "A4", marginsMm: { top: 20, bottom: 20, left: 15, right: 15 } } }));
+    expect(rulerPages(paper, paper.margins, 297)).toEqual([{ from: 0, to: 297, origin: 0 }]);
+    expect(rulerPages(paper, paper.margins, 20 + 20 + 257 * 3)).toEqual([
+      { from: 0, to: 277, origin: 0 },
+      { from: 277, to: 534, origin: 20 },
+      { from: 534, to: 811, origin: 20 },
+    ]);
   });
 });

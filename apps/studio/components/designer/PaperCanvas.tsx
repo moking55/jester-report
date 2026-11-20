@@ -171,7 +171,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
       m.style.height = `${rest >= pageHeightPx - 0.5 ? 0 : rest}px`;
     }
   }, [src, files, sample, part, paper, pageHeightPx, bodyHeight, root]);
-  const sheetMin = paper.roll ? 30 : paper.heightMm * pages; // mm
+  const sheetMin = paper.roll ? 30 : paper.margins.top + paper.margins.bottom + paper.contentHeightMm * pages; // mm: the pages' content back to back
   const runningParts = !paper.roll && paper.layout === "flow"; // header.html / footer.html show on sheets of pages only
 
   // header.html / footer.html bring their own <style> (body { … }): it applies to their zone
