@@ -83,7 +83,9 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   await drag(page, palette(page, "text"), list(page, col2));
 
   // upload a GIF whose name has spaces from the image's panel: it gets a name the api takes and the block uses it
+  await page.waitForTimeout(150); // @dnd-kit swallows clicks for 50 ms after a drag ends: the text just dropped would stay selected
   await list(page, col1).locator("img").click();
+  await expect(page.getByRole("toolbar").getByRole("group", { name: "รูป", exact: true })).toBeVisible();
   const chooser = page.waitForEvent("filechooser");
   await page.getByRole("toolbar").getByRole("button", { name: "อัปโหลดรูปใหม่" }).click();
   const gif = Buffer.from("R0lGODlhAQABAIAAAExpcf8AACH5BAUAAAAALAAAAAABAAEAAAICTAEAOw==", "base64");
