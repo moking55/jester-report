@@ -149,6 +149,18 @@ export function renderSource(src: string, mode: RenderMode, scope: Scope | null 
 /** report.css for the paper: rules for `body` apply to the document root instead (there is no body in a shadow root). */
 export const scopeReportCss = (css: string, to = ".jd-doc") => css.replace(/(^|[\s,}])body(?=[\s,{.:#[])/g, `$1${to}`);
 
+/** The fonts a block can be set in: the ones report.json lists for the body and the header/footer (TH Sarabun New when none). */
+export function fontNames(reportJson: string | undefined): string[] {
+  const list = (v: unknown) => (Array.isArray(v) ? v.filter((f): f is string => typeof f === "string") : []);
+  try {
+    const r = JSON.parse(reportJson ?? "{}") as { fonts?: { body?: unknown; headerFooter?: unknown } };
+    const all = [...list(r.fonts?.body), ...list(r.fonts?.headerFooter)];
+    return all.length ? [...new Set(all)] : ["TH Sarabun New"];
+  } catch {
+    return ["TH Sarabun New"];
+  }
+}
+
 /** @font-face for the fonts the report uses that Studio serves (TH Sarabun New, as the engine has it). */
 export function fontFaces(reportJson: string | undefined): string {
   const list = (v: unknown) => (Array.isArray(v) ? v.filter((f): f is string => typeof f === "string") : []);

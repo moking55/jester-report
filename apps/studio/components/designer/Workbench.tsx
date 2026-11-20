@@ -15,7 +15,8 @@ import {
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList, type Rect } from "@/lib/doc-blocks";
-import { addBox, boxSize, insertBlock, moveBlock, newBlockHtml, removeBlock, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
+import { addBox, boxSize, insertBlock, moveBlock, newBlockHtml, removeBlock, readStyle, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
+import { fontNames } from "@/lib/doc-render";
 import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
 import { useEditor } from "@/lib/editor-bus";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
@@ -32,7 +33,7 @@ import { boxRects, FreeBoxPanel, GuidePanel, useFree } from "./FreeCanvas";
 import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { Toolbar } from "./Toolbar";
-import { blockTools, textTools } from "./toolbar-actions";
+import { blockTools, canFormat, paragraphTools, textTools, type ToolContext } from "./toolbar-actions";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
 import { Rulers } from "./Rulers";
@@ -519,14 +520,20 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     : "";
 
   const editorNow = useEditor(); // the text being typed in: the toolbar formats its selection
-  const tool = { block: current, readOnly, editor: editorNow, remove: () => remove() }; // what the toolbar's buttons work on
+  const formattable = !!current && canFormat(current) && !!current.style && !current.style.readOnly; // a style with Jinja in it is hands off
+  const styleRange = formattable ? current.style!.range : null;
+  const tool: ToolContext = {
+    block: current,
+    decls: formattable ? Object.fromEntries(styleRange ? readStyle(src.slice(styleRange.start, styleRange.end)) : []) : null,
+    readOnly,
+    editor: editorNow,
+    fonts: fontNames(files["report.json"]),
+    setStyle: (props) => current && apply(setStyle(src, current, props)),
+    remove: () => remove(),
+  }; // what the toolbar's buttons work on
   return (
     <DndContext id={dndId} sensors={sensors} onDragStart={onDragStart} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={finish} autoScroll={{ threshold: { x: 0, y: 0.08 } }}>
       <DragCtx.Provider value={{ active, drop, pointer: pointerDrag, selected }}>
-        <div className={styles.workbench}>
-        {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
-        {!readOnly && <Toolbar groups={[textTools(tool), blockTools(tool)]} />}
-        <div className={styles.workbenchRow}>
         {!readOnly && (
           <aside
             ref={area}
@@ -588,6 +595,9 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             onReset={() => resize({ left: DEFAULT_PANES.left })}
           />
         )}
+        <div className={styles.paperColumn}>
+        {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
+        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), blockTools(tool)]} />}
         <div ref={scroller} className={styles.paperScroll} onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
           {message && (
             <p role="alert" className={styles.inlineAlert}>
@@ -609,6 +619,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             <PaperCanvas src={src} blocks={blocks} files={files} templateId={templateId} sample={sample} frame={frame} list={list} editor={editor} part={part} onZone={onZone} guide={guideShown} renderBox={free ? freeSheet.renderBox : undefined} placed={free ? freeSheet.placed : undefined} overlay={free ? freeSheet.overlay : undefined} onPage={free ? () => setSelected(null) : undefined} cellEditor={readOnly ? undefined : cellEditor} onCell={readOnly ? undefined : (b, r, c) => setEditing(`${keyOf(b)}#${r}.${c}`)} />
             </Rulers>
           </div>
+        </div>
         </div>
         <Resizer
           orientation="vertical"
@@ -726,8 +737,6 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             }}
           />
         )}
-        </div>
-        </div>
         <DragOverlay dropAnimation={null}>{active ? <div className={styles.overlay}>{label}</div> : null}</DragOverlay>
       </DragCtx.Provider>
     </DndContext>

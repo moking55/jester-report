@@ -34,7 +34,7 @@
     ปุ่มกดค้างตามรูปแบบที่ caret; บันทึกแล้ว PDF หนาเฉพาะส่วน
   - Verify: vitest `tests/doc-text.test.ts` (ห่อ/ถอด/คร่อมชิป/คร่อม tag/ล้าง) + Playwright บน dev
   - Files: `lib/doc-text.ts`, `components/designer/TextEditor.tsx`, `components/designer/Toolbar.tsx`, tests
-- [ ] **T6 ระดับบล็อก: หนา/เอียง/ขีดเส้นใต้/สี/ฟอนต์/ขนาด/จัดชิด + เอาออกจากแผงขวา**
+- [x] **T6 ระดับบล็อก: หนา/เอียง/ขีดเส้นใต้/สี/ฟอนต์/ขนาด/จัดชิด + เอาออกจากแผงขวา**
   - Acceptance: เลือกบล็อก (ไม่พิมพ์) → ปุ่มเขียน `style=` ของบล็อก; ฟอนต์จาก `report.json` fonts + asset ฟอนต์; `StylePanel` เหลือระยะบน/ล่าง,
     ความกว้าง, เส้นตาราง + ระยะบรรทัดใหม่
   - Verify: vitest (style edits) + dev

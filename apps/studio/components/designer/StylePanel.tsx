@@ -5,11 +5,9 @@ import { readStyle } from "@/lib/doc-edit";
 
 import styles from "./Designer.module.css";
 
-// The style panel of the Document Designer (SPEC-studio v1.7 "คุณสมบัติสไตล์"): the few properties it knows,
-// written into the block's style="" (others stay as written). A style holding Jinja is read-only.
-
-const COLORS = ["", "#000000", "#333333", "#666666", "#1f4fa3", "#0b7a3e", "#b3261e", "#8a5300", "#5b2a86"];
-const SIZES = ["", "10pt", "12pt", "14pt", "16pt", "18pt", "20pt", "24pt", "28pt"];
+// The style panel of the Document Designer: the advanced properties (spacing, width, borders, line height), written
+// into the block's style="" (others stay as written). A style holding Jinja is read-only. The text formatting that used
+// to be here (size, weight, alignment, colour, font) is in the toolbar since v1.9.
 
 type Props = { src: string; block: Block; readOnly: boolean; onChange: (props: Record<string, string | null>) => void };
 
@@ -57,20 +55,15 @@ export function StylePanel({ src, block, readOnly, onChange }: Props) {
     <div className={styles.props}>
       <h3>สไตล์</h3>
       {block.style?.readOnly && <p className={styles.hint}>style นี้มี Jinja อยู่ แก้ได้ในหน้า code เท่านั้น</p>}
-      {textual && select("ขนาดตัวอักษร", "font-size", SIZES.map((s) => [s, s || "ตามเอกสาร"]))}
       {textual &&
-        select("น้ำหนัก", "font-weight", [
-          ["", "ปกติ"],
-          ["bold", "หนา"],
-        ])}
-      {textual &&
-        select("จัดแนว", "text-align", [
+        select("ระยะบรรทัด", "line-height", [
           ["", "ตามเอกสาร"],
-          ["left", "ซ้าย"],
-          ["center", "กลาง"],
-          ["right", "ขวา"],
+          ["1", "1"],
+          ["1.15", "1.15"],
+          ["1.3", "1.3"],
+          ["1.5", "1.5"],
+          ["2", "2"],
         ])}
-      {textual && select("สี", "color", COLORS.map((c) => [c, c || "ตามเอกสาร"]))}
       {(block.kind === "image" || block.kind === "summary") && mmBox("ความกว้าง (mm)", "width")}
       {block.kind === "space" && mmBox("ความสูง (mm)", "height")}
       {mmBox("ระยะห่างด้านบน (mm)", "margin-top")}

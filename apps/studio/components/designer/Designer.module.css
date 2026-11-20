@@ -646,18 +646,18 @@
   box-sizing: border-box;
 }
 
-/* the designer's toolbar row (v1.9): icon buttons in groups above the three columns */
-.workbench {
+/* the paper's column (v1.9): the toolbar above the horizontal ruler, the scrolling paper under it */
+.paperColumn {
   flex: 1;
   min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
 }
 
-.workbenchRow {
+.paperColumn > .paperScroll {
   flex: 1;
   min-height: 0;
-  display: flex;
 }
 
 .tools {
@@ -670,7 +670,7 @@
   border-bottom: 1px solid var(--color-border);
   min-height: 34px;
   position: relative;
-  z-index: 5;
+  z-index: 20;
 }
 
 .toolGroup {
@@ -775,4 +775,20 @@
   color: var(--color-text);
   padding: 3px 8px;
   cursor: pointer;
+}
+
+/* a font or size list in the toolbar */
+.toolSelect {
+  font: inherit;
+  max-width: 120px;
+  height: 26px;
+  padding: 0 2px;
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: var(--fill-button);
+  color: var(--color-text);
+}
+
+.toolSelect:disabled {
+  opacity: 0.4;
 }
