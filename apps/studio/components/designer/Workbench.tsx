@@ -217,7 +217,8 @@ export function modelIndex(list: BlockList, shown: number, moving: Block | null)
   const others = list.items.filter((b) => b.start !== moving?.start);
   const drawn = others.filter(visible);
   if (shown < drawn.length) return others.indexOf(drawn[shown]);
-  return drawn.length ? others.indexOf(drawn[drawn.length - 1]) + 1 : others.length;
+  // the end of the page is the end of the file: after a {% set %} dropped last, so a text dropped later can use it
+  return others.length;
 }
 
 /** The list a list id names in the current blocks. */

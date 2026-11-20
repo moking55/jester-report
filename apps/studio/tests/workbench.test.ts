@@ -23,6 +23,13 @@ describe("modelIndex", () => {
     expect(modelIndex(root, 3, null)).toBe(5); // after the last drawn block
   });
 
+  it("puts a block dropped at the end after hidden blocks there (a variable set last is set before it)", () => {
+    const tail = readBlocks(`<p>a</p>
+{% set v = 1 %}
+`);
+    expect(modelIndex(tail, 1, null)).toBe(2);
+  });
+
   it("counts without the block being moved", () => {
     const a = shown[0];
     // others = set, b, note, c; dropping before c (drawn index 1 among b, c)
