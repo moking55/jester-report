@@ -26,6 +26,7 @@ dependency ใหม่หนึ่งตัว: `lucide-react` (อนุมั
 - **บล็อก "รายการ" ใหม่:** kind `list` = `<ul>`/`<ol>` ที่ทุก `<li>` เป็น inline content; TextEditor แก้ทั้งรายการ (หนึ่ง `<li>` ต่อบรรทัด, Enter = ข้อใหม่,
   Enter ที่ข้อว่าง = ออก); แปลงข้อความ ↔ รายการเป็น edit ใน `doc-edit`
 - **รูปแบบตัวเลขของค่าช่องข้อมูล:** ครอบ/ถอด `fmt.money|number|thai_date(expr)` เฉพาะเมื่อ expression เป็น path ล้วนหรือครอบด้วยหนึ่งในสามตัวนี้; อื่น ๆ = ปุ่มเทา
+- **scrollbar ตาม theme:** CSS ล้วนที่ `styles/tokens.css` (`scrollbar-color` มาตรฐาน, Chromium 121+ ใช้แทน `::-webkit-scrollbar`) — ไม่แตะแต่ละ component
 - **ทุก task:** test ก่อนโค้ด, commit ต่อ task, studio 4 คำสั่ง (typecheck, lint, vitest, build); E2E บน rc stack (`-p jester-e2e`) ตอนท้าย; api ไม่เปลี่ยน
   → pytest ไม่ต้องรันใหม่ แต่เทียบ PDF starter ทั้ง 5 กับ v1.8.1 ใน E2E
 

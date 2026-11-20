@@ -45,6 +45,12 @@
   - Verify: vitest (`doc-blocks`, `doc-edit`) + Playwright
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `components/designer/TextEditor.tsx`, `components/designer/PaperCanvas.tsx`, tests
 
+- [ ] **T7b scrollbar ตาม theme**
+  - Acceptance: `styles/tokens.css` ตั้ง `scrollbar-width: thin` + `scrollbar-color` จาก `--color-border`/`--color-textMuted` (hover) ทั้ง Studio;
+    ครอบหน้ารายการ, palette/ผืน/แผงขวา, CodeMirror, modal; เปลี่ยน theme แล้วสีตาม
+  - Verify: dev: เปิด 2 theme แล้วดู computed `scrollbar-color` ของพื้นที่เลื่อนแต่ละที่ + screenshot
+  - Files: `styles/tokens.css`
+
 ### Checkpoint B
 - [ ] studio 4 คำสั่งผ่าน · Success Criteria ข้อ 1 ส่วนตัวหนา + รายการทำได้ด้วย toolbar
 

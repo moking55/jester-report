@@ -170,6 +170,7 @@ Build order: L1 → L2, L3, L4, L5 (คู่ขนานได้) → L6 · �
 | V3 ผืนคำนวณตัวแปรกับข้อมูลตัวอย่าง | `studio` | V1 |
 | V4 toolbar ส่วนจัดรูปแบบ: รูปแบบระดับคำ, ฟอนต์/ขนาด/จัดชิด, บล็อกรายการ | `studio` | — |
 | V5 toolbar ส่วนของบล็อก (ทุกชนิด) + ย้ายปุ่มออกจากแผงขวา | `studio` | V4, V2 |
+| V6 scrollbar ตาม theme ทั้ง Studio | `studio` | — |
 
 ปล่อยเป็น `v1.9.0` · spec: หัวข้อ v1.9 ใน [SPEC-studio.md](SPEC-studio.md)
 
