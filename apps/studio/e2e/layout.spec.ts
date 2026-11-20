@@ -4,9 +4,9 @@
 // on every page; lists nested three deep (order → detail → part) print every level.
 // Makes its own reports (ids below; E2E_LAYOUT_SUFFIX reruns on a stack that has them). The file name sorts after
 // full-flow (which wants an empty catalog) and before lifecycle.
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { login, pdfInfo, previewPdf, thai } from "./shared";
+import { createReport, login, pdfInfo, previewPdf, thai } from "./shared";
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -23,18 +23,9 @@ function pages(pdf: Buffer) {
 // a 1×1 GIF: a picture the api takes as a logo
 const GIF = Buffer.from("R0lGODlhAQABAIAAAExpcf8AACH5BAUAAAAALAAAAAABAAEAAAICTAEAOw==", "base64");
 
-async function createBlank(page: Page, rid: string, name: string, choose: (dialog: ReturnType<Page["getByRole"]>) => Promise<void> = async () => {}) {
+async function createBlank(page: Page, rid: string, name: string, choose?: (form: Locator) => Promise<void>) {
   await page.goto("/");
-  const create = page.getByRole("form", { name: "สร้างรายงาน" });
-  if (!(await create.isVisible())) await page.getByRole("button", { name: /รายงานใหม่จาก starter/ }).click();
-  await create.getByLabel("id", { exact: true }).fill(rid);
-  await create.getByLabel("ชื่อรายงาน").fill(name);
-  await create.getByLabel("เริ่มจาก").selectOption({ label: "ว่าง" });
-  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
-  const dialog = page.getByRole("dialog", { name: "ขนาดกระดาษและรูปแบบ" });
-  await choose(dialog);
-  await dialog.getByRole("button", { name: "สร้าง", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${rid}$`), { timeout: 30_000 });
+  await createReport(page, rid, name, "ว่าง", choose);
 }
 
 async function openDesigner(page: Page, rid: string) {

@@ -4,7 +4,7 @@
 // empty catalog), so the file name sorts after both; makes its own template.
 import { expect, test } from "@playwright/test";
 
-import { login, watchRequests } from "./shared";
+import { createReport, login, watchRequests } from "./shared";
 
 const ID = "e2e-docs";
 
@@ -17,12 +17,7 @@ test("find an issued document and download it again", async ({ page, request }) 
   const number = `Q-E2E-${Date.now().toString(36).toUpperCase()}`;
 
   // a quotation, published as v1
-  const create = page.getByRole("form", { name: "สร้างรายงาน" });
-  await create.getByLabel("id", { exact: true }).fill(ID);
-  await create.getByLabel("ชื่อรายงาน").fill("เอกสาร E2E");
-  await create.getByLabel("เริ่มจาก").selectOption({ label: "ใบเสนอราคา" });
-  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
+  await createReport(page, ID, "เอกสาร E2E", "ใบเสนอราคา");
   await page.getByRole("button", { name: "Publish" }).click();
   const publish = page.getByRole("dialog", { name: "Publish" });
   await publish.getByRole("button", { name: "Publish" }).click();

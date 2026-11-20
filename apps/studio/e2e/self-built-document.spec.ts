@@ -6,7 +6,7 @@
 // empty catalog) and lifecycle, like self-built-form.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { login } from "./shared";
+import { createReport, login } from "./shared";
 
 test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -63,12 +63,7 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   test.setTimeout(300_000);
   await login(page);
 
-  const create = page.getByRole("form", { name: "สร้างรายงาน" });
-  await create.getByLabel("id", { exact: true }).fill(ID);
-  await create.getByLabel("ชื่อรายงาน").fill("เอกสารจาก designer");
-  await create.getByLabel("เริ่มจาก").selectOption({ label: "ใบเสนอราคา" });
-  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
+  await createReport(page, ID, "เอกสารจาก designer", "ใบเสนอราคา");
 
   await page.getByRole("button", { name: "Document Designer" }).click();
   await expect(page).toHaveURL(new RegExp(`/templates/${ID}/designer$`), { timeout: 30_000 });

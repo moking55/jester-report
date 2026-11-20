@@ -83,7 +83,7 @@ test("export, import, duplicate, archive and set a password", async ({ page, req
   await menu(page, ID).click();
   await page.getByRole("button", { name: "Archive" }).click();
   await expect(row(page, ID)).toHaveCount(0);
-  await page.getByRole("link", { name: "แสดงที่ archive" }).click();
+  await page.getByLabel("แสดงที่ archive").check();
   await expect(row(page, ID)).toBeVisible();
   await expect(page.getByText("archive แล้ว")).toBeVisible();
   const gone = await render();

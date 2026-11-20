@@ -4,7 +4,7 @@
 // catalog), so the file name sorts after both; makes its own template from the blank starter.
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { login } from "./shared";
+import { createReport, login } from "./shared";
 
 // a desktop screen: in a short canvas the last card sits in @dnd-kit's auto-scroll band and drifts under the pointer
 test.use({ viewport: { width: 1440, height: 900 } });
@@ -67,14 +67,7 @@ test("build a form by dragging, then issue a PDF from it", async ({ page }) => {
   test.setTimeout(240_000);
   await login(page);
 
-  const create = page.getByRole("form", { name: "สร้างรายงาน" });
-  await create.getByLabel("id", { exact: true }).fill(ID);
-  await create.getByLabel("ชื่อรายงาน").fill("ฟอร์มที่สร้างเอง");
-  await create.getByLabel("เริ่มจาก").selectOption({ label: "ว่าง" });
-  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
-  // a blank report asks for its sheet size and layout first (v1.8): the defaults, A4 and fixed
-  await page.getByRole("dialog", { name: "ขนาดกระดาษและรูปแบบ" }).getByRole("button", { name: "สร้าง", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
+  await createReport(page, ID, "ฟอร์มที่สร้างเอง", "ว่าง");
 
   // the data schema opens in the form builder, Form Preview beside it
   const files = page.getByRole("navigation", { name: "ไฟล์" });

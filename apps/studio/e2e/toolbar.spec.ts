@@ -4,7 +4,7 @@
 // full-flow (which wants an empty catalog).
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { login, pdfInfo, previewPdf, thai } from "./shared";
+import { createReport, login, pdfInfo, previewPdf, thai } from "./shared";
 
 test.use({ viewport: { width: 1600, height: 900 } });
 
@@ -61,14 +61,7 @@ test("the toolbar makes words bold and a paragraph a list; the PDF follows", asy
   test.setTimeout(240_000);
   await login(page);
   await page.goto("/");
-  const create = page.getByRole("form", { name: "สร้างรายงาน" });
-  if (!(await create.isVisible())) await page.getByRole("button", { name: /รายงานใหม่จาก starter/ }).click();
-  await create.getByLabel("id", { exact: true }).fill(RID);
-  await create.getByLabel("ชื่อรายงาน").fill("ทดสอบ toolbar");
-  await create.getByLabel("เริ่มจาก").selectOption({ label: "ว่าง" });
-  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
-  await page.getByRole("dialog", { name: "ขนาดกระดาษและรูปแบบ" }).getByRole("button", { name: "สร้าง", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${RID}$`), { timeout: 30_000 });
+  await createReport(page, RID, "ทดสอบ toolbar", "ว่าง");
   await page.goto(`/templates/${RID}/designer`);
   await expect(page.locator("[data-paper]")).toBeVisible({ timeout: 30_000 });
   await page.waitForTimeout(1500);

@@ -18,7 +18,7 @@ export async function createTemplate(_: FormState, form: FormData): Promise<Form
     starter: String(form.get("starter") ?? "blank"),
   };
   if (!STARTERS.includes(values.starter)) values.starter = "blank";
-  // the sheet size and layout of a blank report (PageSetupModal); the api checks them
+  // the sheet size and layout of a blank report (PageSetup in the create modal); the api checks them
   let page: unknown = undefined;
   const rawPage = form.get("page");
   if (typeof rawPage === "string" && values.starter === "blank") {

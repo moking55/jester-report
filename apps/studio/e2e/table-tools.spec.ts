@@ -4,7 +4,7 @@
 // Makes its own report (id below; E2E_TABLE_SUFFIX reruns on a stack that has it).
 import { expect, test, type Locator, type Page } from "@playwright/test";
 
-import { login, pdfInfo, previewPdf, thai } from "./shared";
+import { createReport, login, pdfInfo, previewPdf, thai } from "./shared";
 
 test.use({ viewport: { width: 1600, height: 900 } });
 
@@ -56,14 +56,7 @@ test("table cells picked by a click: columns, rows, merge; a row of columns; the
   test.setTimeout(240_000);
   await login(page);
   await page.goto("/");
-  const create = page.getByRole("form", { name: "สร้างรายงาน" });
-  if (!(await create.isVisible())) await page.getByRole("button", { name: /รายงานใหม่จาก starter/ }).click();
-  await create.getByLabel("id", { exact: true }).fill(RID);
-  await create.getByLabel("ชื่อรายงาน").fill("ทดสอบเครื่องมือตาราง");
-  await create.getByLabel("เริ่มจาก").selectOption({ label: "ว่าง" });
-  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
-  await page.getByRole("dialog", { name: "ขนาดกระดาษและรูปแบบ" }).getByRole("button", { name: "สร้าง", exact: true }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${RID}$`), { timeout: 30_000 });
+  await createReport(page, RID, "ทดสอบเครื่องมือตาราง", "ว่าง");
   await page.goto(`/templates/${RID}/designer`);
   await expect(page.locator("[data-paper]")).toBeVisible({ timeout: 30_000 });
   await page.waitForTimeout(1500);

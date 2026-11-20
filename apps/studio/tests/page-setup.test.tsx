@@ -1,14 +1,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import { afterEach, describe, expect, it } from "vitest";
 
-import { PageSetupModal, pageFor } from "@/components/PageSetupModal";
+import { DEFAULT_PAGE, PageSetup, pageFor, pageOk } from "@/components/PageSetup";
 
-beforeAll(() => {
-  // jsdom has no <dialog> methods
-  HTMLDialogElement.prototype.showModal ??= function showModal(this: HTMLDialogElement) {
-    this.setAttribute("open", "");
-  };
-});
 afterEach(cleanup);
 
 describe("pageFor", () => {
@@ -33,33 +28,44 @@ describe("pageFor", () => {
   });
 });
 
-describe("PageSetupModal", () => {
-  it("creates a free A5 landscape page from the cards and the size list", () => {
-    const onConfirm = vi.fn();
-    render(<PageSetupModal onConfirm={onConfirm} onCancel={vi.fn()} />);
+describe("PageSetup", () => {
+  // the modal keeps the choice; here a small parent does, and shows what would be sent
+  function Harness() {
+    const [v, setV] = useState(DEFAULT_PAGE);
+    return (
+      <>
+        <PageSetup value={v} onChange={setV} />
+        <output data-testid="out">{JSON.stringify({ page: pageFor(v.layout, v.choice, v.orientation, v), ok: pageOk(v) })}</output>
+      </>
+    );
+  }
+  const out = () => JSON.parse(screen.getByTestId("out").textContent!);
+
+  it("a free A5 landscape page from the cards and the size list", () => {
+    render(<Harness />);
     fireEvent.click(screen.getByRole("radio", { name: /จัดวางแบบอิสระ/ }));
+    expect(screen.getByRole("radio", { name: /จัดวางแบบอิสระ/ }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", { name: /จัดวางแบบคงที่/ }).getAttribute("aria-checked")).toBe("false");
     fireEvent.change(screen.getByLabelText("ขนาดกระดาษ"), { target: { value: "A5" } });
     fireEvent.click(screen.getByLabelText("แนวนอน"));
-    fireEvent.click(screen.getByRole("button", { name: "สร้าง" }));
-    expect(onConfirm).toHaveBeenCalledWith({ size: "A5", orientation: "landscape", layout: "free" }, "free");
+    expect(out()).toEqual({ page: { size: "A5", orientation: "landscape", layout: "free" }, ok: true });
   });
 
   it("a roll turns the free layout off, with the reason", () => {
-    const onConfirm = vi.fn();
-    render(<PageSetupModal onConfirm={onConfirm} onCancel={vi.fn()} />);
+    render(<Harness />);
     fireEvent.click(screen.getByRole("radio", { name: /จัดวางแบบอิสระ/ }));
     fireEvent.change(screen.getByLabelText("ขนาดกระดาษ"), { target: { value: "roll80" } });
     expect(screen.getByRole("radio", { name: /จัดวางแบบอิสระ/ })).toHaveProperty("disabled", true);
     expect(screen.getByText(/ใบเสร็จม้วนใช้แบบอิสระไม่ได้/)).toBeTruthy();
     expect(screen.queryByLabelText("แนวนอน")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "สร้าง" }));
-    expect(onConfirm).toHaveBeenCalledWith({ size: "roll", rollWidthMm: 80 }, "flow");
+    expect(out().page).toEqual({ size: "roll", rollWidthMm: 80 });
   });
 
-  it("custom size outside the limits cannot be created", () => {
-    render(<PageSetupModal onConfirm={vi.fn()} onCancel={vi.fn()} />);
+  it("a custom size outside the limits is not ok", () => {
+    render(<Harness />);
     fireEvent.change(screen.getByLabelText("ขนาดกระดาษ"), { target: { value: "custom" } });
     fireEvent.change(screen.getByLabelText("กว้าง (mm)"), { target: { value: "10" } });
-    expect(screen.getByRole("button", { name: "สร้าง" })).toHaveProperty("disabled", true);
+    expect(out().ok).toBe(false);
+    expect(screen.getByText(/กว้าง 25–1000 mm/)).toBeTruthy();
   });
 });

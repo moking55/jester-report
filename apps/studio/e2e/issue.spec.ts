@@ -2,7 +2,7 @@
 // Runs on the same fresh stack after checkpoint-a (it needs the E2E user); makes its own template.
 import { expect, test, type Page } from "@playwright/test";
 
-import { login, watchRequests } from "./shared";
+import { createReport, login, watchRequests } from "./shared";
 
 const ID = "e2e-tax";
 const field = (page: Page, pointer: string) => page.locator(`#f${pointer.replaceAll("/", "-")}`);
@@ -15,12 +15,7 @@ test("issue a tax invoice from the form", async ({ page }) => {
   await login(page);
 
   // a dev creates it from the starter and publishes v1
-  const create = page.getByRole("form", { name: "สร้างรายงาน" }); // the catalog also has duplicate dialogs
-  await create.getByLabel("id", { exact: true }).fill(ID);
-  await create.getByLabel("ชื่อรายงาน").fill("ใบกำกับภาษี E2E");
-  await create.getByLabel("เริ่มจาก").selectOption({ label: "ใบกำกับภาษีเต็มรูป" });
-  await create.getByRole("button", { name: "สร้างรายงาน" }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
+  await createReport(page, ID, "ใบกำกับภาษี E2E", "ใบกำกับภาษีเต็มรูป");
   await page.getByRole("button", { name: "Publish" }).click();
   const publish = page.getByRole("dialog", { name: "Publish" });
   await publish.getByRole("button", { name: "Publish" }).click();

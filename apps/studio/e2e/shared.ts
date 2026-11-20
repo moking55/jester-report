@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export const USER = "e2e-admin";
 export const PASSWORD = "e2e correct horse battery";
@@ -70,4 +70,19 @@ export async function previewPdf(page: Page, id: string, params = "{}"): Promise
   const response = await page.request.post(`/preview/${id}`, { multipart: { params } });
   expect(response.status(), await response.text().catch(() => "")).toBe(200);
   return Buffer.from(await response.body());
+}
+
+/**
+ * "+ สร้างรายงาน" on the catalog opens the modal; name, id, starter, and for a blank report the sheet and layout
+ * (choose works in the modal's form), then "สร้าง" opens the new report.
+ */
+export async function createReport(page: Page, id: string, name: string, starter: string, choose?: (form: Locator) => Promise<void>) {
+  await page.getByRole("button", { name: "+ สร้างรายงาน" }).click();
+  const create = page.getByRole("form", { name: "สร้างรายงาน" });
+  await create.getByLabel("ชื่อรายงาน").fill(name);
+  await create.getByLabel("id", { exact: true }).fill(id);
+  await create.getByLabel("เริ่มจาก").selectOption({ label: starter });
+  if (choose) await choose(create);
+  await create.getByRole("button", { name: "สร้าง", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/templates/${id}$`), { timeout: 30_000 }); // a cold stack is slow here
 }

@@ -1,9 +1,9 @@
 import { cookies } from "next/headers";
 import Link from "next/link";
 
+import { CatalogFilters } from "@/components/CatalogFilters";
 import { CreateTemplate } from "@/components/CreateTemplate";
 import { ImportDialog } from "@/components/ImportDialog";
-import { NewTemplateCard } from "@/components/NewTemplateCard";
 import { TemplateMenu } from "@/components/TemplateMenu";
 import { ViewToggle } from "@/components/ViewToggle";
 import { api } from "@/lib/api";
@@ -36,7 +36,13 @@ function LastRun({ run }: { run: TemplateSummary["lastRun"] }) {
 }
 
 /** Only a published, active template can issue documents (SPEC-studio v1.4: the published version). */
-function IssueLink({ t, className }: { t: TemplateSummary; className?: string }) {
+function IssueLink({
+  t,
+  className,
+}: {
+  t: TemplateSummary;
+  className?: string;
+}) {
   if (t.publishedVersion === null || t.archivedAt) return null;
   return (
     <Link href={`/templates/${t.id}?mode=issue`} className={className}>
@@ -46,7 +52,13 @@ function IssueLink({ t, className }: { t: TemplateSummary; className?: string })
 }
 
 /** Documents exist only for templates that were published; an archived one keeps its documents. */
-function DocumentsLink({ t, className }: { t: TemplateSummary; className?: string }) {
+function DocumentsLink({
+  t,
+  className,
+}: {
+  t: TemplateSummary;
+  className?: string;
+}) {
   if (t.publishedVersion === null) return null;
   return (
     <Link href={`/documents?template=${t.id}`} className={className}>
@@ -72,14 +84,32 @@ function Archived({ t }: { t: TemplateSummary }) {
 export default async function CatalogPage({
   searchParams,
 }: {
-  searchParams: Promise<{ archived?: string }>;
+  searchParams: Promise<{ archived?: string; q?: string; status?: string }>;
 }) {
-  const withArchived = (await searchParams).archived === "1";
+  const params = await searchParams;
+  const withArchived = params.archived === "1";
+  const q = (params.q ?? "").trim();
+  const status = params.status ?? "";
   const templates = await api<TemplateSummary[]>(
     withArchived ? "/v1/templates?includeArchived=true" : "/v1/templates",
   );
   const view =
     (await cookies()).get(VIEW_COOKIE)?.value === "cards" ? "cards" : "table";
+  const needle = q.toLowerCase();
+  const shown = templates.filter(
+    (t) =>
+      (!needle ||
+        t.name.toLowerCase().includes(needle) ||
+        t.id.includes(needle)) &&
+      (status === "published"
+        ? t.publishedVersion !== null
+        : status === "draft"
+          ? t.publishedVersion === null
+          : status === "changed"
+            ? t.draftChangedSincePublish
+            : true),
+  );
+  const back = withArchived ? "/?archived=1" : "/"; // where the menu goes after an archive or a restore
   return (
     <section className={styles.page}>
       <div className={styles.heading}>
@@ -88,76 +118,96 @@ export default async function CatalogPage({
         <ViewToggle view={view} />
       </div>
       <p className={styles.sub}>
-        {templates.length} รายงาน · เปิดเพื่อแก้ template ดูตัวอย่าง PDF และ publish ·{" "}
-        <Link href={withArchived ? "/" : "/?archived=1"}>
-          {withArchived ? "ซ่อนที่ archive" : "แสดงที่ archive"}
-        </Link>
+        {shown.length === templates.length
+          ? `${templates.length} รายงาน`
+          : `${shown.length} จาก ${templates.length} รายงาน`}{" "}
+        · เปิดเพื่อแก้ template ดูตัวอย่าง PDF และ publish
       </p>
-      {view === "table" ? (
-        <Table templates={templates} back={withArchived ? "/?archived=1" : "/"} />
+      <div className={styles.bar}>
+        <CreateTemplate className={styles.create} />
+        <CatalogFilters q={q} status={status} archived={withArchived} />
+      </div>
+      {shown.length === 0 ? (
+        <p className={styles.sub}>
+          {templates.length === 0
+            ? "ยังไม่มีรายงาน กด + สร้างรายงาน เพื่อเริ่มจาก starter"
+            : "ไม่มีรายงานที่ตรงกับตัวกรอง"}
+        </p>
+      ) : view === "table" ? (
+        <Table templates={shown} back={back} />
       ) : (
-        <Cards templates={templates} back={withArchived ? "/?archived=1" : "/"} />
+        <Cards templates={shown} back={back} />
       )}
     </section>
   );
 }
 
-function Table({ templates, back }: { templates: TemplateSummary[]; back: string }) {
+function Table({
+  templates,
+  back,
+}: {
+  templates: TemplateSummary[];
+  back: string;
+}) {
   return (
-    <>
-      <CreateTemplate />
-      {templates.length === 0 ? (
-        <p className={styles.sub}>ยังไม่มีรายงาน สร้างจาก starter ด้านบนได้เลย</p>
-      ) : (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>ชื่อ</th>
-              <th>id</th>
-              <th>Published</th>
-              <th>Draft</th>
-              <th>Render ล่าสุด</th>
-              <th>แก้ล่าสุด</th>
-              <th aria-label="เมนู" />
-            </tr>
-          </thead>
-          <tbody>
-            {templates.map((t) => (
-              <tr key={t.id}>
-                <td>
-                  <Link href={`/templates/${t.id}`}>{t.name}</Link> <Archived t={t} />
-                </td>
-                <td>
-                  <code>{t.id}</code>
-                </td>
-                <td>
-                  {t.publishedVersion === null ? "—" : `v${t.publishedVersion}`}
-                </td>
-                <td>
-                  r{t.draftRevision}
-                  {t.draftChangedSincePublish && (
-                    <span className={styles.changed}> แก้หลัง publish</span>
-                  )}
-                </td>
-                <td>
-                  <LastRun run={t.lastRun} />
-                </td>
-                <td>{when(t.updatedAt)}</td>
-                <td className={styles.actions}>
-                  <IssueLink t={t} className={styles.issue} />
-                  <DocumentsLink t={t} className={styles.documents} />
-                  <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </>
+    <table className={styles.table}>
+      <thead>
+        <tr>
+          <th>ชื่อ</th>
+          <th>id</th>
+          <th>Published</th>
+          <th>Draft</th>
+          <th>Render ล่าสุด</th>
+          <th>แก้ล่าสุด</th>
+          <th aria-label="เมนู" />
+        </tr>
+      </thead>
+      <tbody>
+        {templates.map((t) => (
+          <tr key={t.id}>
+            <td>
+              <Link href={`/templates/${t.id}`}>{t.name}</Link>{" "}
+              <Archived t={t} />
+            </td>
+            <td>
+              <code>{t.id}</code>
+            </td>
+            <td>
+              {t.publishedVersion === null ? "—" : `v${t.publishedVersion}`}
+            </td>
+            <td>
+              r{t.draftRevision}
+              {t.draftChangedSincePublish && (
+                <span className={styles.changed}> แก้หลัง publish</span>
+              )}
+            </td>
+            <td>
+              <LastRun run={t.lastRun} />
+            </td>
+            <td>{when(t.updatedAt)}</td>
+            <td className={styles.actions}>
+              <IssueLink t={t} className={styles.issue} />
+              <DocumentsLink t={t} className={styles.documents} />
+              <TemplateMenu
+                templateId={t.id}
+                archived={Boolean(t.archivedAt)}
+                back={back}
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
-function Cards({ templates, back }: { templates: TemplateSummary[]; back: string }) {
+function Cards({
+  templates,
+  back,
+}: {
+  templates: TemplateSummary[];
+  back: string;
+}) {
   return (
     <div className={styles.grid}>
       {templates.map((t) => (
@@ -194,11 +244,14 @@ function Cards({ templates, back }: { templates: TemplateSummary[]; back: string
             </Link>
             <IssueLink t={t} className={styles.issue} />
             <DocumentsLink t={t} className={styles.documents} />
-            <TemplateMenu templateId={t.id} archived={Boolean(t.archivedAt)} back={back} />
+            <TemplateMenu
+              templateId={t.id}
+              archived={Boolean(t.archivedAt)}
+              back={back}
+            />
           </div>
         </article>
       ))}
-      <NewTemplateCard empty={templates.length === 0} />
     </div>
   );
 }

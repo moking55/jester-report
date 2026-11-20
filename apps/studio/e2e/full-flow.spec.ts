@@ -2,7 +2,7 @@
 //   STUDIO_E2E_URL, STUDIO_E2E_API_URL (render with an API key goes there, from the test, not the browser)
 import { expect, test, type Page } from "@playwright/test";
 
-import { login, themeCss, watchRequests } from "./shared";
+import { createReport, login, themeCss, watchRequests } from "./shared";
 
 const ID = "e2e-quote";
 
@@ -36,14 +36,8 @@ test("report from starter to API render, history, two tabs and themes", async ({
   const urls = watchRequests(page);
   await login(page);
 
-  // 1. create from the quotation starter (the + card is already open on an empty catalog)
-  const addCard = page.getByRole("button", { name: /รายงานใหม่จาก starter/ });
-  if (await addCard.isVisible()) await addCard.click();
-  await page.getByLabel("id", { exact: true }).fill(ID);
-  await page.getByLabel("ชื่อรายงาน").fill("ใบเสนอราคา E2E");
-  await page.getByLabel("เริ่มจาก").selectOption({ label: "ใบเสนอราคา" });
-  await page.getByRole("button", { name: "สร้างรายงาน" }).click();
-  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 }); // a cold stack is slow here
+  // 1. create from the quotation starter
+  await createReport(page, ID, "ใบเสนอราคา E2E", "ใบเสนอราคา");
   await expect(page.locator(".cm-content")).toBeVisible();
 
   // 2. edit a file with the keyboard and save: the automatic check shows the problem with its line
