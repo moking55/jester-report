@@ -25,7 +25,7 @@ export function splitArgs(args: string): string[] {
 }
 
 /** The pieces of an expression joined by ~ at the top level. */
-function joined(expr: string): string[] {
+export function joined(expr: string): string[] {
   const out: string[] = [];
   let depth = 0;
   let quote = "";
