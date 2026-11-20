@@ -1,4 +1,4 @@
-import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Copy, Eraser, Italic, Trash2, Underline } from "lucide-react";
+import { AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, Copy, Eraser, Italic, List, ListOrdered, Trash2, Underline } from "lucide-react";
 import { createElement } from "react";
 
 import type { Block } from "@/lib/doc-blocks";
@@ -23,6 +23,7 @@ export type ToolContext = {
   readOnly: boolean;
   editor: EditorHandle | null; // the text being typed in, if any
   fonts: string[]; // the fonts of the report
+  list: { can: boolean; kind: "ul" | "ol" | null; toggle: (ordered: boolean) => void }; // a paragraph as a list, a list back
   setStyle: (props: Record<string, string | null>) => void; // write the selected block's style (one undo step)
   remove: () => void;
 };
@@ -73,6 +74,19 @@ export function textTools(ctx: ToolContext): ToolGroup {
       },
     ],
   };
+}
+
+/** Bulleted and numbered list: a paragraph becomes one (a line per item), the same button turns it back. */
+export function listTools(ctx: ToolContext): ToolGroup {
+  const button = (id: string, label: string, icon: typeof List, ordered: boolean) => ({
+    id,
+    label,
+    icon,
+    disabled: ctx.readOnly || !ctx.list.can,
+    pressed: ctx.list.kind === (ordered ? "ol" : "ul"),
+    onClick: () => ctx.list.toggle(ordered),
+  });
+  return { id: "list", label: "รายการ", items: [button("bullets", "รายการจุด", List, false), button("numbers", "รายการตัวเลข", ListOrdered, true)] };
 }
 
 /** Font, size and alignment of the selected block. */

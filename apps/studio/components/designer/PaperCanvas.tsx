@@ -326,6 +326,29 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         );
         break;
       }
+      case "list": {
+        const d = b.detail.kind === "list" ? b.detail : null;
+        const attrOf = (el: { attrs: { name: string; value: string | null }[] } | null, name: string) => el?.attrs.find((a) => a.name === name)?.value ?? undefined;
+        inner =
+          d &&
+          createElement(
+            d.ordered ? "ol" : "ul",
+            { style: styleObject(attrOf(own, "style") ?? ""), className: attrOf(own, "class") },
+            d.items.map(
+              (item, i) =>
+                cellEditor?.(b, i, 0) ??
+                createElement("li", {
+                  key: i,
+                  style: styleObject(attrOf(item.node, "style") ?? ""),
+                  className: attrOf(item.node, "class"),
+                  title: onCell ? "ดับเบิลคลิกเพื่อพิมพ์" : undefined,
+                  onDoubleClick: onCell ? () => onCell(b, i, 0) : undefined,
+                  dangerouslySetInnerHTML: { __html: renderSource(src.slice(item.inner.start, item.inner.end), mode, scope) || "&nbsp;" },
+                }),
+            ),
+          );
+        break;
+      }
       case "page": {
         // the one sheet of a free layout: boxes drawn where their style puts them, in stacking order
         const own = b.node.kind === "element" ? b.node : null;

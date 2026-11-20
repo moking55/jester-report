@@ -815,3 +815,60 @@ export function setGuide(src: string, page: Block, name: string, w: number, h: n
   if (!fresh) return fail("ไม่พบหน้ากระดาษ");
   return ok({ src: insertBlock(base, fresh.lists[0].list, 0, html).src, at: null }); // nothing to select: the guide is not a box
 }
+
+// ---- lists (v1.9) ----------------------------------------------------------------------------------
+
+const renameTag = (el: ElementNode, tag: string): Patch[] => [
+  { start: el.open.start + 1, end: el.open.start + 1 + el.name.length, text: tag },
+  { start: el.close!.start + 2, end: el.close!.start + 2 + el.name.length, text: tag },
+];
+
+/** A paragraph as a list: one item per line (split at <br>). */
+export function toList(src: string, block: Block, ordered: boolean): Result<Edited> {
+  const el = block.node;
+  if (block.kind !== "text" || el.kind !== "element" || !el.close || !["p", "div"].includes(el.name)) return fail("แปลงเป็นรายการได้เฉพาะย่อหน้า");
+  const raw = src.slice(el.open.end, el.close.start);
+  const parts = raw.split(/<br\s*\/?>/i).map((p) => p.trim());
+  const items = parts.length > 1 ? parts.filter((p) => p) : parts;
+  const indent = indentAt(src, block.start);
+  const body = `${items.map((p) => `
+${indent}  <li>${p}</li>`).join("")}
+${indent}`;
+  const patches = [...renameTag(el, ordered ? "ol" : "ul"), { start: el.open.end, end: el.close.start, text: body }];
+  const grow = 2 * (2 - el.name.length) + body.length - raw.length;
+  return ok({ src: applyPatches(src, patches), at: { start: block.start, end: block.end + grow } });
+}
+
+/** A list as a paragraph again: its items joined with <br>. */
+export function fromList(src: string, block: Block): Result<Edited> {
+  const el = block.node;
+  if (block.detail.kind !== "list" || el.kind !== "element" || !el.close) return fail("ไม่ใช่รายการ");
+  const body = block.detail.items.map((i) => src.slice(i.inner.start, i.inner.end)).join("<br>");
+  const raw = src.slice(el.open.end, el.close.start);
+  const patches = [...renameTag(el, "p"), { start: el.open.end, end: el.close.start, text: body }];
+  return ok({ src: applyPatches(src, patches), at: { start: block.start, end: block.end + 2 * (1 - el.name.length) + body.length - raw.length } });
+}
+
+/** An item after item `after` (-1: first), empty, written like the one before it. */
+export function addListItem(src: string, block: Block, after: number): Result<Edited> {
+  if (block.detail.kind !== "list") return fail("ไม่ใช่รายการ");
+  const items = block.detail.items;
+  const at = items[Math.max(0, after)];
+  const indent = indentAt(src, at.range.start);
+  const text = `
+${indent}<li></li>`;
+  const pos = after < 0 ? at.range.start : at.range.end;
+  const patch = after < 0 ? { start: pos, end: pos, text: `<li></li>
+${indent}` } : { start: pos, end: pos, text };
+  return ok({ src: applyPatches(src, [patch]), at: { start: block.start, end: block.end + patch.text.length } });
+}
+
+/** Item `i` out of the list (the last one cannot go: remove the block). */
+export function removeListItem(src: string, block: Block, i: number): Result<Edited> {
+  if (block.detail.kind !== "list" || block.node.kind !== "element") return fail("ไม่ใช่รายการ");
+  const items = block.detail.items;
+  if (items.length < 2) return fail("เหลือข้อเดียว: ลบบล็อกแทน");
+  const from = i === 0 ? block.node.open.end : items[i - 1].range.end;
+  const patch = { start: from, end: items[i].range.end, text: "" };
+  return ok({ src: applyPatches(src, [patch]), at: { start: block.start, end: block.end - (patch.end - patch.start) } });
+}

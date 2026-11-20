@@ -39,7 +39,7 @@
     ความกว้าง, เส้นตาราง + ระยะบรรทัดใหม่
   - Verify: vitest (style edits) + dev
   - Files: `components/designer/Toolbar.tsx`, `components/designer/StylePanel.tsx`, `lib/doc-edit.ts`, tests
-- [ ] **T7 บล็อก "รายการ" (จุด/ตัวเลข)**
+- [x] **T7 บล็อก "รายการ" (จุด/ตัวเลข)**
   - Acceptance: kind `list` (`<ul>`/`<ol>` ของ `<li>` inline); ปุ่มแปลงข้อความ ↔ รายการ (หนึ่งบรรทัด = หนึ่งข้อ), สลับจุด/ตัวเลข; TextEditor: Enter = ข้อใหม่,
     Enter ที่ข้อว่าง = จบ; `{{ }}` และรูปแบบระดับคำในข้อได้; header/footer ปุ่มเทา; PDF ตรงผืน
   - Verify: vitest (`doc-blocks`, `doc-edit`) + Playwright

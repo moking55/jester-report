@@ -15,7 +15,7 @@ import {
 import { createContext, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { allBlocks, blockAt, readBlocks, type Block, type BlockKind, type BlockList, type Rect } from "@/lib/doc-blocks";
-import { addBox, boxSize, insertBlock, moveBlock, newBlockHtml, removeBlock, readStyle, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
+import { addBox, addListItem, boxSize, fromList, toList, insertBlock, moveBlock, newBlockHtml, removeBlock, removeListItem, readStyle, replaceIn, setStyle, setTableSizes, type Edited, type NewBlock, type NewBox, type Result } from "@/lib/doc-edit";
 import { fontNames } from "@/lib/doc-render";
 import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
 import { useEditor } from "@/lib/editor-bus";
@@ -33,7 +33,7 @@ import { boxRects, FreeBoxPanel, GuidePanel, useFree } from "./FreeCanvas";
 import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { Toolbar } from "./Toolbar";
-import { blockTools, canFormat, paragraphTools, textTools, type ToolContext } from "./toolbar-actions";
+import { blockTools, canFormat, listTools, paragraphTools, textTools, type ToolContext } from "./toolbar-actions";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
 import { Rulers } from "./Rulers";
@@ -142,6 +142,7 @@ export const KIND_NAME: Record<BlockKind, string> = {
   rule: "เส้นคั่น",
   space: "ช่องว่าง",
   pagebreak: "ขึ้นหน้าใหม่",
+  list: "รายการ",
   condition: "เงื่อนไข",
   repeat: "วนซ้ำ",
   set: "ตั้งค่าตัวแปร",
@@ -506,8 +507,35 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
       <TextEditor key={b.start} el={b.node} inner={b.detail.inner} src={src} fields={fields} onDone={(inner) => typed(b, (b.detail as { inner: Range }).inner, inner)} />
     ) : null;
   /** A cell of a fixed table being typed in (key "block#row.col"). */
+  /** Enter in an item of a list: the item is kept and a new one opens after it; Enter in an empty item ends the list. */
+  function nextItem(b: Block, i: number, inner: string | null) {
+    const item = b.detail.kind === "list" ? b.detail.items[i] : null;
+    if (!item) return setEditing(null);
+    const text = inner ?? src.slice(item.inner.start, item.inner.end);
+    let out: Edited = inner === null ? { src, at: null } : replaceIn(src, b, item.inner, inner);
+    const again = () => allBlocks(readBlocks(out.src)).find((x) => x.start === b.start && x.kind === "list") ?? null;
+    if (!text.trim()) {
+      const fresh = again();
+      const gone = fresh ? removeListItem(out.src, fresh, i) : null;
+      setEditing(null);
+      if (gone?.ok) apply(gone.value);
+      else if (inner !== null) apply(out);
+      return;
+    }
+    const fresh = again();
+    const added = fresh ? addListItem(out.src, fresh, i) : null;
+    if (!added?.ok) return typed(b, item.inner, inner);
+    out = added.value;
+    apply(out);
+    setEditing(`${keyOf(b)}#${i + 1}.0`);
+  }
   const cellEditor = (b: Block, r: number, c: number) => {
-    if (editing !== `${keyOf(b)}#${r}.${c}` || b.detail.kind !== "grid") return null;
+    if (editing !== `${keyOf(b)}#${r}.${c}`) return null;
+    if (b.detail.kind === "list") {
+      const item = b.detail.items[r];
+      return item ? <TextEditor key={`${b.start}-${r}`} el={item.node} inner={item.inner} src={src} fields={fields} onDone={(inner) => typed(b, item.inner, inner)} onEnter={(inner) => nextItem(b, r, inner)} /> : null;
+    }
+    if (b.detail.kind !== "grid") return null;
     const cell = b.detail.rows[r]?.cells[c];
     return cell ? <TextEditor key={`${b.start}-${r}-${c}`} el={cell.node} inner={cell.inner} src={src} fields={fields} onDone={(inner) => typed(b, cell.inner, inner)} /> : null;
   };
@@ -528,6 +556,17 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     readOnly,
     editor: editorNow,
     fonts: fontNames(files["report.json"]),
+    list: {
+      kind: current?.detail.kind === "list" ? (current.detail.ordered ? "ol" : "ul") : null,
+      // a paragraph or a list, in the body, when no text is being typed in (Enter finishes that first)
+      can: part === "body" && !editorNow && !!current && ((current.kind === "text" && current.detail.kind === "text" && ["p", "div"].includes(current.detail.tag)) || current.detail.kind === "list"),
+      toggle: (ordered) => {
+        if (!current) return;
+        if (current.detail.kind !== "list") apply(toList(src, current, ordered));
+        else if ((current.detail.ordered ? "ol" : "ul") === (ordered ? "ol" : "ul")) apply(fromList(src, current));
+        else apply(setTextTag(src, current, ordered ? "ol" : "ul"));
+      },
+    },
     setStyle: (props) => current && apply(setStyle(src, current, props)),
     remove: () => remove(),
   }; // what the toolbar's buttons work on
@@ -597,7 +636,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
         )}
         <div className={styles.paperColumn}>
         {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
-        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), blockTools(tool)]} />}
+        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), listTools(tool), blockTools(tool)]} />}
         <div ref={scroller} className={styles.paperScroll} onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
           {message && (
             <p role="alert" className={styles.inlineAlert}>

@@ -23,6 +23,7 @@ type Props = {
   src: string;
   fields: Suggestion[];
   onDone: (inner: string | null) => void; // null: nothing changed
+  onEnter?: (inner: string | null) => void; // Enter, where it means "next" (an item of a list), instead of finishing
 };
 
 /** Set while a field in the palette is pressed: the blur that follows does not end typing (it may be dropped in). */
@@ -71,7 +72,7 @@ function typedQuery(root: HTMLElement): { node: Text; start: number; query: stri
   return { node: node as Text, start: m.index, query: m[1], rect: sel.getRangeAt(0).getBoundingClientRect() };
 }
 
-export function TextEditor({ el, inner, src, fields, onDone }: Props) {
+export function TextEditor({ el, inner, src, fields, onDone, onEnter }: Props) {
   const start = useMemo(() => readInner(src.slice(inner.start, inner.end)), []); // eslint-disable-line react-hooks/exhaustive-deps
   const ref = useRef<HTMLElement>(null);
   const pop = useRef<HTMLDivElement>(null);
@@ -149,6 +150,13 @@ export function TextEditor({ el, inner, src, fields, onDone }: Props) {
     onDone(next === src.slice(inner.start, inner.end) ? null : next);
   }
 
+  function enter() {
+    if (done.current || !ref.current) return;
+    done.current = true;
+    const next = writeInner(start.units, domUnits(ref.current));
+    onEnter!(next === src.slice(inner.start, inner.end) ? null : next);
+  }
+
   function pick(f: Suggestion) {
     const e = ref.current!;
     const q = typedQuery(e);
@@ -208,6 +216,11 @@ export function TextEditor({ el, inner, src, fields, onDone }: Props) {
     if (e.key === "Enter" && e.shiftKey) {
       e.preventDefault();
       document.execCommand("insertLineBreak");
+      return;
+    }
+    if (e.key === "Enter" && onEnter) {
+      e.preventDefault();
+      enter();
       return;
     }
     if (e.key === "Enter" || e.key === "Escape") {

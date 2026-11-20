@@ -13,6 +13,7 @@ export type BlockKind =
   | "table" // a list table: thead, {% for %} rows, else row, footer rows
   | "summary" // <table data-jd="summary">: label | {{ value }}
   | "grid" // <table data-jd="grid">: a fixed table of inline cells (v1.7 รอบแก้ข้อ 7)
+  | "list" // <ul>/<ol> of <li> of inline content (v1.9)
   | "code" // <div>{{ fmt.qr(...) }}</div> and promptpay / barcode
   | "rule" // <hr>
   | "space" // <div data-jd="space">
@@ -65,6 +66,7 @@ export type Detail =
     }
   | { kind: "summary"; rows: { label: Cell; value: Cell }[] }
   | { kind: "grid"; rows: { range: Range; cells: GridCell[] }[]; head: boolean } // head: the first row is <th>
+  | { kind: "list"; ordered: boolean; items: GridCell[] } // the <li>s
   | { kind: "condition"; branches: { tag: Range; keyword: string; test: string }[] }
   | { kind: "repeat"; tag: Range; variable: string; iterable: string }
   | { kind: "set"; inner: string }
@@ -320,6 +322,14 @@ function classify(src: string, n: Node, path: number[]): Classified {
   }
   if (TEXT_TAGS.has(el.name) && !tag && el.children.every((c) => isInline(src, c))) {
     return known("text", { kind: "text", tag: el.name, inner: inner(el) });
+  }
+  if ((el.name === "ul" || el.name === "ol") && !tag && !el.broken && kids.length) {
+    const items: GridCell[] = [];
+    for (const c of kids) {
+      if (c.kind !== "element" || c.name !== "li" || c.broken || !c.children.every((k) => isInline(src, k))) return custom(true);
+      items.push({ range: { start: c.start, end: c.end }, inner: inner(c), node: c });
+    }
+    return known("list", { kind: "list", ordered: el.name === "ol", items });
   }
   return custom(true);
 }

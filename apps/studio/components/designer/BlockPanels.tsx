@@ -518,6 +518,12 @@ export function BlockPanel(props: Props) {
           <p className={styles.hint}>ลากบล็อกลงใน &quot;ทุกแถว&quot; บนกระดาษ ใช้ชื่อแต่ละแถวในช่องข้อมูล</p>
         </div>
       );
+    case "list":
+      return (
+        <div className={styles.props}>
+          <p className={styles.hint}>ดับเบิลคลิกข้อเพื่อพิมพ์ · Enter = ข้อถัดไป · Enter ที่ข้อว่าง = จบรายการ · ปุ่มรายการในแถบเครื่องมือเปลี่ยนจุด/ตัวเลข หรือกลับเป็นข้อความ</p>
+        </div>
+      );
     case "set":
       return <VarPanel block={block} src={src} inner={d.inner} fields={fields} readOnly={readOnly} apply={apply} />;
     case "none":
