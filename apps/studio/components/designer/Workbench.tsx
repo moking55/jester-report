@@ -595,6 +595,8 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     src,
     apply,
     duplicate: () => duplicate(),
+    cell: cellNow,
+    move: free ? undefined : (dir) => step(dir),
     sheet: blocks.items.find((b) => b.kind === "page") ?? null,
     page: { w: paper.widthMm, h: paper.heightMm },
     pickImage: () => {
@@ -718,20 +720,6 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
           {current ? (
             <div className={styles.props}>
               <h3>{KIND_NAME[current.kind]}</h3>
-              {!readOnly && (
-                <div className={styles.row}>
-                  {!free && (
-                    <>
-                  <button type="button" onClick={() => step(-1)}>
-                    ขึ้น
-                  </button>
-                  <button type="button" onClick={() => step(1)}>
-                    ลง
-                  </button>
-                    </>
-                  )}
-                </div>
-              )}
               {free && freeSheet.sheet && (current.kind === "box" || current.kind === "rect" || current.kind === "line") && (
                 <FreeBoxPanel block={current} src={src} readOnly={readOnly} apply={apply} />
               )}

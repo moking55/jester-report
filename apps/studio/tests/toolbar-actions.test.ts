@@ -118,3 +118,34 @@ describe("kind tools of code, condition, variable and free boxes", () => {
 function arrangeToolsFor(src: string, sheet: ReturnType<typeof readBlocks>["items"][number], block: ReturnType<typeof readBlocks>["items"][number], apply: (r: unknown) => void) {
   return arrangeTools({ ...base, src, block, sheet, apply, page: { w: 210, h: 148 } });
 }
+
+describe("table buttons work on the picked cell (v1.10)", () => {
+  const run = (src: string, id: string, cell: { row: number; col: number } | null) => {
+    let out = "";
+    const g = kindTools({ ...base, src, block: readBlocks(src).items[0], cell, apply: (r) => (out = ((r as { value?: { src: string } }).value ?? (r as { src: string })).src) });
+    const b = g?.items.find((i) => i.id === id) as ToolButton;
+    if (!b.disabled) b.onClick();
+    return { out, disabled: b.disabled };
+  };
+  const G = '<table data-jd="grid"><tr><td>a</td><td>b</td></tr><tr><td>c</td><td>d</td></tr></table>';
+
+  it("fixed table: rows and columns around the cell", () => {
+    expect(run(G, "colleft", { row: 0, col: 1 }).out).toBe('<table data-jd="grid"><tr><td>a</td><td>&nbsp;</td><td>b</td></tr><tr><td>c</td><td>&nbsp;</td><td>d</td></tr></table>');
+    expect(run(G, "rowabove", { row: 0, col: 0 }).out.startsWith('<table data-jd="grid"><tr><td>&nbsp;</td><td>&nbsp;</td></tr>')).toBe(true);
+    expect(run(G, "rowbelow", { row: 0, col: 0 }).out).toContain("<tr><td>a</td><td>b</td></tr>\n<tr><td>&nbsp;</td><td>&nbsp;</td></tr><tr><td>c</td>");
+    expect(run(G, "merge", { row: 1, col: 0 }).out).toContain('<td colspan="2">c d</td>');
+    expect(run(G, "merge", { row: 1, col: 1 }).disabled).toBe(true);
+    expect(run(G, "split", { row: 1, col: 1 }).disabled).toBe(true);
+    expect(run(G, "left", { row: 0, col: 0 }).disabled).toBe(true);
+  });
+
+  it("fixed table with no cell picked works at the end, as in v1.9", () => {
+    expect(run(G, "colright", null).out).toBe('<table data-jd="grid"><tr><td>a</td><td>b</td><td>&nbsp;</td></tr><tr><td>c</td><td>d</td><td>&nbsp;</td></tr></table>');
+  });
+
+  it("list table: a column left of the picked one", () => {
+    const L = "<table>\n<thead><tr><th>A</th><th>B</th></tr></thead>\n<tbody>\n{% for r in lists.x %}<tr><td>{{ r.a }}</td><td>{{ r.b }}</td></tr>{% endfor %}\n</tbody>\n</table>";
+    const out = run(L, "addleft", { row: 0, col: 1 }).out;
+    expect(out).toMatch(/<th>A<\/th>\s*<th>หัวคอลัมน์<\/th>\s*<th>B<\/th>/);
+  });
+});

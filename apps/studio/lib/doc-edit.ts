@@ -431,10 +431,15 @@ const tableEdit = (src: string, block: Block, patches: Patch[]): Result<Edited> 
   return ok({ src: out, at: { start: block.start, end: block.end + out.length - src.length } });
 };
 
-/** A row of empty cells after row `after` (-1: at the end), shaped like the body rows. */
-export function gridAddRow(src: string, block: Block, after = -1): Result<Edited> {
+/** A row of empty cells after row `after` (-1: at the end; with `top`, -1 is before the first row), shaped like the body rows. */
+export function gridAddRow(src: string, block: Block, after = -1, top = false): Result<Edited> {
   const g = gridOf(block);
   if (!g) return fail("ไม่ใช่ตารางเปล่า");
+  if (top && after < 0) {
+    const first = g.rows[0];
+    const cells = first.cells.map((c) => `${openAs(src, c, "td")}&nbsp;</td>`).join("");
+    return tableEdit(src, block, [{ start: first.range.start, end: first.range.start, text: `<tr>${cells}</tr>\n${indentAt(src, first.range.start)}` }]);
+  }
   const at = after < 0 ? g.rows.length - 1 : Math.min(after, g.rows.length - 1);
   const model = g.rows[g.head && g.rows.length > 1 ? Math.max(1, at) : at];
   const cells = model.cells.map((c) => `${openAs(src, c, "td")}&nbsp;</td>`).join("");
@@ -988,4 +993,23 @@ export function removeElse(src: string, block: Block): Result<Edited> {
   const start = own(els.tag.start) ? lineStart(src, els.tag.start) : els.tag.start;
   const end = own(close.start) ? lineStart(src, close.start) : close.start;
   return ok({ src: applyPatches(src, [{ start, end, text: "" }]), at: { start: block.start, end: block.end - (end - start) } });
+}
+
+/** A row of columns with `n` columns (2–4): new empty ones at the end, or the last ones merged in (their blocks kept). */
+export function setRowColumns(src: string, block: Block, n: number): Result<Edited> {
+  if (block.kind !== "row") return fail("ไม่ใช่แถวแบ่งคอลัมน์");
+  if (n < 2 || n > 4) return fail("แถวมีได้ 2–4 คอลัมน์");
+  let out = src;
+  let at: Block = block;
+  for (let guard = 0; guard < 4; guard++) {
+    const now = columnsOf(out, at)?.length ?? 0;
+    if (now === n) return ok({ src: out, at: { start: block.start, end: at.end } });
+    const r = now < n ? addRowColumn(out, at) : mergeColumns(out, at, now - 2);
+    if (!r.ok) return r;
+    out = r.value.src;
+    const again = flatten(readBlocks(out).items).find((b) => b.start === block.start && b.kind === "row");
+    if (!again) return fail("อ่านแถวกลับไม่ได้");
+    at = again;
+  }
+  return fail("ปรับจำนวนคอลัมน์ไม่สำเร็จ");
 }

@@ -10,21 +10,13 @@ import { readCode, writeCode, type CodeBlock } from "@/lib/code-block";
 import { checkCode } from "@/lib/doc-check";
 import {
   addBranch,
-  addColumn,
   addDetailRow,
   removeDetailRow,
   columnWidths,
   readStyle,
   setTableSizes,
   tableCells,
-  gridAddColumn,
-  gridAddRow,
-  gridMoveColumn,
-  gridRemoveColumn,
-  gridRemoveRow,
   mergeColumns,
-  moveColumn,
-  removeColumn,
   removeElse,
   replaceIn,
   setAttr,
@@ -262,42 +254,8 @@ export function BlockPanel(props: Props) {
       return (
         <div className={styles.props}>
           <p className={styles.hint}>
-            {d.rows.length} แถว × {cols} คอลัมน์ · ดับเบิลคลิกเซลล์บนกระดาษเพื่อพิมพ์
+            {d.rows.length} แถว × {cols} คอลัมน์ · คลิกเซลล์เพื่อเลือก (ปุ่มแถว/คอลัมน์/รวมช่องอยู่ในแถบเครื่องมือ) · ดับเบิลคลิกเพื่อพิมพ์
           </p>
-          {!readOnly && (
-            <>
-              <h3>แถว</h3>
-              {d.rows.map((_, r) => (
-                <div key={r} className={styles.row}>
-                  <span className={styles.hint}>แถว {r + 1}</span>
-                  <button type="button" onClick={() => apply(gridAddRow(src, block, r))}>
-                    + แถวใต้
-                  </button>
-                  <button type="button" className={styles.danger} disabled={d.rows.length <= 1} onClick={() => apply(gridRemoveRow(src, block, r))}>
-                    ลบ
-                  </button>
-                </div>
-              ))}
-              <h3>คอลัมน์</h3>
-              {Array.from({ length: cols }, (_, c) => (
-                <div key={c} className={styles.row}>
-                  <span className={styles.hint}>คอลัมน์ {c + 1}</span>
-                  <button type="button" aria-label="ย้ายซ้าย" disabled={c === 0} onClick={() => apply(gridMoveColumn(src, block, c, -1))}>
-                    ←
-                  </button>
-                  <button type="button" aria-label="ย้ายขวา" disabled={c === cols - 1} onClick={() => apply(gridMoveColumn(src, block, c, 1))}>
-                    →
-                  </button>
-                  <button type="button" onClick={() => apply(gridAddColumn(src, block, c))}>
-                    + ขวา
-                  </button>
-                  <button type="button" className={styles.danger} disabled={cols <= 1} onClick={() => apply(gridRemoveColumn(src, block, c))}>
-                    ลบ
-                  </button>
-                </div>
-              ))}
-            </>
-          )}
         </div>
       );
     }
@@ -390,26 +348,8 @@ export function BlockPanel(props: Props) {
                 <Field label={`หัวคอลัมน์ ${i + 1}`} value={cellText(head[i])} readOnly={readOnly} onCommit={(v) => apply(guarded(src, block, head[i].inner, v))} />
               )}
               <Field label="ค่าในแถว" value={cellText(c)} mono readOnly={readOnly} onCommit={(v) => apply(guarded(src, block, c.inner, v))} />
-              {!readOnly && (
-                <div className={styles.row}>
-                  <button type="button" aria-label="ย้ายซ้าย" disabled={i === 0} onClick={() => apply(moveColumn(src, block, i, -1))}>
-                    ←
-                  </button>
-                  <button type="button" aria-label="ย้ายขวา" disabled={i === d.cells.length - 1} onClick={() => apply(moveColumn(src, block, i, 1))}>
-                    →
-                  </button>
-                  <button type="button" className={styles.danger} onClick={() => apply(removeColumn(src, block, i))}>
-                    ลบคอลัมน์
-                  </button>
-                </div>
-              )}
             </div>
           ))}
-          {!readOnly && (
-            <button type="button" onClick={() => apply(addColumn(src, block, d.cells.length - 1, "หัวคอลัมน์", `{{ ${variable} }}`))}>
-              + คอลัมน์
-            </button>
-          )}
         </div>
       );
     }

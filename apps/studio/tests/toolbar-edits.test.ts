@@ -55,3 +55,19 @@ describe("else of conditions and loops", () => {
     expect(addBranch(src, first(src), "elif")).toMatchObject({ ok: false });
   });
 });
+
+describe("columns of a row", () => {
+  it("sets the number of columns, keeping blocks of a column that goes", async () => {
+    const { setRowColumns } = await import("@/lib/doc-edit");
+    const src = '<div data-jd="row">\n  <div data-jd="col" style="flex: 1"><p>a</p></div>\n  <div data-jd="col" style="flex: 1"><p>b</p></div>\n  <div data-jd="col" style="flex: 1"><p>c</p></div>\n</div>';
+    const two = setRowColumns(src, first(src), 2);
+    expect(two.ok).toBe(true);
+    if (!two.ok) return;
+    const b = readBlocks(two.value.src).items[0];
+    expect(b.lists).toHaveLength(2);
+    expect(two.value.src).toContain("<p>c</p>");
+    const four = setRowColumns(two.value.src, b, 4);
+    expect(four.ok && readBlocks(four.value.src).items[0].lists).toHaveLength(4);
+    expect(setRowColumns(src, first(src), 5)).toMatchObject({ ok: false });
+  });
+});

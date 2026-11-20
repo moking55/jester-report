@@ -10,12 +10,17 @@ import {
   AlignStartHorizontal,
   AlignStartVertical,
   ArrowDown,
+  ArrowLeft,
+  ArrowRight,
   ArrowUp,
+  BetweenHorizontalEnd,
   BetweenHorizontalStart,
+  BetweenVerticalEnd,
   BetweenVerticalStart,
   Bold,
   BringToFront,
-  Columns3,
+  ChevronDown,
+  ChevronUp,
   Copy,
   Equal,
   Eraser,
@@ -31,6 +36,8 @@ import {
   TableColumnsSplit,
   TableRowsSplit,
   Trash2,
+  TableCellsMerge,
+  TableCellsSplit,
   Underline,
 } from "lucide-react";
 import { createElement } from "react";
@@ -38,20 +45,26 @@ import { createElement } from "react";
 import type { Block } from "@/lib/doc-blocks";
 import {
   addColumn,
-  addRowColumn,
   addSummaryRow,
   equalColumns,
-  gridAddColumn,
   gridAddRow,
+  gridCanMoveColumn,
+  gridCellAt,
+  gridInsertColumn,
+  gridMergeRight,
+  gridMoveColumn,
   gridBorders,
   gridHeader,
   gridRemoveColumn,
   gridRemoveRow,
+  gridSplit,
+  moveColumn,
   moveBoxOrder,
   readStyle,
   removeColumn,
   replaceIn,
   setBoxRect,
+  setRowColumns,
   setStyle,
   setTagArgs,
   type Edited,
@@ -86,6 +99,8 @@ export type ToolContext = {
   apply: (r: Result<Edited> | Edited) => void; // one undo step
   duplicate: () => void; // a copy after the selected block
   pickImage: () => void; // choose a picture to replace the selected image's
+  cell?: { row: number; col: number } | null; // the cell clicked in the selected table (v1.10)
+  move?: (dir: -1 | 1) => void; // the selected block one place up or down (flow layout)
   sheet: Block | null; // the one sheet of a free layout
   page: { w: number; h: number }; // its size, mm
   list: { can: boolean; kind: "ul" | "ol" | null; toggle: (ordered: boolean) => void }; // a paragraph as a list, a list back
@@ -205,22 +220,33 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
         ],
       };
     case "row": {
-      const cols = b.node.kind === "element" ? b.node.children.filter((c) => c.kind === "element").length : 0;
+      const cols = b.node.kind === "element" ? b.node.children.filter((x) => x.kind === "element").length : 0;
       return {
         id: "kind",
         label: "แถวแบ่งคอลัมน์",
-        items: [act("addcol", "เพิ่มคอลัมน์", Columns3, () => addRowColumn(ctx.src, b), cols >= 4), act("equal", "สัดส่วนคอลัมน์เท่ากัน", Equal, () => equalColumns(ctx.src, b))],
+        items: [
+          select("count", "จำนวนคอลัมน์", String(cols), [["2", "2 คอลัมน์"], ["3", "3 คอลัมน์"], ["4", "4 คอลัมน์"]], off, (v) => {
+            if (!v || Number(v) === cols) return;
+            if (Number(v) < cols && !window.confirm("บล็อกในคอลัมน์ที่หายไปจะย้ายไปอยู่ท้ายคอลัมน์ก่อนหน้า — ทำต่อ?")) return;
+            ctx.apply(setRowColumns(ctx.src, b, Number(v)));
+          }),
+          act("equal", "สัดส่วนคอลัมน์เท่ากัน", Equal, () => equalColumns(ctx.src, b)),
+        ],
       };
     }
     case "table": {
       const d = b.detail;
-      const last = d.cells.length - 1;
+      const n = d.cells.length;
+      const col = ctx.cell && ctx.cell.col < n ? ctx.cell.col : n - 1; // no cell picked: the last column
       return {
         id: "kind",
         label: "ตารางรายการ",
         items: [
-          act("addcol", "เพิ่มคอลัมน์ท้าย", BetweenVerticalStart, () => addColumn(ctx.src, b, last, "หัวคอลัมน์", `{{ ${d.loop.variable} }}`)),
-          act("delcol", "ลบคอลัมน์ท้าย", TableColumnsSplit, () => removeColumn(ctx.src, b, last), last < 1),
+          act("addleft", "เพิ่มคอลัมน์ซ้าย", BetweenVerticalStart, () => addColumn(ctx.src, b, col - 1, "หัวคอลัมน์", `{{ ${d.loop.variable} }}`)),
+          act("addright", "เพิ่มคอลัมน์ขวา", BetweenVerticalEnd, () => addColumn(ctx.src, b, col, "หัวคอลัมน์", `{{ ${d.loop.variable} }}`)),
+          act("delcol", "ลบคอลัมน์", TableColumnsSplit, () => removeColumn(ctx.src, b, col), n <= 1),
+          act("left", "เลื่อนคอลัมน์ไปซ้าย", ArrowLeft, () => moveColumn(ctx.src, b, col, -1), col === 0),
+          act("right", "เลื่อนคอลัมน์ไปขวา", ArrowRight, () => moveColumn(ctx.src, b, col, 1), col === n - 1),
           select("border", "เส้นตาราง", styleOf().border ?? "", [["1px solid #000", "เส้นนอก"], ["none", "ไม่มี"]], off || !!b.style?.readOnly, (v) => ctx.apply(setStyle(ctx.src, b, { border: v || null }))),
         ],
       };
@@ -228,16 +254,27 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
     case "grid": {
       const d = b.detail;
       const rows = d.rows.length;
-      const cols = d.cols;
-      const bordered = d.rows.every((r) => r.cells.every((c) => /(?:^|;)\s*border\s*:/.test(c.node.attrs.find((a) => a.name === "style")?.value ?? "")));
+      const picked = ctx.cell && ctx.cell.row < rows && ctx.cell.col < d.cols ? ctx.cell : null;
+      const row = picked?.row ?? rows - 1; // no cell picked: the last row and column
+      const col = picked?.col ?? d.cols - 1;
+      const hit = gridCellAt(d.rows[row], col)!;
+      const span = hit.cell.span ?? 1;
+      const bordered = d.rows.every((r) => r.cells.every((x) => /(?:^|;)\s*border\s*:/.test(x.node.attrs.find((a) => a.name === "style")?.value ?? "")));
       return {
         id: "kind",
         label: "ตารางเปล่า",
         items: [
-          act("addrow", "เพิ่มแถวท้าย", BetweenHorizontalStart, () => gridAddRow(ctx.src, b, rows - 1)),
-          act("delrow", "ลบแถวท้าย", TableRowsSplit, () => gridRemoveRow(ctx.src, b, rows - 1), rows <= 1),
-          act("addcol", "เพิ่มคอลัมน์ท้าย", BetweenVerticalStart, () => gridAddColumn(ctx.src, b, cols - 1)),
-          act("delcol", "ลบคอลัมน์ท้าย", TableColumnsSplit, () => gridRemoveColumn(ctx.src, b, cols - 1), cols <= 1),
+          // a row above the header row would be a plain row before the <th> row: not a fixed table any more
+          act("rowabove", "เพิ่มแถวบน", BetweenHorizontalStart, () => gridAddRow(ctx.src, b, row - 1, true), d.head && row === 0),
+          act("rowbelow", "เพิ่มแถวล่าง", BetweenHorizontalEnd, () => gridAddRow(ctx.src, b, row)),
+          act("colleft", "เพิ่มคอลัมน์ซ้าย", BetweenVerticalStart, () => gridInsertColumn(ctx.src, b, hit.start)),
+          act("colright", "เพิ่มคอลัมน์ขวา", BetweenVerticalEnd, () => gridInsertColumn(ctx.src, b, hit.start + span)),
+          act("delrow", "ลบแถว", TableRowsSplit, () => gridRemoveRow(ctx.src, b, row), rows <= 1),
+          act("delcol", "ลบคอลัมน์", TableColumnsSplit, () => gridRemoveColumn(ctx.src, b, col), d.cols <= 1),
+          act("left", "เลื่อนคอลัมน์ไปซ้าย", ArrowLeft, () => gridMoveColumn(ctx.src, b, col, -1), !gridCanMoveColumn(b, col, -1)),
+          act("right", "เลื่อนคอลัมน์ไปขวา", ArrowRight, () => gridMoveColumn(ctx.src, b, col, 1), !gridCanMoveColumn(b, col, 1)),
+          act("merge", "รวมกับช่องขวา", TableCellsMerge, () => gridMergeRight(ctx.src, b, row, col), hit.index >= d.rows[row].cells.length - 1),
+          act("split", "แยกช่อง", TableCellsSplit, () => gridSplit(ctx.src, b, row, col), span < 2),
           act("head", "แถวแรกเป็นหัวตาราง", Heading, () => gridHeader(ctx.src, b, !d.head), false, d.head),
           act("borders", "เส้นตาราง", Grid3x3, () => gridBorders(ctx.src, b, !bordered), false, bordered),
         ],
@@ -367,6 +404,8 @@ export function blockTools(ctx: ToolContext): ToolGroup {
     id: "block",
     label: "บล็อกที่เลือก",
     items: [
+      { id: "up", label: "เลื่อนขึ้น", icon: ChevronUp, disabled: none || !ctx.move, onClick: () => ctx.move?.(-1) },
+      { id: "down", label: "เลื่อนลง", icon: ChevronDown, disabled: none || !ctx.move, onClick: () => ctx.move?.(1) },
       { id: "duplicate", label: "ทำสำเนา", icon: Copy, keys: "Ctrl+D", disabled: none, onClick: ctx.duplicate },
       { id: "remove", label: "ลบ", icon: Trash2, keys: "Delete", disabled: none, onClick: ctx.remove },
     ],
