@@ -65,7 +65,7 @@
   - Acceptance: ปุ่มตามตาราง spec เรียก edit เดิม (`addColumn`, `gridAddRow`, `mergeColumns`, …); รูป: อัปโหลด + กว้าง 25/50/100%; แถว: แบ่ง 2/3 เท่ากัน
   - Verify: vitest (edit ใหม่ถ้ามี) + dev
   - Files: `components/designer/toolbar-actions.ts`, `lib/doc-edit.ts`, tests
-- [ ] **T10 QR, เงื่อนไข, วนซ้ำ, ตัวแปร, แบบอิสระ**
+- [x] **T10 QR, เงื่อนไข, วนซ้ำ, ตัวแปร, แบบอิสระ**
   - Acceptance: ชนิด QR; เงื่อนไข: เพิ่มหรือถ้า/เพิ่ม-ลบไม่เช่นนั้น; วนซ้ำ: เปิด/ปิดถ้าไม่มีแถว; ตัวแปร: ประเภท + ค่าเดียว/ตามเงื่อนไข;
     แบบอิสระ: ลำดับซ้อน 4 ปุ่ม + จัดแนวกับกระดาษ 6 ปุ่ม
   - Verify: vitest (`alignBox`) + dev

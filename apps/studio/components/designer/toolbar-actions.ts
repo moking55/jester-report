@@ -3,13 +3,23 @@ import {
   AlignJustify,
   AlignLeft,
   AlignRight,
+  AlignCenterHorizontal,
+  AlignCenterVertical,
+  AlignEndHorizontal,
+  AlignEndVertical,
+  AlignStartHorizontal,
+  AlignStartVertical,
+  ArrowDown,
+  ArrowUp,
   BetweenHorizontalStart,
   BetweenVerticalStart,
   Bold,
+  BringToFront,
   Columns3,
   Copy,
   Equal,
   Eraser,
+  GitBranchPlus,
   Grid3x3,
   Heading,
   ImagePlus,
@@ -17,6 +27,8 @@ import {
   List,
   ListOrdered,
   ListPlus,
+  SendToBack,
+  SplitSquareVertical,
   TableColumnsSplit,
   TableRowsSplit,
   Trash2,
@@ -26,6 +38,7 @@ import { createElement } from "react";
 
 import type { Block } from "@/lib/doc-blocks";
 import {
+  addBranch,
   addColumn,
   addRowColumn,
   addSummaryRow,
@@ -36,14 +49,20 @@ import {
   gridHeader,
   gridRemoveColumn,
   gridRemoveRow,
+  moveBoxOrder,
   readStyle,
   removeColumn,
+  removeElse,
   replaceIn,
+  setBoxRect,
   setStyle,
+  setTagArgs,
   type Edited,
   type Result,
 } from "@/lib/doc-edit";
+import { CODE_NAME, readCode, writeCode, type CodeType } from "@/lib/code-block";
 import { setTextTag, TEXT_LEVELS } from "@/lib/doc-text";
+import { convertValue, readVar, TYPE_NAME, writeVar, type Var, type VarType } from "@/lib/doc-var";
 import { FORMAT_NAME, readFieldFormat, writeFieldFormat, type FieldFormat } from "@/lib/field-format";
 import type { EditorHandle } from "@/lib/editor-bus";
 
@@ -70,6 +89,8 @@ export type ToolContext = {
   apply: (r: Result<Edited> | Edited) => void; // one undo step
   duplicate: () => void; // a copy after the selected block
   pickImage: () => void; // choose a picture to replace the selected image's
+  sheet: Block | null; // the one sheet of a free layout
+  page: { w: number; h: number }; // its size, mm
   list: { can: boolean; kind: "ul" | "ol" | null; toggle: (ordered: boolean) => void }; // a paragraph as a list, a list back
   setStyle: (props: Record<string, string | null>) => void; // write the selected block's style (one undo step)
   remove: () => void;
@@ -135,6 +156,14 @@ function select(id: string, label: string, value: string, options: [string, stri
       [["", label] as [string, string], ...shown].map(([v, l]) => createElement("option", { key: v, value: v }, l)),
     ),
   };
+}
+
+/** Add or take away the else of a condition or a loop; taking it away asks first when something is in it. */
+function elseOf(ctx: ToolContext, b: Block, hasElse: boolean): Result<Edited> | Edited {
+  if (!hasElse) return addBranch(ctx.src, b, "else");
+  const last = b.lists[b.lists.length - 1];
+  if (last && last.list.items.length && !window.confirm("เอาสาขานี้ออกพร้อมบล็อกข้างใน?")) return { src: ctx.src, at: null };
+  return removeElse(ctx.src, b);
 }
 
 /** What only this kind of block has: a heading level for text, a number format for a field, … */
@@ -227,9 +256,88 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
     }
     case "summary":
       return { id: "kind", label: "สรุปยอด", items: [act("addrow", "เพิ่มแถว", ListPlus, () => addSummaryRow(ctx.src, b))] };
+    case "code": {
+      const d = b.detail;
+      const code = readCode(d.inner);
+      const names = (Object.keys(CODE_NAME) as CodeType[]).map((t): [string, string] => [t, CODE_NAME[t]]);
+      return {
+        id: "kind",
+        label: "QR / บาร์โค้ด",
+        items: [select("type", "ชนิด", code?.type ?? "", names, off || !code, (v) => code && v && ctx.apply(replaceIn(ctx.src, b, d.expr, `{{ ${writeCode({ ...code, type: v as CodeType })} }}`)))],
+      };
+    }
+    case "condition": {
+      const d = b.detail;
+      const hasElse = d.branches.some((x) => x.keyword === "else");
+      return {
+        id: "kind",
+        label: "เงื่อนไข",
+        items: [
+          act("elif", "เพิ่มสาขา ไม่เช่นนั้นถ้า", GitBranchPlus, () => addBranch(ctx.src, b, "elif", "true")),
+          act("else", hasElse ? "เอาสาขา ไม่เช่นนั้น ออก" : "เพิ่มสาขา ไม่เช่นนั้น", SplitSquareVertical, () => elseOf(ctx, b, hasElse), false, hasElse),
+        ],
+      };
+    }
+    case "repeat": {
+      const hasElse = b.node.kind === "block" && b.node.branches.some((x) => x.tag.keyword === "else");
+      return { id: "kind", label: "วนซ้ำ", items: [act("else", hasElse ? "เอาสาขา ถ้าไม่มีแถว ออก" : "เพิ่มสาขา ถ้าไม่มีแถว", SplitSquareVertical, () => elseOf(ctx, b, hasElse), false, hasElse)] };
+    }
+    case "set": {
+      const v = readVar(b.detail.inner);
+      if (!v) return null;
+      const write = (next: Var): Result<Edited> => {
+        const out = writeVar(next);
+        return out.ok ? setTagArgs(ctx.src, b, b, "set", out.value) : { ok: false, error: out.error };
+      };
+      const names = (Object.keys(TYPE_NAME) as VarType[]).map((t): [string, string] => [t, TYPE_NAME[t]]);
+      const conv = (t: VarType) => (x: string) => convertValue(x, v.type, t);
+      return {
+        id: "kind",
+        label: "ตัวแปร",
+        items: [
+          select("type", "ประเภท", v.type, names, off, (t) => t && ctx.apply(write({ ...v, type: t as VarType, rows: v.rows.map((r) => ({ ...r, value: conv(t as VarType)(r.value) })), otherwise: conv(t as VarType)(v.otherwise) }))),
+          act(
+            "conditional",
+            v.rows.length ? "ค่าเดียว (เอาเงื่อนไขออก)" : "ตั้งค่าตามเงื่อนไข",
+            GitBranchPlus,
+            () => write(v.rows.length ? { ...v, rows: [], otherwise: v.rows[0].value } : { ...v, rows: [{ test: "true", value: v.otherwise }] }),
+            false,
+            v.rows.length > 0,
+          ),
+        ],
+      };
+    }
     default:
       return null;
   }
+}
+
+/** Stacking order and alignment to the sheet, for a box, a rectangle or a line of a free layout. */
+export function arrangeTools(ctx: ToolContext): ToolGroup | null {
+  const b = ctx.block;
+  const r = b?.rect;
+  if (!b || !r || !ctx.sheet || !["box", "rect", "line"].includes(b.kind)) return null;
+  const sheet = ctx.sheet;
+  const off = ctx.readOnly;
+  const order = (id: string, label: string, icon: typeof ArrowUp, to: "front" | "back" | "up" | "down") => ({ id, label, icon, disabled: off, onClick: () => ctx.apply(moveBoxOrder(ctx.src, b, sheet, to)) });
+  const place = (id: string, label: string, icon: typeof ArrowUp, rect: { x?: number; y?: number }) => ({ id, label, icon, disabled: off, onClick: () => ctx.apply(setBoxRect(ctx.src, b, rect)) });
+  const { w: W, h: H } = ctx.page;
+  return {
+    id: "arrange",
+    label: "ลำดับและการจัดแนว",
+    items: [
+      order("front", "ยกขึ้นหน้าสุด", BringToFront, "front"),
+      order("up", "ขึ้นหนึ่งชั้น", ArrowUp, "up"),
+      order("down", "ลงหนึ่งชั้น", ArrowDown, "down"),
+      order("back", "ส่งไปหลังสุด", SendToBack, "back"),
+      place("left", "ชิดซ้ายของกระดาษ", AlignStartVertical, { x: 0 }),
+      place("center", "กึ่งกลางกระดาษ (แนวนอน)", AlignCenterVertical, { x: (W - r.w) / 2 }),
+      place("right", "ชิดขวาของกระดาษ", AlignEndVertical, { x: W - r.w }),
+      place("top", "ชิดบนของกระดาษ", AlignStartHorizontal, { y: 0 }),
+      place("middle", "กึ่งกลางกระดาษ (แนวตั้ง)", AlignCenterHorizontal, { y: (H - r.h) / 2 }),
+      place("bottom", "ชิดล่างของกระดาษ", AlignEndHorizontal, { y: H - r.h }),
+    ],
+  };
 }
 
 export function listTools(ctx: ToolContext): ToolGroup {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { readBlocks } from "@/lib/doc-blocks";
-import { addSummaryRow, equalColumns } from "@/lib/doc-edit";
+import { addBranch, addSummaryRow, equalColumns, removeElse } from "@/lib/doc-edit";
 
 const first = (src: string) => readBlocks(src).items[0];
 
@@ -28,5 +28,30 @@ describe("edits behind the toolbar's buttons", () => {
   it("refuses a block of another kind", () => {
     expect(addSummaryRow("<p>x</p>", first("<p>x</p>"))).toMatchObject({ ok: false });
     expect(equalColumns("<p>x</p>", first("<p>x</p>"))).toMatchObject({ ok: false });
+  });
+});
+
+describe("else of conditions and loops", () => {
+  it("adds and removes the else of a loop", () => {
+    const src = "{% for r in lists.a %}\n  <p>{{ r.x }}</p>\n{% endfor %}";
+    const withElse = addBranch(src, first(src), "else");
+    expect(withElse.ok && withElse.value.src).toBe("{% for r in lists.a %}\n  <p>{{ r.x }}</p>\n{% else %}\n{% endfor %}");
+    if (!withElse.ok) return;
+    const b = first(withElse.value.src);
+    expect(b.lists).toHaveLength(2);
+    const gone = removeElse(withElse.value.src, b);
+    expect(gone.ok && gone.value.src).toBe(src);
+  });
+
+  it("removes the else of a condition with its content", () => {
+    const src = "{% if a %}\n  <p>x</p>\n{% else %}\n  <p>y</p>\n{% endif %}";
+    const out = removeElse(src, first(src));
+    expect(out.ok && out.value.src).toBe("{% if a %}\n  <p>x</p>\n{% endif %}");
+    expect(removeElse("{% if a %}x{% endif %}", first("{% if a %}x{% endif %}"))).toMatchObject({ ok: false });
+  });
+
+  it("only a loop takes an else; an elif is for conditions", () => {
+    const src = "{% for r in lists.a %}<p>x</p>{% endfor %}";
+    expect(addBranch(src, first(src), "elif")).toMatchObject({ ok: false });
   });
 });

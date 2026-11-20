@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import type { ToolButton, ToolGroup } from "@/components/designer/Toolbar";
 import { readBlocks } from "@/lib/doc-blocks";
-import { kindTools, paragraphTools, textTools, type ToolContext } from "@/components/designer/toolbar-actions";
+import { arrangeTools, kindTools, paragraphTools, textTools, type ToolContext } from "@/components/designer/toolbar-actions";
 
 const calls: Record<string, string | null>[] = [];
-const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], src: "", apply: () => undefined, duplicate: () => undefined, pickImage: () => undefined, list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
+const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], src: "", apply: () => undefined, duplicate: () => undefined, pickImage: () => undefined, sheet: null, page: { w: 210, h: 297 }, list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
 const button = (g: ToolGroup, id: string) => g.items.find((i) => i.id === id) as ToolButton;
 
 describe("toolbar text and paragraph tools", () => {
@@ -74,3 +74,52 @@ describe("kind tools", () => {
     expect(kindTools(withBlock("<hr>", () => undefined))).toBeNull();
   });
 });
+
+describe("kind tools of code, condition, variable and free boxes", () => {
+  const withBlock = (src: string, apply: (r: unknown) => void, more: Partial<ToolContext> = {}) => ({ ...base, src, block: readBlocks(src).items[0], apply, ...more });
+  const btn = (g: ToolGroup | null, id: string) => g?.items.find((i) => i.id === id) as ToolButton;
+  const sel = (g: ToolGroup | null, id: string) => (g?.items.find((i) => i.id === id) as unknown as { node: { props: { value: string; onChange: (e: { target: { value: string } }) => void } } }).node.props;
+
+  it("code: changes the kind and keeps the text", () => {
+    const got: { src: string }[] = [];
+    sel(kindTools(withBlock("<div>{{ fmt.qr(data.url) }}</div>", (r) => got.push(r as { src: string }))), "type").onChange({ target: { value: "barcode" } });
+    expect(got[0].src).toBe("<div>{{ fmt.barcode(data.url) }}</div>");
+  });
+
+  it("condition: adds an elif and an else", () => {
+    const got: { src: string }[] = [];
+    const g = kindTools(withBlock("{% if a %}<p>x</p>{% endif %}", (r) => got.push((r as { value: { src: string } }).value)));
+    btn(g, "elif").onClick();
+    expect(got[0].src).toContain("{% elif true %}");
+    btn(g, "else").onClick();
+    expect(got[1].src).toContain("{% else %}");
+    expect(btn(g, "else").pressed).toBe(false);
+  });
+
+  it("variable: a type, and a conditional value", () => {
+    const got: { src: string }[] = [];
+    const g = kindTools(withBlock('{% set s = "a" %}', (r) => got.push((r as { value: { src: string } }).value)));
+    btn(g, "conditional").onClick();
+    expect(got[0].src).toBe('{% set s = "a" if true else "a" %}');
+    sel(g, "type").onChange({ target: { value: "expr" } });
+    expect(got[1].src).toBe('{% set s = "a" %}');
+  });
+
+  it("free box: stacking and alignment to the sheet", () => {
+    const html = '<div data-jd="page" style="position: relative; width: 210mm; height: 148mm">\n<div data-jd="box" style="position: absolute; left: 10mm; top: 10mm; width: 50mm; height: 20mm"><p>x</p></div>\n</div>';
+    const page = readBlocks(html).items[0];
+    const box = page.lists[0].list.items[0];
+    const got: { value: { src: string } }[] = [];
+    const g = arrangeToolsFor(html, page, box, (r) => got.push(r as { value: { src: string } }));
+    btn(g, "center").onClick();
+    expect(got[0].value.src).toContain("left: 80mm");
+    btn(g, "bottom").onClick();
+    expect(got[1].value.src).toContain("top: 128mm");
+    btn(g, "right").onClick();
+    expect(got[2].value.src).toContain("left: 160mm");
+  });
+});
+
+function arrangeToolsFor(src: string, sheet: ReturnType<typeof readBlocks>["items"][number], block: ReturnType<typeof readBlocks>["items"][number], apply: (r: unknown) => void) {
+  return arrangeTools({ ...base, src, block, sheet, apply, page: { w: 210, h: 148 } });
+}

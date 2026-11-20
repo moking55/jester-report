@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 
-import { argToText, textToArg } from "@/lib/code-arg";
 import type { Block } from "@/lib/doc-blocks";
 import { setTagArgs, type Edited, type Result } from "@/lib/doc-edit";
-import { readVar, TYPE_NAME, writeVar, type Var, type VarRow, type VarType } from "@/lib/doc-var";
+import { convertValue, readVar, TYPE_NAME, writeVar, type Var, type VarRow, type VarType } from "@/lib/doc-var";
 
 import styles from "./Designer.module.css";
 import { TemplateField } from "./BlockPanels";
@@ -22,12 +21,6 @@ type Props = {
   readOnly: boolean;
   apply: (r: Result<Edited> | Edited) => void;
 };
-
-/** The value of a type in another type's form (text is the panel's text, the others Jinja). */
-export function convertValue(value: string, from: VarType, to: VarType): string {
-  if (from === to || (from !== "text" && to !== "text")) return value;
-  return to === "text" ? argToText(value) : textToArg(value);
-}
 
 function Line({ label, value, onChange, onCommit, readOnly, list, placeholder }: { label: string; value: string; onChange: (v: string) => void; onCommit: () => void; readOnly: boolean; list?: string; placeholder?: string }) {
   return (

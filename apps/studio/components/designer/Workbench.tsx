@@ -33,7 +33,7 @@ import { boxRects, FreeBoxPanel, GuidePanel, useFree } from "./FreeCanvas";
 import { snapMove } from "@/lib/snap";
 import { BlockPanel, TableSizePanel } from "./BlockPanels";
 import { Toolbar } from "./Toolbar";
-import { blockTools, canFormat, kindTools, listTools, paragraphTools, textTools, type ToolContext } from "./toolbar-actions";
+import { arrangeTools, blockTools, canFormat, kindTools, listTools, paragraphTools, textTools, type ToolContext } from "./toolbar-actions";
 import { CustomCodeModal } from "./CustomCodeModal";
 import { Resizer } from "../Resizer";
 import { Rulers } from "./Rulers";
@@ -576,6 +576,8 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     src,
     apply,
     duplicate: () => duplicate(),
+    sheet: blocks.items.find((b) => b.kind === "page") ?? null,
+    page: { w: paper.widthMm, h: paper.heightMm },
     pickImage: () => {
       if (!current || !onUpload) return;
       replacing.current = keyOf(current);
@@ -661,7 +663,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
         )}
         <div className={styles.paperColumn}>
         {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
-        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), listTools(tool), ...(kindTools(tool) ? [kindTools(tool)!] : []), blockTools(tool)]} />}
+        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), listTools(tool), ...(kindTools(tool) ? [kindTools(tool)!] : []), ...(arrangeTools(tool) ? [arrangeTools(tool)!] : []), blockTools(tool)]} />}
         <div ref={scroller} className={styles.paperScroll} onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
           {message && (
             <p role="alert" className={styles.inlineAlert}>

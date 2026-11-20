@@ -220,7 +220,8 @@ export function setTagArgs(src: string, block: Range, tag: Range, keyword: strin
 
 /** A condition's branches as source: add an {% elif %} or {% else %} before the end tag. */
 export function addBranch(src: string, block: Block, keyword: "elif" | "else", test = ""): Result<Edited> {
-  if (block.kind !== "condition" || block.node.kind !== "block" || !block.node.close) return fail("ไม่ใช่บล็อกเงื่อนไข");
+  const loop = block.kind === "repeat" && keyword === "else"; // a loop's "ถ้าไม่มีแถว"
+  if ((block.kind !== "condition" && !loop) || block.node.kind !== "block" || !block.node.close) return fail("ไม่ใช่บล็อกเงื่อนไข");
   if (block.node.branches.some((b) => b.tag.keyword === "else")) {
     if (keyword === "else") return fail("มี \"ไม่เช่นนั้น\" แล้ว");
   }
@@ -904,4 +905,16 @@ export function addSummaryRow(src: string, block: Block): Result<Edited> {
   const lead = src.slice(src.lastIndexOf("\n", start - 1) + 1, start);
   const text = `\n${/^[ \t]*$/.test(lead) ? lead : ""}${src.slice(start, end)}`;
   return ok(replaceIn(src, block, { start: end, end }, text));
+}
+
+/** An {% if %} without its "ไม่เช่นนั้น", or a {% for %} without its "ถ้าไม่มีแถว": the {% else %} and what is in it go. */
+export function removeElse(src: string, block: Block): Result<Edited> {
+  if (block.node.kind !== "block" || !block.node.close) return fail("ไม่ใช่บล็อกเงื่อนไข");
+  const els = block.node.branches.find((b) => b.tag.keyword === "else");
+  if (!els) return fail("ไม่มี \"ไม่เช่นนั้น\"");
+  const close = block.node.close;
+  const own = (at: number) => src.slice(lineStart(src, at), at).trim() === "";
+  const start = own(els.tag.start) ? lineStart(src, els.tag.start) : els.tag.start;
+  const end = own(close.start) ? lineStart(src, close.start) : close.start;
+  return ok({ src: applyPatches(src, [{ start, end, text: "" }]), at: { start: block.start, end: block.end - (end - start) } });
 }

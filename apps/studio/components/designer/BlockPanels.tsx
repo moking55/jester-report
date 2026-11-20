@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 
 import type { Block, Cell } from "@/lib/doc-blocks";
-import { argToText, splitArgs, textToArg } from "@/lib/code-arg";
+import { readCode, writeCode, type CodeBlock, type CodeType } from "@/lib/code-block";
 import { checkCode } from "@/lib/doc-check";
 import {
   addBranch,
@@ -319,38 +319,26 @@ export function BlockPanel(props: Props) {
       );
     case "code": {
       const inner = d.inner.trim();
-      const pp = /^fmt\.qr\(fmt\.promptpay\(([\s\S]*)\)\)$/.exec(inner);
-      const plain = /^fmt\.(qr|barcode)\(([\s\S]*)\)$/.exec(inner);
-      const type = pp ? "promptpay" : (plain?.[1] ?? "");
-      // the text (first argument) as the panel shows it; the rest (size_mm=…, or a PromptPay amount) is kept as written
-      const [first = "", ...rest] = splitArgs(pp ? pp[1] : (plain?.[2] ?? ""));
-      const amount = pp ? (rest[0] ?? "").trim() : "";
-      const more = (pp ? rest.slice(1) : rest).map((r) => `,${r}`).join("");
-      const write = (t: string, text: string, amt: string) => {
-        const a = textToArg(text);
-        if (t === "promptpay") {
-          const money = amt.trim() ? `, ${textToArg(amt, true)}` : "";
-          return apply(replaceIn(src, block, d.expr, `{{ fmt.qr(fmt.promptpay(${a}${money}${more})) }}`));
-        }
-        apply(replaceIn(src, block, d.expr, `{{ fmt.${t}(${a}${more}) }}`));
-      };
-      const text = argToText(first);
-      const amountText = argToText(amount, true);
+      const code = readCode(inner);
+      const type = code?.type ?? "";
+      const write = (next: CodeBlock) => apply(replaceIn(src, block, d.expr, `{{ ${writeCode(next)} }}`));
+      const text = code?.text ?? "";
+      const amountText = code?.amount ?? "";
       return (
         <div className={styles.props}>
           {type ? (
             <>
               <label className={styles.prop}>
                 ชนิด
-                <select value={type} disabled={readOnly} onChange={(e) => write(e.target.value, text, amountText)}>
+                <select value={type} disabled={readOnly} onChange={(e) => code && write({ ...code, type: e.target.value as CodeType })}>
                   <option value="qr">QR code</option>
                   <option value="promptpay">QR PromptPay</option>
                   <option value="barcode">บาร์โค้ด</option>
                 </select>
               </label>
-              <TemplateField label={type === "promptpay" ? "เบอร์/เลขผู้เสียภาษี" : "ข้อความในโค้ด"} value={text} fields={fields} readOnly={readOnly} onCommit={(v) => write(type, v, amountText)} />
+              <TemplateField label={type === "promptpay" ? "เบอร์/เลขผู้เสียภาษี" : "ข้อความในโค้ด"} value={text} fields={fields} readOnly={readOnly} onCommit={(v) => code && write({ ...code, text: v })} />
               {type === "promptpay" && (
-                <TemplateField label="ยอดเงิน (เว้นว่างได้)" value={amountText} fields={fields} readOnly={readOnly} onCommit={(v) => write(type, text, v)} />
+                <TemplateField label="ยอดเงิน (เว้นว่างได้)" value={amountText} fields={fields} readOnly={readOnly} onCommit={(v) => code && write({ ...code, amount: v })} />
               )}
               <p className={styles.hint}>พิมพ์ข้อความได้เลย ใช้ค่าจากข้อมูลด้วย {"{{ … }}"} (พิมพ์ {"{{"} เพื่อเลือก)</p>
             </>

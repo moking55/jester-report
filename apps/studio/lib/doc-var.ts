@@ -138,3 +138,9 @@ export function writeVar(v: Var): Result<string> {
 export function varSummary(v: Var): string {
   return v.rows.length ? `ตามเงื่อนไข ${v.rows.length} ข้อ` : v.otherwise;
 }
+
+/** The value of a type in another type's form (text is the panel's text, the others Jinja). */
+export function convertValue(value: string, from: VarType, to: VarType): string {
+  if (from === to || (from !== "text" && to !== "text")) return value;
+  return to === "text" ? argToText(value) : textToArg(value);
+}
