@@ -41,19 +41,32 @@ function Line({ label, value, onChange, onCommit, readOnly, list, placeholder }:
 export function VarPanel(props: Props) {
   const v0 = readVar(props.inner);
   if (!v0) return <p className={styles.hint}>แท็ก set นี้ designer ยังอ่านเป็นตัวแปรไม่ได้ แก้เป็นโค้ดได้</p>;
-  // a new draft when the file's tag changes (an undo, another edit): the key is the tag's text
-  return <Draft key={props.inner} {...props} v0={v0} />;
+  // one draft per block; it starts again only when the tag changes from elsewhere (an undo, the code view)
+  return <Draft key={props.block.path.join(".")} {...props} v0={v0} />;
 }
 
 function Draft({ block, src, inner, fields, readOnly, apply, v0 }: Props & { v0: Var }) {
   const [v, setV] = useState<Var>(v0);
   const [error, setError] = useState<string | null>(null);
+  // the tag as this draft last saw it, and as it last wrote it: its own save keeps the draft (and the type chosen);
+  // reading the saved text back would guess the type anew (`1 if c else ""` reads as an expression)
+  const [seen, setSeen] = useState(inner.trim());
+  const [written, setWritten] = useState<string | null>(null);
+  if (inner.trim() !== seen) {
+    setSeen(inner.trim());
+    if (inner.trim() !== written) {
+      setV(v0);
+      setError(null);
+    }
+  }
 
   const commit = (next: Var) => {
     const out = writeVar(next);
     if (!out.ok) return setError(out.error);
     setError(null);
-    if (`set ${out.value}` !== inner.trim()) apply(setTagArgs(src, block, block, "set", out.value));
+    if (`set ${out.value}` === inner.trim()) return;
+    setWritten(`set ${out.value}`);
+    apply(setTagArgs(src, block, block, "set", out.value));
   };
   const change = (next: Var, now = false) => {
     setV(next);

@@ -105,8 +105,8 @@ test("the toolbar makes words bold and a paragraph a list; the PDF follows", asy
 
   const pdf = await previewPdf(page, RID);
   const info = pdfInfo(pdf);
-  if (!info) test.info().annotations.push({ type: "pdf-checks-skipped", description: "python with pypdf not found" });
-  else {
+  expect(info, "this spec is about the PDF: a python with pypdf is needed (E2E_PYTHON or apps/api/.venv)").not.toBeNull();
+  if (info) {
     expect(info).toHaveLength(1);
     const text = thai(info[0].text);
     expect(text).toContain(thai("เรียน คุณสมชาย ครับ"));
@@ -164,8 +164,8 @@ test("a variable with a type and conditional values fills a text; the PDF has th
   await save(page);
 
   const info = pdfInfo(await previewPdf(page, RID));
-  if (!info) test.info().annotations.push({ type: "pdf-checks-skipped", description: "python with pypdf not found" });
-  else {
+  expect(info, "this spec is about the PDF: a python with pypdf is needed (E2E_PYTHON or apps/api/.venv)").not.toBeNull();
+  if (info) {
     const text = thai(info[0].text);
     expect(text).toContain(thai("สถานะ ชำระแล้ว"));
     expect(text).toContain("VAT 72");

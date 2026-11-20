@@ -1,5 +1,7 @@
 // Shared by the specs. They run in file order on one fresh stack (workers: 1): checkpoint-a does the setup.
 import { execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 
 import { expect, type Page } from "@playwright/test";
 
@@ -26,7 +28,7 @@ export async function login(page: Page) {
 export type PdfPage = { widthMm: number; heightMm: number; text: string; images: number; fonts: string[] };
 
 /**
- * A PDF's pages (size, text, pictures) read with pypdf through `python`; null when python or pypdf is not there, so the
+ * A PDF's pages (size, text, pictures, fonts) read with pypdf (E2E_PYTHON, the api's .venv, or `python`); null when python or pypdf is not there, so the
  * specs that look inside a PDF check only what they can then. Thai marks vary in a PDF's text (the font's own glyph
  * forms): compare with `thai()`.
  */
@@ -36,16 +38,27 @@ export function pdfInfo(pdf: Buffer): PdfPage[] | null {
     "from pypdf import PdfReader",
     "r = PdfReader(io.BytesIO(sys.stdin.buffer.read()))",
     "def fonts(p):",
-    "    f = p['/Resources'].get('/Font', {}) if '/Resources' in p else {}",
+    "    r = p['/Resources'] if '/Resources' in p else {}",
+    "    f = r['/Font'] if '/Font' in r else {}",
     "    return sorted({str(v.get_object().get('/BaseFont', '')) for v in f.values()})",
     'print(json.dumps([{"widthMm": float(p.mediabox.width) * 25.4 / 72, "heightMm": float(p.mediabox.height) * 25.4 / 72, "text": p.extract_text(), "images": len(p.images), "fonts": fonts(p)} for p in r.pages]))',
   ].join("\n");
-  try {
-    const out = execFileSync("python", ["-c", script], { input: pdf, encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
-    return JSON.parse(out) as PdfPage[];
-  } catch {
-    return null;
+  // the api's own environment has pypdf; a bare `python` often does not
+  const pythons = [
+    process.env.E2E_PYTHON,
+    join(process.cwd(), "../api/.venv/Scripts/python.exe"), // Playwright runs from apps/studio
+    join(process.cwd(), "../api/.venv/bin/python"),
+    "python",
+  ].filter((p): p is string => !!p && (p === "python" || existsSync(p)));
+  for (const python of pythons) {
+    try {
+      const out = execFileSync(python, ["-c", script], { input: pdf, encoding: "utf8", env: { ...process.env, PYTHONIOENCODING: "utf-8" } });
+      return JSON.parse(out) as PdfPage[];
+    } catch {
+      // the next python
+    }
   }
+  return null;
 }
 
 /** Thai text without its marks and the font's private glyph forms: what a PDF's text and the template's text share. */
