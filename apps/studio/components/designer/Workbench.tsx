@@ -19,6 +19,7 @@ import { addBox, addListItem, boxSize, fromList, setBoxRect, toList, insertBlock
 import { fontNames } from "@/lib/doc-render";
 import { readVar, TYPE_NAME, varSummary } from "@/lib/doc-var";
 import { useEditor } from "@/lib/editor-bus";
+import { cellAtPlace, cellPlace, type CellPlace } from "@/lib/table-cell";
 import { setTextTag } from "@/lib/doc-text";
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 import { paperOf, setMargins } from "@/lib/paper";
@@ -231,6 +232,9 @@ export function listById(blocks: BlockList, id: string): BlockList | null {
 
 export function Workbench({ src, blocks, edit, readOnly, files, templateId, assets, sample, zoom, onReport, onUpload, part = "body", onZone }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
+  // the cell clicked in the selected table (v1.10): the toolbar's table buttons work on its row and column
+  const [cell, setCell] = useState<(CellPlace & { key: string }) | null>(null);
+  const cellNow = cell && cell.key === selected ? cell : null;
   const [active, setActive] = useState<string | null>(null);
   const [drop, setDrop] = useState<Drop | null>(null);
   const [pointerDrag, setPointerDrag] = useState(false);
@@ -481,6 +485,17 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     return () => window.removeEventListener("keydown", key);
   });
 
+  // the selected cell drawn with a frame (the paper is drawn by React from the file; the frame is set on the DOM after)
+  useLayoutEffect(() => {
+    const root = scroller.current?.querySelector("[data-paper]")?.shadowRoot;
+    if (!root) return;
+    root.querySelectorAll(".jd-cell-on").forEach((e) => e.classList.remove("jd-cell-on"));
+    if (!cellNow) return;
+    const block = root.querySelector(`[data-jd-block="${cellNow.key}"]`);
+    const table = [...(block?.querySelectorAll("table") ?? [])].find((t) => t.closest("[data-jd-block]") === block);
+    if (table) cellAtPlace(table, cellNow)?.classList.add("jd-cell-on");
+  });
+
   /** Leaving the text editor: one undo step, refused if the text no longer reads as a text block. */
   function typed(block: Block, range: Range, inner: string | null) {
     setEditing(null);
@@ -513,7 +528,10 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
     <Frame
       block={block}
       readOnly={readOnly}
-      onSelect={setSelected}
+      onSelect={(k, place) => {
+        setSelected(k);
+        setCell(place ? { key: k, ...place } : null);
+      }}
       onEdit={block.kind === "text" && !readOnly ? setEditing : block.kind === "custom" ? () => setCoding(block.start) : undefined}
       onColumns={!readOnly && (block.kind === "table" || block.kind === "grid") ? (cols) => apply(setTableSizes(src, block, { columns: cols })) : undefined}
     >
@@ -835,7 +853,7 @@ function Frame({
 }: {
   block: Block;
   readOnly: boolean;
-  onSelect: (k: string) => void;
+  onSelect: (k: string, cell: CellPlace | null) => void;
   onEdit?: (k: string) => void;
   onColumns?: (widths: number[]) => void; // a table's column widths (%) after dragging a line between columns
   children: React.ReactNode;
@@ -851,7 +869,10 @@ function Frame({
       data-jd-block={key}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect(key);
+        // a click in a cell of this table (not of a block inside it) picks that cell too
+        const td = block.kind === "grid" || block.kind === "table" ? (e.target as Element).closest?.("td, th") : null;
+        const own = td && td.closest("[data-jd-block]") === e.currentTarget ? cellPlace(td) : null;
+        onSelect(key, own);
       }}
       onDoubleClick={onEdit && (() => onEdit(key))}
     >

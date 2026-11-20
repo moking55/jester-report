@@ -9,7 +9,7 @@
     เพิ่ม/ลบ/เลื่อนคอลัมน์ และเพิ่ม/ลบแถว นับคอลัมน์จริงเมื่อมีช่องรวม; test เดิมของตารางเปล่าผ่านไม่แก้
   - Verify: `npx vitest run tests/grid-span.test.ts tests/doc-edit.test.ts tests/doc-blocks.test.ts`
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `components/designer/PaperCanvas.tsx`, `tests/grid-span.test.ts`
-- [ ] **C2 เลือกเซลล์ในตาราง**
+- [x] **C2 เลือกเซลล์ในตาราง**
   - Acceptance: คลิกครั้งเดียวในตารางเปล่า/ตารางรายการ = เลือกตาราง + เซลล์ (กรอบฟ้า); `cellAt` แปลงเป็นแถว/คอลัมน์จริง; ดับเบิลคลิกยังพิมพ์;
     เซลล์หายจากไฟล์ = ล้าง
   - Verify: vitest (`cellAt`) + Playwright บน dev

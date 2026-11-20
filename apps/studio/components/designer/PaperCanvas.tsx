@@ -108,6 +108,7 @@ const PAPER_CSS = `
   font-size: inherit; line-height: inherit; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } /* one line of the text it sits in: never taller, never wider than its place */
 .jd-expr { background: #e6f0ff; color: #1f4fa3; }
 .jd-tag { background: #fff0db; color: #8a5300; }
+.jd-cell-on { outline: 2px solid #2f6fe0; outline-offset: -2px; } /* the table cell the toolbar works on (v1.10) */
 .jd-editing { outline: 2px solid #f0a020; outline-offset: 2px; cursor: text; }
 .jd-editing .jd-chip { user-select: all; }
 .jd-editing .jd-if { cursor: pointer; }
