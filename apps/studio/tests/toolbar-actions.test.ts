@@ -86,14 +86,9 @@ describe("kind tools of code, condition, variable and free boxes", () => {
     expect(got[0].src).toBe("<div>{{ fmt.barcode(data.url) }}</div>");
   });
 
-  it("condition: adds an elif and an else", () => {
-    const got: { src: string }[] = [];
-    const g = kindTools(withBlock("{% if a %}<p>x</p>{% endif %}", (r) => got.push((r as { value: { src: string } }).value)));
-    btn(g, "elif").onClick();
-    expect(got[0].src).toContain("{% elif true %}");
-    btn(g, "else").onClick();
-    expect(got[1].src).toContain("{% else %}");
-    expect(btn(g, "else").pressed).toBe(false);
+  it("condition and loop: their branches are in the panel, not the toolbar", () => {
+    expect(kindTools(withBlock("{% if a %}<p>x</p>{% endif %}", () => undefined))).toBeNull();
+    expect(kindTools(withBlock("{% for r in lists.a %}<p>x</p>{% endfor %}", () => undefined))).toBeNull();
   });
 
   it("variable: a type, and a conditional value", () => {

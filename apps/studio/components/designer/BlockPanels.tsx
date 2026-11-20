@@ -9,6 +9,7 @@ import type { Block, Cell } from "@/lib/doc-blocks";
 import { readCode, writeCode, type CodeBlock } from "@/lib/code-block";
 import { checkCode } from "@/lib/doc-check";
 import {
+  addBranch,
   addColumn,
   addDetailRow,
   removeDetailRow,
@@ -24,6 +25,7 @@ import {
   mergeColumns,
   moveColumn,
   removeColumn,
+  removeElse,
   replaceIn,
   setAttr,
   setColumnFlex,
@@ -155,6 +157,25 @@ export function TemplateField({ label, value, onCommit, readOnly, fields }: { la
           document.body,
         )}
     </label>
+  );
+}
+
+/** The else of a condition or a loop: add it, or take it away (asking first when blocks are in it). */
+function ElseButton({ block, src, apply, add, remove }: { block: Block; src: string; apply: Apply; add: string; remove: string }) {
+  const has = block.node.kind === "block" && block.node.branches.some((b) => b.tag.keyword === "else");
+  const last = block.lists[block.lists.length - 1];
+  return (
+    <button
+      type="button"
+      className={has ? styles.danger : undefined}
+      onClick={() => {
+        if (!has) return apply(addBranch(src, block, "else"));
+        if (last?.list.items.length && !window.confirm("เอาสาขานี้ออกพร้อมบล็อกข้างใน?")) return;
+        apply(removeElse(src, block));
+      }}
+    >
+      {has ? remove : add}
+    </button>
   );
 }
 
@@ -435,7 +456,15 @@ export function BlockPanel(props: Props) {
               </div>
             ),
           )}
-          <p className={styles.hint}>ลากบล็อกลงในแต่ละสาขาบนกระดาษ (เพิ่มสาขาจากแถบเครื่องมือ)</p>
+          {!readOnly && (
+            <div className={styles.row}>
+              <button type="button" onClick={() => apply(addBranch(src, block, "elif", "true"))}>
+                + ไม่เช่นนั้นถ้า
+              </button>
+              <ElseButton block={block} src={src} apply={apply} add="+ ไม่เช่นนั้น" remove="เอา ไม่เช่นนั้น ออก" />
+            </div>
+          )}
+          <p className={styles.hint}>ลากบล็อกลงในแต่ละสาขาบนกระดาษ</p>
           {cond !== null && d.branches[cond] && (
             <ConditionModal
               fields={fields}
@@ -453,6 +482,11 @@ export function BlockPanel(props: Props) {
       return (
         <div className={styles.props}>
           <LoopFields {...props} tag={d.tag} variable={d.variable} iterable={d.iterable} />
+          {!readOnly && (
+            <div className={styles.row}>
+              <ElseButton block={block} src={src} apply={apply} add="+ ถ้าไม่มีแถว" remove="เอา ถ้าไม่มีแถว ออก" />
+            </div>
+          )}
           <p className={styles.hint}>ลากบล็อกลงใน &quot;ทุกแถว&quot; บนกระดาษ ใช้ชื่อแต่ละแถวในช่องข้อมูล</p>
         </div>
       );

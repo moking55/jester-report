@@ -28,7 +28,6 @@ import {
   ListOrdered,
   ListPlus,
   SendToBack,
-  SplitSquareVertical,
   TableColumnsSplit,
   TableRowsSplit,
   Trash2,
@@ -38,7 +37,6 @@ import { createElement } from "react";
 
 import type { Block } from "@/lib/doc-blocks";
 import {
-  addBranch,
   addColumn,
   addRowColumn,
   addSummaryRow,
@@ -52,7 +50,6 @@ import {
   moveBoxOrder,
   readStyle,
   removeColumn,
-  removeElse,
   replaceIn,
   setBoxRect,
   setStyle,
@@ -158,14 +155,6 @@ function select(id: string, label: string, value: string, options: [string, stri
   };
 }
 
-/** Add or take away the else of a condition or a loop; taking it away asks first when something is in it. */
-function elseOf(ctx: ToolContext, b: Block, hasElse: boolean): Result<Edited> | Edited {
-  if (!hasElse) return addBranch(ctx.src, b, "else");
-  const last = b.lists[b.lists.length - 1];
-  if (last && last.list.items.length && !window.confirm("เอาสาขานี้ออกพร้อมบล็อกข้างใน?")) return { src: ctx.src, at: null };
-  return removeElse(ctx.src, b);
-}
-
 /** What only this kind of block has: a heading level for text, a number format for a field, … */
 export function kindTools(ctx: ToolContext): ToolGroup | null {
   const b = ctx.block;
@@ -265,22 +254,6 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
         label: "QR / บาร์โค้ด",
         items: [select("type", "ชนิด", code?.type ?? "", names, off || !code, (v) => code && v && ctx.apply(replaceIn(ctx.src, b, d.expr, `{{ ${writeCode({ ...code, type: v as CodeType })} }}`)))],
       };
-    }
-    case "condition": {
-      const d = b.detail;
-      const hasElse = d.branches.some((x) => x.keyword === "else");
-      return {
-        id: "kind",
-        label: "เงื่อนไข",
-        items: [
-          act("elif", "เพิ่มสาขา ไม่เช่นนั้นถ้า", GitBranchPlus, () => addBranch(ctx.src, b, "elif", "true")),
-          act("else", hasElse ? "เอาสาขา ไม่เช่นนั้น ออก" : "เพิ่มสาขา ไม่เช่นนั้น", SplitSquareVertical, () => elseOf(ctx, b, hasElse), false, hasElse),
-        ],
-      };
-    }
-    case "repeat": {
-      const hasElse = b.node.kind === "block" && b.node.branches.some((x) => x.tag.keyword === "else");
-      return { id: "kind", label: "วนซ้ำ", items: [act("else", hasElse ? "เอาสาขา ถ้าไม่มีแถว ออก" : "เพิ่มสาขา ถ้าไม่มีแถว", SplitSquareVertical, () => elseOf(ctx, b, hasElse), false, hasElse)] };
     }
     case "set": {
       const v = readVar(b.detail.inner);
