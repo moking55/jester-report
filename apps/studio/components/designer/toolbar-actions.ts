@@ -27,7 +27,6 @@ import {
   GitBranchPlus,
   Grid3x3,
   Heading,
-  ImagePlus,
   Italic,
   List,
   ListOrdered,
@@ -98,7 +97,6 @@ export type ToolContext = {
   src: string; // template.html as it is now
   apply: (r: Result<Edited> | Edited) => void; // one undo step
   duplicate: () => void; // a copy after the selected block
-  pickImage: () => void; // choose a picture to replace the selected image's
   cell?: { row: number; col: number } | null; // the cell clicked in the selected table (v1.10)
   move?: (dir: -1 | 1) => void; // the selected block one place up or down (flow layout)
   sheet: Block | null; // the one sheet of a free layout
@@ -215,7 +213,7 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
         id: "kind",
         label: "รูป",
         items: [
-          { id: "upload", label: "อัปโหลดรูปใหม่", icon: ImagePlus, disabled: off, onClick: ctx.pickImage },
+          ...imageAlign(ctx, b, styleOf(), off || !!b.style?.readOnly),
           select("width", "ความกว้าง", styleOf().width ?? "", [["25%", "25%"], ["50%", "50%"], ["75%", "75%"], ["100%", "100%"]], off || !!b.style?.readOnly, (v) => ctx.apply(setStyle(ctx.src, b, { width: v || null }))),
         ],
       };
@@ -320,6 +318,26 @@ export function kindTools(ctx: ToolContext): ToolGroup | null {
     default:
       return null;
   }
+}
+
+/**
+ * Left, centre or right for a picture: a block with auto margins, so it works in the flow, in a column and in a
+ * box of a free layout alike. Pressing the pressed one again takes it back to an inline picture.
+ */
+function imageAlign(ctx: ToolContext, b: Block, d: Record<string, string>, off: boolean): ToolGroup["items"] {
+  const block = d.display === "block";
+  const now = !block ? null : d["margin-left"] === "auto" ? (d["margin-right"] === "auto" ? "center" : "right") : "left";
+  const MARGINS: Record<string, [string | null, string | null]> = { left: [null, null], center: ["auto", "auto"], right: ["auto", null] };
+  const button = (id: "left" | "center" | "right", label: string, icon: typeof AlignLeft) => ({
+    id: `img-${id}`,
+    label,
+    icon,
+    disabled: off,
+    pressed: now === id,
+    onClick: () =>
+      ctx.apply(setStyle(ctx.src, b, now === id ? { display: null, "margin-left": null, "margin-right": null } : { display: "block", "margin-left": MARGINS[id][0], "margin-right": MARGINS[id][1] })),
+  });
+  return [button("left", "รูปชิดซ้าย", AlignLeft), button("center", "รูปกึ่งกลาง", AlignCenter), button("right", "รูปชิดขวา", AlignRight)];
 }
 
 /** Stacking order and alignment to the sheet, for a box, a rectangle or a line of a free layout. */

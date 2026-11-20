@@ -318,6 +318,7 @@ export function BlockPanel(props: Props) {
               ))}
             </select>
           </label>
+          {!readOnly && props.onUpload && <ImageUpload onUpload={props.onUpload} onDone={(name) => apply(setAttr(src, block, "src", name))} />}
         </div>
       );
     }

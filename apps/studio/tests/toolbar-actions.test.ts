@@ -5,7 +5,7 @@ import { readBlocks } from "@/lib/doc-blocks";
 import { arrangeTools, kindTools, paragraphTools, textTools, type ToolContext } from "@/components/designer/toolbar-actions";
 
 const calls: Record<string, string | null>[] = [];
-const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], src: "", apply: () => undefined, duplicate: () => undefined, pickImage: () => undefined, sheet: null, page: { w: 210, h: 297 }, list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
+const base: ToolContext = { block: null, decls: null, readOnly: false, editor: null, fonts: ["TH Sarabun New"], src: "", apply: () => undefined, duplicate: () => undefined, sheet: null, page: { w: 210, h: 297 }, list: { can: false, kind: null, toggle: () => undefined }, setStyle: (p) => void calls.push(p), remove: () => undefined };
 const button = (g: ToolGroup, id: string) => g.items.find((i) => i.id === id) as ToolButton;
 
 describe("toolbar text and paragraph tools", () => {
@@ -67,6 +67,24 @@ describe("kind tools", () => {
     expect(got[0].src).toBe("<div>{{ fmt.money(totals.grand) }}</div>");
     const other = kindTools(withBlock("<div>{{ data.a | upper }}</div>", () => undefined));
     expect(node(other, "format").disabled).toBe(true);
+  });
+
+  it("image: left / centre / right through auto margins; the pressed one again takes it back", () => {
+    type Btn = { id: string; pressed?: boolean; onClick: () => void };
+    const out: string[] = [];
+    const run = (src: string) => {
+      const g = kindTools(withBlock(src, (r) => out.push((r as { value: { src: string } }).value.src)));
+      return (id: string) => g!.items.find((i) => i.id === id) as unknown as Btn;
+    };
+    expect(run('<img src="a.png" style="width: 40mm">')("upload")).toBeUndefined(); // the upload is in the panel
+    run('<img src="a.png" style="width: 40mm">')("img-center").onClick();
+    expect(out.pop()).toBe('<img src="a.png" style="width: 40mm; display: block; margin-left: auto; margin-right: auto">');
+    const centred = run('<img src="a.png" style="display: block; margin-left: auto; margin-right: auto">');
+    expect(centred("img-center").pressed).toBe(true);
+    centred("img-right").onClick();
+    expect(out.pop()).toBe('<img src="a.png" style="display: block; margin-left: auto">');
+    centred("img-center").onClick();
+    expect(out.pop()).toBe('<img src="a.png" style="">');
   });
 
   it("has nothing for a kind without tools yet, or no selection", () => {

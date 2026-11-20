@@ -87,11 +87,15 @@ test("build a document on the paper, guard Custom Code, save, Preview pdf, keep 
   await list(page, col1).locator("img").click();
   await expect(page.getByRole("toolbar").getByRole("group", { name: "รูป", exact: true })).toBeVisible();
   const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("toolbar").getByRole("button", { name: "อัปโหลดรูปใหม่" }).click();
+  await panel(page).getByRole("button", { name: "อัปโหลดรูป…" }).click();
   const gif = Buffer.from("R0lGODlhAQABAIAAAExpcf8AACH5BAUAAAAALAAAAAABAAEAAAICTAEAOw==", "base64");
   await (await chooser).setFiles({ name: "logo new 2.gif", mimeType: "image/gif", buffer: gif });
-  await expect(page.getByRole("alert").filter({ hasText: 'อัปโหลด "logo new 2.gif" เป็น logo-new-2.gif' })).toBeVisible();
+  await expect(panel(page)).toContainText('อัปโหลด "logo new 2.gif" เป็น logo-new-2.gif');
   await expect(list(page, col1).locator("img")).toHaveAttribute("src", /name=logo-new-2\.gif/);
+  // the toolbar places the picture: centred is a block with auto margins
+  await page.getByRole("toolbar").getByRole("button", { name: "รูปกึ่งกลาง" }).click();
+  await expect(page.getByRole("toolbar").getByRole("button", { name: "รูปกึ่งกลาง" })).toHaveAttribute("aria-pressed", "true");
+  await expect(list(page, col1).locator("img")).toHaveAttribute("style", /display: block.*margin-left: auto.*margin-right: auto/);
 
   // type in the new text on the paper; "{{" offers the fields, the pick is a chip
   const typed = list(page, col2).locator("p");
