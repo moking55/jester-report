@@ -47,8 +47,9 @@
 
 - [ ] **T7b scrollbar ตาม theme**
   - Acceptance: `styles/tokens.css` ตั้ง `scrollbar-width: thin` + `scrollbar-color` จาก `--color-border`/`--color-textMuted` (hover) ทั้ง Studio;
-    ครอบหน้ารายการ, palette/ผืน/แผงขวา, CodeMirror, modal; เปลี่ยน theme แล้วสีตาม
-  - Verify: dev: เปิด 2 theme แล้วดู computed `scrollbar-color` ของพื้นที่เลื่อนแต่ละที่ + screenshot
+    ครอบหน้ารายการ, palette/ผืน/แผงขวา, CodeMirror, modal; เปลี่ยน theme แล้วสีตาม;
+    theme classic (`[data-look="aero"]`): แบบ Java Swing Metal (Ocean) — แท่งฟ้าไล่เฉด + grip, ปุ่มลูกศรหัว/ท้าย, รางเทาขอบคม (`::-webkit-scrollbar*`)
+  - Verify: dev: theme อื่น 1 ตัว (computed `scrollbar-color`) + classic (screenshot เทียบ Metal) ในพื้นที่เลื่อนแต่ละที่
   - Files: `styles/tokens.css`
 
 ### Checkpoint B
