@@ -684,7 +684,7 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
         )}
         <div className={styles.paperColumn}>
         {/* eslint-disable-next-line react-hooks/refs -- the buttons run the handlers on click; nothing reads a ref while rendering */}
-        {!readOnly && <Toolbar groups={[textTools(tool), paragraphTools(tool), listTools(tool), ...(kindTools(tool) ? [kindTools(tool)!] : []), ...(arrangeTools(tool) ? [arrangeTools(tool)!] : []), blockTools(tool)]} />}
+        {!readOnly && <Toolbar groups={[...(kindTools(tool) ? [kindTools(tool)!] : []), ...(arrangeTools(tool) ? [arrangeTools(tool)!] : []), blockTools(tool), textTools(tool), paragraphTools(tool), listTools(tool)]} />}
         <div ref={scroller} className={styles.paperScroll} onClick={(e) => e.target === e.currentTarget && setSelected(null)}>
           {message && (
             <p role="alert" className={styles.inlineAlert}>
