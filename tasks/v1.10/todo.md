@@ -22,15 +22,16 @@
   - Files: `components/designer/toolbar-actions.ts`, `components/designer/BlockPanels.tsx`, `components/designer/Workbench.tsx`, `e2e/*.spec.ts`, tests
 
 ### Checkpoint A
-- [ ] studio 4 คำสั่งผ่าน · Success Criteria 1–4 ทำได้บน dev
+- [x] studio 4 คำสั่งผ่าน · Success Criteria 1–4 ทำได้บน dev
 
 ## Phase B: ติดตั้งเป็นแอป
 
-- [ ] **C4 PWA**
+- [x] **C4 PWA**
   - Acceptance: `app/manifest.ts` (ชื่อ, standalone, ไอคอน 192/512/maskable, สีจาก theme); `public/icons/*`; `public/sw.js` (static + หน้าออฟไลน์,
     ไม่ cache HTML/api/preview, cache ตามเวอร์ชัน); ลงทะเบียนใน production
   - Verify: build + `next start` บนเครื่อง: Chrome แสดงปุ่มติดตั้ง, Lighthouse installable, ตัดเน็ตเห็นหน้าออฟไลน์; vitest ของ manifest (สีจาก theme)
-  - Files: `app/manifest.ts`, `public/sw.js`, `public/icons/*`, `app/offline/page.tsx` หรือ `public/offline.html`, `components/RegisterSw.tsx`, `app/layout.tsx`
+  - Files: `app/manifest.ts`, `lib/pwa.ts`, `public/sw.js`, `public/icons/*`, `public/offline.html`, `components/RegisterSw.tsx`, `app/layout.tsx`, `next.config.ts`
+  - ผล: `next start` บนเครื่อง: Chrome `Page.getInstallabilityErrors` ว่าง, manifest ไม่มี error, sw ลงทะเบียน `/sw.js?v=<version>`, ออฟไลน์เห็นหน้า "ออฟไลน์อยู่"
 
 ## Phase C: ตรวจรวม
 
