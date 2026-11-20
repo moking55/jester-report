@@ -103,3 +103,92 @@ textarea {
   font: inherit;
   color: inherit;
 }
+
+/* scrollbars follow the theme (SPEC-studio.md v1.9): thin, the thumb a mix of the border and the muted text colour */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--color-textMuted) 45%, var(--color-border)) transparent;
+}
+
+/* classic: Java Swing "Metal" (Ocean) — a light-blue thumb with a grip, square arrow buttons, a grey track with sharp edges.
+   ::-webkit-scrollbar is ignored while scrollbar-color is set, so classic hands that back to auto; a browser without
+   ::-webkit-scrollbar (Firefox) keeps the thin themed one above. */
+@supports selector(::-webkit-scrollbar) {
+  :root[data-look="aero"] * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar {
+    width: 17px;
+    height: 17px;
+    background: #eef2f8;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-track {
+    background: #e9eef6;
+    border: 1px solid #aab6c8;
+    box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.14);
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-thumb {
+    border: 1px solid #5c7aa6;
+    background:
+      repeating-linear-gradient(to bottom, rgba(54, 84, 130, 0.6) 0 1px, transparent 1px 3px) center / 7px 9px no-repeat,
+      linear-gradient(to right, #dbe7f6 0%, #b3caea 45%, #94b4dc 55%, #c3d6ef 100%);
+    box-shadow: inset 1px 1px 0 #ffffff;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-thumb:horizontal {
+    background:
+      repeating-linear-gradient(to right, rgba(54, 84, 130, 0.6) 0 1px, transparent 1px 3px) center / 9px 7px no-repeat,
+      linear-gradient(to bottom, #dbe7f6 0%, #b3caea 45%, #94b4dc 55%, #c3d6ef 100%);
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-thumb:hover {
+    filter: brightness(1.06);
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-button:single-button {
+    display: block;
+    width: 17px;
+    height: 17px;
+    border: 1px solid #5c7aa6;
+    background-color: #c3d6ef;
+    background-image: linear-gradient(to bottom, #e6effb, #a9c2e4);
+    background-repeat: no-repeat;
+    box-shadow: inset 1px 1px 0 #ffffff;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-button:single-button:vertical:decrement {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M1 6.5 4.5 2.5 8 6.5z' fill='%23334a6b'/%3E%3C/svg%3E"),
+      linear-gradient(to bottom, #e6effb, #a9c2e4);
+    background-position: center, 0 0;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-button:single-button:vertical:increment {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M1 2.5 4.5 6.5 8 2.5z' fill='%23334a6b'/%3E%3C/svg%3E"),
+      linear-gradient(to bottom, #e6effb, #a9c2e4);
+    background-position: center, 0 0;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-button:single-button:horizontal:decrement {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M6.5 1 2.5 4.5 6.5 8z' fill='%23334a6b'/%3E%3C/svg%3E"),
+      linear-gradient(to bottom, #e6effb, #a9c2e4);
+    background-position: center, 0 0;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-button:single-button:horizontal:increment {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='9'%3E%3Cpath d='M2.5 1 6.5 4.5 2.5 8z' fill='%23334a6b'/%3E%3C/svg%3E"),
+      linear-gradient(to bottom, #e6effb, #a9c2e4);
+    background-position: center, 0 0;
+  }
+
+  :root[data-look="aero"] *::-webkit-scrollbar-corner {
+    background: #e9eef6;
+  }
+}

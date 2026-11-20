@@ -45,7 +45,7 @@
   - Verify: vitest (`doc-blocks`, `doc-edit`) + Playwright
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `components/designer/TextEditor.tsx`, `components/designer/PaperCanvas.tsx`, tests
 
-- [ ] **T7b scrollbar ตาม theme**
+- [x] **T7b scrollbar ตาม theme**
   - Acceptance: `styles/tokens.css` ตั้ง `scrollbar-width: thin` + `scrollbar-color` จาก `--color-border`/`--color-textMuted` (hover) ทั้ง Studio;
     ครอบหน้ารายการ, palette/ผืน/แผงขวา, CodeMirror, modal; เปลี่ยน theme แล้วสีตาม;
     theme classic (`[data-look="aero"]`): แบบ Java Swing Metal (Ocean) — แท่งฟ้าไล่เฉด + grip, ปุ่มลูกศรหัว/ท้าย, รางเทาขอบคม (`::-webkit-scrollbar*`)
@@ -53,7 +53,7 @@
   - Files: `styles/tokens.css`
 
 ### Checkpoint B
-- [ ] studio 4 คำสั่งผ่าน · Success Criteria ข้อ 1 ส่วนตัวหนา + รายการทำได้ด้วย toolbar
+- [x] studio 4 คำสั่งผ่าน · Success Criteria ข้อ 1 ส่วนตัวหนา + รายการทำได้ด้วย toolbar
 
 ## Phase C: toolbar ส่วนของบล็อก
 
