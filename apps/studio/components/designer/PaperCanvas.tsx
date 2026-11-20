@@ -80,6 +80,9 @@ const PAPER_CSS = `
 .jd-margin-label { position: absolute; right: 4px; top: 2px; font: 10px system-ui; color: #9aa; }
 .jd-body { position: relative; display: flow-root; } /* the page's content box; holds the document's margins */
 .jd-doc { margin: 8px; } /* Chromium's default body margin, which the PDF has too; report.css may change it */
+.jd-pb { position: relative; min-height: 0; } /* "ขึ้นหน้าใหม่": as tall as what is left of the page, so what follows starts on the next one */
+.jd-pb::before { content: "ขึ้นหน้าใหม่"; position: absolute; left: 0; right: 0; bottom: 0; height: 18px; box-sizing: border-box; border-bottom: 1px dashed #2f6fe0;
+  font: 10px/18px system-ui; color: #2f6fe0; text-align: center; background: rgba(255,255,255,.75); cursor: pointer; }
 .jd-break { position: absolute; left: -8mm; right: -8mm; border-top: 1px dashed #d33; pointer-events: none; }
 .jd-break span { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #d33; background: #fff; padding: 0 4px; }
 [data-jd-page] img[data-jd="guide"] { pointer-events: none; user-select: none; }
@@ -154,6 +157,20 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
   const pageHeightPx = paper.contentHeightMm * PX_PER_MM;
   const breaks = paper.roll || paper.layout === "free" ? [] : pageBreaks(bodyHeight, pageHeightPx);
   const pages = breaks.length + 1;
+  // a "ขึ้นหน้าใหม่" block fills what is left of its page (the PDF starts the next content on a new page), in document order
+  useLayoutEffect(() => {
+    const el = body.current;
+    if (!el || part !== "body") return;
+    const marks = [...el.querySelectorAll<HTMLElement>(".jd-pb")];
+    for (const m of marks) m.style.height = "0px";
+    if (paper.roll || paper.layout === "free" || pageHeightPx <= 0) return;
+    for (const m of marks) {
+      let top = 0;
+      for (let n: HTMLElement | null = m; n && n !== el; n = n.offsetParent as HTMLElement | null) top += n.offsetTop;
+      const rest = pageHeightPx - (top % pageHeightPx);
+      m.style.height = `${rest >= pageHeightPx - 0.5 ? 0 : rest}px`;
+    }
+  }, [src, files, sample, part, paper, pageHeightPx, bodyHeight, root]);
   const sheetMin = paper.roll ? 30 : paper.heightMm * pages; // mm
   const runningParts = !paper.roll && paper.layout === "flow"; // header.html / footer.html show on sheets of pages only
 
@@ -331,6 +348,9 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
       }
       case "guide":
         return <FrameKey key={`${b.path.join(".")}@${b.start}`}>{guide ? leaf(b, scope) : null}</FrameKey>;
+      case "pagebreak":
+        inner = <div className="jd-pb" />;
+        break;
       case "custom":
         inner = (
           <div className="jd-custom">

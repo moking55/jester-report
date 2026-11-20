@@ -231,6 +231,30 @@
   cursor: grab;
 }
 
+/* a {% set %} listed beside the paper: it draws nothing on it */
+.varItem {
+  text-align: left;
+  padding: 3px 8px;
+  border: 1px solid var(--line-button);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-text);
+  font-size: 0.9em;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.varItem code {
+  color: var(--color-textMuted);
+}
+
+.varItemOn {
+  border-color: var(--color-primary, #2f6fe0);
+  background: var(--tint-primary, rgba(47, 111, 224, 0.12));
+}
+
 .suggest,
 .popover {
   position: fixed;

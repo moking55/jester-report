@@ -181,7 +181,7 @@ export function newBlockFor(kind: NewBlock["kind"], files: Record<string, string
     case "grid":
       return { kind, rows: 3, columns: 2 };
     case "code":
-      return { kind, expr: `fmt.qr(${expr})` };
+      return { kind, expr: `fmt.qr(${scalar ? expr : '"ข้อความในโค้ด"'})` }; // plain text unless the report has a field
     case "condition":
       return { kind, test: expr };
     case "repeat":
@@ -276,7 +276,19 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
   );
 
   const flat = useMemo(() => allBlocks(blocks), [blocks]);
-  const fields = useMemo(() => [...(part === "body" ? [] : PAGE_FIELDS), ...suggestions(files)], [files, part]);
+  // {% set %} blocks draw nothing on the paper: they are listed beside it, and their names are fields to put in text
+  const variables = useMemo(
+    () =>
+      allBlocks(blocks).flatMap((b) => {
+        const m = b.kind === "set" && b.detail.kind === "set" ? /^set\s+([A-Za-z_]\w*)\s*=\s*([\s\S]*)$/.exec(b.detail.inner.trim()) : null;
+        return m ? [{ block: b, name: m[1], expr: m[2].trim() }] : [];
+      }),
+    [blocks],
+  );
+  const fields = useMemo(
+    () => [...(part === "body" ? [] : PAGE_FIELDS), ...variables.map((v) => ({ label: `ตัวแปร ${v.name}`, expression: `{{ ${v.name} }}` })), ...suggestions(files)],
+    [files, part, variables],
+  );
   const paper = useMemo(() => paperOf(files["report.json"]), [files]);
   const free = paper.layout === "free" && part === "body"; // one sheet of boxes placed in mm (v1.8)
   const kinds = (macro: boolean) =>
@@ -520,6 +532,22 @@ export function Workbench({ src, blocks, edit, readOnly, files, templateId, asse
             )}
             {part === "body" && <GroupHead label="มาโคร" open={open.macros} onToggle={() => toggle("macros")} />}
             {part === "body" && open.macros && kinds(true).map((p) => <PaletteItem key={p.kind} kind={p.kind} label={p.label} />)}
+            {part === "body" && open.macros && variables.length > 0 && (
+              <>
+                <p className={styles.hint}>ตัวแปรที่ตั้งไว้ (ไม่แสดงบนกระดาษ คลิกเพื่อแก้)</p>
+                {variables.map((v) => (
+                  <button
+                    key={keyOf(v.block)}
+                    type="button"
+                    className={`${styles.varItem} ${selected === keyOf(v.block) ? styles.varItemOn : ""}`}
+                    title={`{% set ${v.name} = ${v.expr} %}`}
+                    onClick={() => setSelected(keyOf(v.block))}
+                  >
+                    {v.name} = <code>{v.expr}</code>
+                  </button>
+                ))}
+              </>
+            )}
             <GroupHead label="ช่องข้อมูล" open={open.fields} onToggle={() => toggle("fields")} />
             {open.fields && <p className={styles.hint}>ดับเบิลคลิกข้อความ แล้วลากลงในข้อความ หรือพิมพ์ {"{{"}</p>}
             {open.fields && fields.map((f) => (

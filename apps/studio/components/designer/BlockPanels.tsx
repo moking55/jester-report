@@ -1,10 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { IMAGE_ACCEPT, isImageName } from "@/lib/asset-name";
 
 import type { Block, Cell } from "@/lib/doc-blocks";
+import { argToText, splitArgs, textToArg } from "@/lib/code-arg";
 import { checkCode } from "@/lib/doc-check";
 import {
   addBranch,
@@ -72,6 +74,89 @@ function Field({ label, value, onCommit, readOnly, list, mono }: { label: string
         onBlur={(e) => e.target.value !== value && onCommit(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       />
+    </label>
+  );
+}
+
+/**
+ * Text with {{ … }} for values (a QR code's text): typing {{ lists the fields; Enter or leaving the box commits.
+ */
+function TemplateField({ label, value, onCommit, readOnly, fields }: { label: string; value: string; onCommit: (v: string) => void; readOnly: boolean; fields: Suggestion[] }) {
+  const [text, setText] = useState(value);
+  const [seen, setSeen] = useState(value);
+  const [open, setOpen] = useState<{ from: number; to: number; query: string; index: number; rect: DOMRect } | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  if (value !== seen) {
+    setSeen(value);
+    setText(value);
+  }
+  const matches = open ? fields.filter((f) => `${f.label} ${f.expression}`.toLowerCase().includes(open.query.toLowerCase())).slice(0, 8) : [];
+  const look = (el: HTMLInputElement) => {
+    const caret = el.selectionStart ?? el.value.length;
+    const m = /\{\{\s*([^{}]*)$/.exec(el.value.slice(0, caret));
+    setOpen(m ? { from: m.index, to: caret, query: m[1].trim(), index: 0, rect: el.getBoundingClientRect() } : null);
+  };
+  const pick = (f: Suggestion) => {
+    if (!open) return;
+    const inserted = `{{ ${bare(f.expression)} }}`;
+    const after = text.slice(open.to).replace(/^\s*\}\}/, "");
+    setText(text.slice(0, open.from) + inserted + after);
+    setOpen(null);
+    const at = open.from + inserted.length;
+    requestAnimationFrame(() => input.current?.setSelectionRange(at, at));
+  };
+  const rect = open && matches.length ? open.rect : null;
+  return (
+    <label className={styles.prop}>
+      {label}
+      <input
+        ref={input}
+        value={text}
+        disabled={readOnly}
+        className={styles.mono}
+        onChange={(e) => {
+          setText(e.target.value);
+          look(e.target);
+        }}
+        onBlur={() => {
+          setOpen(null);
+          if (text !== value) onCommit(text);
+        }}
+        onKeyDown={(e) => {
+          if (open && matches.length) {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+              e.preventDefault();
+              const step = e.key === "ArrowDown" ? 1 : matches.length - 1;
+              return setOpen({ ...open, index: (open.index + step) % matches.length });
+            }
+            if (e.key === "Enter" || e.key === "Tab") {
+              e.preventDefault();
+              return pick(matches[open.index]);
+            }
+            if (e.key === "Escape") return setOpen(null);
+          }
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        }}
+      />
+      {rect &&
+        createPortal(
+          <div className={styles.suggest} style={{ left: rect.left, top: rect.bottom + 4 }} role="listbox" aria-label="ช่องข้อมูล">
+            {matches.map((f, i) => (
+              <button
+                key={f.expression}
+                type="button"
+                role="option"
+                aria-selected={i === open?.index}
+                className={i === open?.index ? styles.active : undefined}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(f)}
+              >
+                {f.label} <code>{f.expression}</code>
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
     </label>
   );
 }
@@ -235,24 +320,37 @@ export function BlockPanel(props: Props) {
       const pp = /^fmt\.qr\(fmt\.promptpay\(([\s\S]*)\)\)$/.exec(inner);
       const plain = /^fmt\.(qr|barcode)\(([\s\S]*)\)$/.exec(inner);
       const type = pp ? "promptpay" : (plain?.[1] ?? "");
-      const arg = pp ? pp[1] : (plain?.[2] ?? "");
-      const write = (t: string, a: string) =>
-        apply(
-          replaceIn(src, block, d.expr, `{{ ${t === "promptpay" ? `fmt.qr(fmt.promptpay(${a}))` : `fmt.${t}(${a})`} }}`),
-        );
+      // the text (first argument) as the panel shows it; the rest (size_mm=…, or a PromptPay amount) is kept as written
+      const [first = "", ...rest] = splitArgs(pp ? pp[1] : (plain?.[2] ?? ""));
+      const amount = pp ? (rest[0] ?? "").trim() : "";
+      const more = (pp ? rest.slice(1) : rest).map((r) => `,${r}`).join("");
+      const write = (t: string, text: string, amt: string) => {
+        const a = textToArg(text);
+        if (t === "promptpay") {
+          const money = amt.trim() ? `, ${textToArg(amt, true)}` : "";
+          return apply(replaceIn(src, block, d.expr, `{{ fmt.qr(fmt.promptpay(${a}${money}${more})) }}`));
+        }
+        apply(replaceIn(src, block, d.expr, `{{ fmt.${t}(${a}${more}) }}`));
+      };
+      const text = argToText(first);
+      const amountText = argToText(amount, true);
       return (
         <div className={styles.props}>
           {type ? (
             <>
               <label className={styles.prop}>
                 ชนิด
-                <select value={type} disabled={readOnly} onChange={(e) => write(e.target.value, arg)}>
+                <select value={type} disabled={readOnly} onChange={(e) => write(e.target.value, text, amountText)}>
                   <option value="qr">QR code</option>
                   <option value="promptpay">QR PromptPay</option>
                   <option value="barcode">บาร์โค้ด</option>
                 </select>
               </label>
-              <Field label={type === "promptpay" ? "เบอร์/เลขผู้เสียภาษี, ยอดเงิน" : "ข้อความในโค้ด"} value={arg} mono readOnly={readOnly} onCommit={(a) => write(type, a)} />
+              <TemplateField label={type === "promptpay" ? "เบอร์/เลขผู้เสียภาษี" : "ข้อความในโค้ด"} value={text} fields={fields} readOnly={readOnly} onCommit={(v) => write(type, v, amountText)} />
+              {type === "promptpay" && (
+                <TemplateField label="ยอดเงิน (เว้นว่างได้)" value={amountText} fields={fields} readOnly={readOnly} onCommit={(v) => write(type, text, v)} />
+              )}
+              <p className={styles.hint}>พิมพ์ข้อความได้เลย ใช้ค่าจากข้อมูลด้วย {"{{ … }}"} (พิมพ์ {"{{"} เพื่อเลือก)</p>
             </>
           ) : (
             <Field label="expression" value={inner} mono readOnly={readOnly} onCommit={(v) => apply(replaceIn(src, block, d.expr, `{{ ${v.trim()} }}`))} />
