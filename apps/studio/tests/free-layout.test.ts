@@ -46,7 +46,7 @@ describe("the free-layout model (v1.8)", () => {
     src = value(addBox(src, page(src), { kind: "code", expr: "fmt.qr(data.id)" }, R(5, 20, 25, 25)));
     src = value(addBox(src, page(src), { kind: "grid", rows: 2, columns: 3 }, R(5, 60, 80, 20)));
     expect(boxes(src).map((b) => b.lists[0].list.items[0].kind)).toEqual(["field", "code", "grid"]);
-    expect(boxSize({ kind: "grid", rows: 2, columns: 3 })).toEqual({ w: 80, h: 20 });
+    expect(boxSize({ kind: "grid", rows: 2, columns: 3 })).toEqual({ w: 80, h: 26 });
   });
 
   it("sets a place to 0.1 mm and keeps every other byte", () => {

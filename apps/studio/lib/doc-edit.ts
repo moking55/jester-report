@@ -809,7 +809,7 @@ export function boxSize(b: NewBox): { w: number; h: number } {
     case "code":
       return { w: 25, h: 25 };
     case "grid":
-      return { w: 80, h: 20 };
+      return { w: 80, h: 26 }; // three rows of the fixed table are 23.7 mm tall
     case "rect":
       return { w: 40, h: 20 };
     case "line":

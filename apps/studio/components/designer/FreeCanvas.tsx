@@ -186,7 +186,15 @@ function BoxView({
     // text that runs past the box's height (a box of text, a field): the PDF would draw it over what is below
     const e = el.current;
     if (!e || block.kind !== "box") return setOver(false);
-    setOver(e.scrollHeight > e.clientHeight + 1);
+    // the content's own bottom, not scrollHeight: the "ข้อความล้นกล่อง" label below the box is a pseudo-element that counts
+    // in scrollHeight, so a box once flagged would stay flagged for ever
+    const box = e.getBoundingClientRect();
+    let bottom = 0;
+    for (const c of e.querySelectorAll("*")) {
+      const r = c.getBoundingClientRect();
+      if (r.height > 0) bottom = Math.max(bottom, r.bottom - box.top);
+    }
+    setOver(bottom > box.height + 1);
   });
   return (
     <div
