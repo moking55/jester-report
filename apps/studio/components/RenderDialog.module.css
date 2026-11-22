@@ -8,6 +8,9 @@
   color: var(--color-text);
   box-shadow: var(--shadow);
   padding: 0;
+  /* a dialog inherits from where it sits in the page (a nowrap table cell, a menu), not from the viewport */
+  white-space: normal;
+  text-align: start;
 }
 
 .dialog::backdrop {

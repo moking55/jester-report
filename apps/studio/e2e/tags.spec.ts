@@ -17,7 +17,7 @@ const reportRow = (page: Page, id: string) =>
 
 async function editReportTags(page: Page, id: string, name: string, edit: (dialog: Locator) => Promise<void>) {
   await page.goto("/");
-  await page.getByLabel(`เมนูของ ${id}`).click();
+  await page.getByLabel(`เมนูของ ${id}`, { exact: true }).click();
   await reportRow(page, id).getByRole("button", { name: "แก้ tag…" }).click();
   const dialog = page.getByRole("dialog", { name: `แก้ tag ของ ${name}` });
   await edit(dialog);
@@ -145,7 +145,7 @@ test("tag a report and its documents, colour them, filter by them", async ({ pag
 
   // 7. duplicate and export/import take the tags along
   await page.goto("/");
-  await page.getByLabel(`เมนูของ ${ID}`).click();
+  await page.getByLabel(`เมนูของ ${ID}`, { exact: true }).click();
   await reportRow(page, ID).getByRole("button", { name: "ทำสำเนา…" }).click();
   const copyDialog = page.getByRole("dialog", { name: `ทำสำเนา ${ID}` });
   await copyDialog.getByLabel("id ใหม่").fill("e2e-tags-copy");
@@ -155,7 +155,7 @@ test("tag a report and its documents, colour them, filter by them", async ({ pag
   await page.goto("/");
   await expect(reportRow(page, "e2e-tags-copy").getByText(VIP, { exact: true })).toBeVisible();
 
-  await page.getByLabel(`เมนูของ ${ID}`).click();
+  await page.getByLabel(`เมนูของ ${ID}`, { exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("link", { name: "Export draft (.zip)" }).first().click();
   const zip = await readFile(await (await download).path());
