@@ -18,10 +18,10 @@ describe("curl example", () => {
     expect(curl).toContain(`O'\\''Brien`);
     expect(curl).not.toMatch(/jrk_[A-Za-z0-9]/);
   });
-  it("shows the response headers and fails on an error status", () => {
+  it("shows the status line and headers, with flags old curl knows", () => {
     const curl = curlExample("{}");
     expect(curl).toContain("-D -");
-    expect(curl).toContain("--fail-with-body");
+    expect(curl).not.toContain("--fail-with-body"); // curl 7.76+ only
   });
 });
 

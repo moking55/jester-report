@@ -1,7 +1,7 @@
 // Examples of a /v1/render request: the API page and the issue form's developer dialog.
 // The key always comes from JESTER_API_KEY: Studio never shows a real secret here.
 
-/** What another system would run in sh/bash. Headers go to the terminal; an error status exits non-zero. */
+/** What another system would run in sh/bash. Status line and headers go to the terminal (-D -). No --fail-with-body: curl before 7.76 lacks it. */
 export function curlExample(body: string): string {
   const quoted = `'${body.replace(/'/g, `'\\''`)}'`; // safe inside single quotes in sh/bash
   return [
@@ -9,7 +9,7 @@ export function curlExample(body: string): string {
     '  -H "Authorization: Bearer $JESTER_API_KEY" \\',
     '  -H "Content-Type: application/json" \\',
     `  -d ${quoted} \\`,
-    "  -D - --fail-with-body \\",
+    "  -D - \\",
     "  -o report.pdf",
   ].join("\n");
 }

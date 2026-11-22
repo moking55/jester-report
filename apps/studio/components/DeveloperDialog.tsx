@@ -100,7 +100,7 @@ export function DeveloperDialog({ body, source, onClose }: { body: string; sourc
         <p className={styles.hint}>
           สำเร็จได้ <code>200</code> เป็น <code>application/pdf</code> พร้อม header <code>Jester-Run-Id</code> (ใช้ค้นใน ประวัติ
           Render และเอกสารที่ออก) และ <code>Jester-Template-Version</code> (เลขเวอร์ชันที่ใช้จริง) ไม่สำเร็จได้{" "}
-          <code>application/problem+json</code> ซึ่ง curl ข้างบนจะจบด้วย exit code ไม่เป็นศูนย์ และ report.pdf จะเป็น JSON นั้น
+          <code>application/problem+json</code> curl ข้างบนแสดงบรรทัดสถานะและ header ก่อน ถ้าไม่ใช่ <code>200</code> ไฟล์ report.pdf จะเป็น JSON นั้น
         </p>
 
         <h3>ฟิลด์</h3>

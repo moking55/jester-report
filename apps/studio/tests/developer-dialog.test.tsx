@@ -29,7 +29,7 @@ afterEach(cleanup);
 describe("DeveloperDialog (v1.12)", () => {
   it("switches between curl, JavaScript and Python of the same body", () => {
     render(<DeveloperDialog body={body} source={source} onClose={() => {}} />);
-    expect(screen.getByLabelText("ตัวอย่าง curl").textContent).toContain("--fail-with-body");
+    expect(screen.getByLabelText("ตัวอย่าง curl").textContent).toContain("-D -");
     fireEvent.click(screen.getByRole("button", { name: "Python" }));
     expect(screen.getByLabelText("ตัวอย่าง Python").textContent).toContain("urllib.request");
     expect(screen.getByRole("button", { name: "คัดลอก Python" })).toBeTruthy();

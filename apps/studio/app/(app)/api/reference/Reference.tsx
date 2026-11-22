@@ -5,7 +5,8 @@ import "@scalar/api-reference-react/style.css";
 
 /**
  * Scalar renders the contract. The browser never calls the api itself (route.ts), so every way to send a
- * request from the page is off, and fonts come from Studio instead of a CDN (the stack may have no internet).
+ * request from the page is off, and so is anything that talks to Scalar's servers; fonts come from Studio
+ * instead of a CDN (the stack may have no internet).
  */
 export function Reference({ content }: { content: string }) {
   return (
@@ -15,9 +16,10 @@ export function Reference({ content }: { content: string }) {
         hideTestRequestButton: true,
         hideClientButton: true,
         withDefaultFonts: false,
-        hideDarkModeToggle: true,
         showDeveloperTools: "never",
         telemetry: false,
+        agent: { disabled: true }, // "Ask AI" would send the contract to Scalar's cloud
+        mcp: { disabled: true },
       }}
     />
   );

@@ -3761,7 +3761,7 @@ export interface operations {
                      *             "templateSha256": "922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3",
                      *             "paramsSha256": "a20b52fae57cc7a99c9651f1b573950fd211823e3ace3bb9c273c06430f24cd3",
                      *             "dataSha256": "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7",
-                     *             "engineVersion": "8.25.1",
+                     *             "engineVersion": "9.4.1",
                      *             "engineImage": "jester/gotenberg:9.4.1-th1",
                      *             "fonts": [
                      *               {
@@ -3831,7 +3831,7 @@ export interface operations {
                      *         "templateSha256": "922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3",
                      *         "paramsSha256": "a20b52fae57cc7a99c9651f1b573950fd211823e3ace3bb9c273c06430f24cd3",
                      *         "dataSha256": "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7",
-                     *         "engineVersion": "8.25.1",
+                     *         "engineVersion": "9.4.1",
                      *         "engineImage": "jester/gotenberg:9.4.1-th1",
                      *         "fonts": [
                      *           {
@@ -4593,13 +4593,12 @@ export interface operations {
                     /**
                      * @example {
                      *       "status": "up",
-                     *       "version": "1.12.0",
                      *       "components": {
                      *         "database": "up",
                      *         "objectStorage": "up",
                      *         "engine": {
                      *           "status": "up",
-                     *           "version": "8.25.1"
+                     *           "version": "9.4.1"
                      *         }
                      *       }
                      *     }
@@ -4616,7 +4615,6 @@ export interface operations {
                     /**
                      * @example {
                      *       "status": "degraded",
-                     *       "version": "1.12.0",
                      *       "components": {
                      *         "database": "up",
                      *         "objectStorage": "up",
