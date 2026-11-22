@@ -751,7 +751,7 @@ export interface paths {
         };
         /**
          * Tags in use on templates or documents, with colour and counts (Studio sessions only)
-         * @description Busiest first (templates + documents), then by name; at most 500. Colour belongs to the tag name,
+         * @description Busiest first (templates + documents), then by name; every tag in use, since the colours come from this list. Colour belongs to the tag name,
          *     so it is the same everywhere. A tag nobody has set a colour for is `gray`.
          */
         get: operations["listTags"];

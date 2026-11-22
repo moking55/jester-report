@@ -16,7 +16,6 @@ COLORS = ("gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", 
 MAX_TAGS = 10
 MAX_LENGTH = 30
 _SPACES = re.compile(r"\s+")
-_LIST_LIMIT = 500  # shortcut: list is capped (enough for hundreds of tags); page it if it ever isn't
 
 
 class TagError(Exception):
@@ -76,8 +75,7 @@ class Tags:
                 "  UNION ALL SELECT unnest(tags), 0, 1 FROM documents) x GROUP BY tag) "
                 "SELECT u.tag, coalesce(c.color, 'gray'), u.templates, u.documents "
                 "FROM used u LEFT JOIN tag_colors c USING (tag) "
-                "ORDER BY u.templates + u.documents DESC, u.tag LIMIT %s",
-                (_LIST_LIMIT,),
+                "ORDER BY u.templates + u.documents DESC, u.tag"
             )
             return [TagUse(*row) for row in await cur.fetchall()]
 

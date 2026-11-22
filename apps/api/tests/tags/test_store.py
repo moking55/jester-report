@@ -71,3 +71,15 @@ async def test_set_color_rejects_bad_tag(pool, tag):
 async def test_set_color_rejects_unknown_color(pool):
     with pytest.raises(TagError, match="color"):
         await Tags(pool).set_color("vip", "#ff0000")
+
+
+async def test_every_tag_in_use_is_listed_so_none_loses_its_colour(pool):
+    # 510 tags on documents, each used once; a template's tag that sorts last must still come back red
+    for i in range(51):
+        await _document(pool, f"r{i}", [f"doc-{i}-{j}" for j in range(10)])
+    await _template(pool, "a", ["zz-template"])
+    tags = Tags(pool)
+    await tags.set_color("zz-template", "red")
+    listed = await tags.list()
+    assert len(listed) == 511
+    assert (listed[-1].tag, listed[-1].color, listed[-1].templates) == ("zz-template", "red", 1)
