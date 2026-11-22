@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Form, Request, UploadFile
+from fastapi import APIRouter, Form, Query, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
 from pydantic import Field
 
@@ -41,6 +41,10 @@ class Archived(views.Body):
     archived: bool
 
 
+class TagList(views.Body):
+    tags: list[str]
+
+
 class Duplicate(views.Body):
     id: str
     name: str
@@ -56,9 +60,14 @@ async def _summary(request: Request, template_id: str) -> dict:
 
 # ---- templates ------------------------------------------------------------------------------------------
 @router.get("/v1/templates")
-async def list_templates(request: Request, caller: SessionCaller, includeArchived: bool = False) -> list:  # noqa: N803
+async def list_templates(
+    request: Request,
+    caller: SessionCaller,
+    includeArchived: bool = False,  # noqa: N803
+    tag: Annotated[list[str] | None, Query()] = None,
+) -> list:
     s = services(request)
-    summaries = await s.store.list(include_archived=includeArchived)
+    summaries = await s.store.list(include_archived=includeArchived, tags=tag)
     last = await s.render.last_runs([t.id for t in summaries])
     return [views.template(t, last.get(t.id)) for t in summaries]
 
@@ -276,3 +285,14 @@ async def get_version(request: Request, caller: SessionCaller, templateId: str, 
 async def set_published(request: Request, caller: SessionCaller, templateId: str, body: VersionRef) -> dict:  # noqa: N803
     await services(request).store.set_published(templateId, body.version)
     return await _summary(request, templateId)
+
+
+@router.put("/v1/templates/{templateId}/tags")
+async def set_template_tags(
+    request: Request,
+    caller: SessionCaller,
+    templateId: str,  # noqa: N803
+    body: TagList,
+) -> dict:
+    # shortcut: the new set replaces the old one, so two people editing at once means the last save wins
+    return {"tags": (await services(request).store.set_tags(templateId, body.tags)).tags}

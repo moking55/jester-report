@@ -284,12 +284,12 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 | operation | request | response |
 | --- | --- | --- |
-| `PUT /v1/templates/{id}/tags` `setTemplateTags` | `{tags: string[]}` (Studio session) | `200 {tags}`; tag ผิด → `422` บอกว่า tag ไหน; ไม่มี id → `404`; API key → `403` |
-| `PUT /v1/documents/{runId}/tags` `setDocumentTags` | `{tags: string[]}` (Studio session เท่านั้น) | `200 {tags}`; `runId` ไม่มี → `404`; API key → `403` |
+| `PUT /v1/templates/{id}/tags` `setTemplateTags` | `{tags: string[]}` (Studio session) | `200 {tags}`; tag ผิด → `422` บอกว่า tag ไหน; ไม่มี id → `404`; API key → `401` |
+| `PUT /v1/documents/{runId}/tags` `setDocumentTags` | `{tags: string[]}` (Studio session เท่านั้น) | `200 {tags}`; `runId` ไม่มี → `404`; API key → `401` |
 | `GET /v1/tags` `listTags` | — | `200 [{tag, color, templates, documents}]` เรียงตามจำนวนใช้รวม แล้วชื่อ |
 | `PUT /v1/tag-colors` `setTagColor` | `{tag, color}` | `200 {tag, color}`; `color` นอกชุด → `422`; `gray` = ลบแถวสี; tag ที่ไม่มีใครใช้ก็ตั้งสีได้ (Studio session เท่านั้น) |
 
-- `Template` และ `DocumentSummary` เพิ่ม `tags: string[]` (required); `GET /v1/templates` และ `GET /v1/documents` รับ `?tag=` ซ้ำได้ (ต้องมีทุก tag);
+- `TemplateSummary` และ `DocumentSummary` เพิ่ม `tags: string[]` (required); `GET /v1/templates` และ `GET /v1/documents` รับ `?tag=` ซ้ำได้ (ต้องมีทุก tag);
   `q` ของเอกสารค้น tag ด้วย
 - `POST /v1/render` รับ `tags?: string[]` (API key ได้) — ไม่ส่ง = สำเนา tag ของรายงาน; tag ผิด → `422` ก่อน render
 - ชุดสี: `gray red orange yellow green teal blue purple pink`

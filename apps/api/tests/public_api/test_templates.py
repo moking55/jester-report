@@ -2,6 +2,8 @@ import base64
 
 import pytest
 
+from .test_contract import assert_fits
+
 pytestmark = pytest.mark.db
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
@@ -202,3 +204,70 @@ async def test_create_with_a_page(api, admin):
         json={"id": "bad2", "name": "B", "starter": "quotation", "page": {"size": "A5"}},
     )
     assert wrong.status_code == 422
+
+
+async def test_template_tags(api, admin):
+    for tid in ("aa", "bb", "cc"):
+        await api.post("/v1/templates", headers=admin, json={"id": tid, "name": tid})
+    fresh = (await api.get("/v1/templates/aa", headers=admin)).json()
+    assert fresh["tags"] == [] and fresh["draftChangedSincePublish"] is True
+    put = await api.put("/v1/templates/aa/tags", headers=admin, json={"tags": [" vip ", "ไตรมาส  4", "vip"]})
+    assert (put.status_code, put.json()) == (200, {"tags": ["vip", "ไตรมาส 4"]})
+    await api.put("/v1/templates/bb/tags", headers=admin, json={"tags": ["vip"]})
+    got = (await api.get("/v1/templates/aa", headers=admin)).json()
+    assert_fits("TemplateSummary", got)
+    assert got["tags"] == ["vip", "ไตรมาส 4"] and got["draftRevision"] == 1
+
+    def ids(response):
+        return [t["id"] for t in response.json()]
+
+    assert ids(await api.get("/v1/templates?tag=vip", headers=admin)) == ["aa", "bb"]
+    assert ids(await api.get("/v1/templates?tag=vip&tag=ไตรมาส 4", headers=admin)) == ["aa"]
+    assert ids(await api.get("/v1/templates?tag=VIP", headers=admin)) == []
+    assert ids(await api.get("/v1/templates", headers=admin)) == ["aa", "bb", "cc"]
+    for item in (await api.get("/v1/templates", headers=admin)).json():
+        assert_fits("TemplateSummary", item)
+
+
+async def test_template_tags_errors_and_who_may_edit(api, admin):
+    await api.post("/v1/templates", headers=admin, json={"id": "aa", "name": "A"})
+    await api.put("/v1/templates/aa/tags", headers=admin, json={"tags": ["keep"]})
+    for bad in (["a,b"], ["x" * 31], [f"t{i}" for i in range(11)]):
+        r = await api.put("/v1/templates/aa/tags", headers=admin, json={"tags": bad})
+        assert (r.status_code, r.json()["code"]) == (422, "INPUT_INVALID")
+    r = await api.put("/v1/templates/aa/tags", headers=admin, json={"tags": ["a,b"]})
+    assert "a,b" in r.json()["detail"]  # names the tag
+    for body in ({"tags": "vip"}, {"tags": [3]}, {}, {"tags": [], "x": 1}):
+        assert (await api.put("/v1/templates/aa/tags", headers=admin, json=body)).status_code == 422
+    assert (await api.get("/v1/templates/aa", headers=admin)).json()["tags"] == ["keep"]
+    assert (await api.put("/v1/templates/nope/tags", headers=admin, json={"tags": []})).status_code == 404
+    assert (await api.put("/v1/templates/aa/tags", json={"tags": []})).status_code == 401
+    key = await api.post("/v1/api-keys", headers=admin, json={"name": "erp"})
+    by_key = {"Authorization": f"Bearer {key.json()['secret']}"}
+    assert (await api.put("/v1/templates/aa/tags", headers=by_key, json={"tags": []})).status_code == 401
+
+
+async def test_tagging_does_not_make_a_published_template_look_edited(api, admin):
+    await api.post("/v1/templates", headers=admin, json={"id": "aa", "name": "A", "starter": "quotation"})
+    await api.post("/v1/templates/aa/versions", headers={**admin, "If-Match": "1"}, json={})
+    before = (await api.get("/v1/templates/aa", headers=admin)).json()
+    assert before["draftChangedSincePublish"] is False
+    await api.put("/v1/templates/aa/tags", headers=admin, json={"tags": ["vip"]})
+    after = (await api.get("/v1/templates/aa", headers=admin)).json()
+    assert after["draftChangedSincePublish"] is False
+    assert (after["draftRevision"], after["updatedAt"]) == (before["draftRevision"], before["updatedAt"])
+
+
+async def test_duplicate_and_zip_carry_tags_over_http(api, admin):
+    await api.post("/v1/templates", headers=admin, json={"id": "aa", "name": "A"})
+    await api.put("/v1/templates/aa/tags", headers=admin, json={"tags": ["vip"]})
+    copy = await api.post("/v1/templates/aa/duplicate", headers=admin, json={"id": "bb", "name": "B"})
+    assert copy.json()["tags"] == ["vip"]
+    zipped = await api.get("/v1/templates/aa/export", headers=admin)
+    imported = await api.post(
+        "/v1/templates/import",
+        headers=admin,
+        files={"file": ("aa.zip", zipped.content, "application/zip")},
+        data={"templateId": "cc"},
+    )
+    assert imported.status_code == 201 and imported.json()["template"]["tags"] == ["vip"]

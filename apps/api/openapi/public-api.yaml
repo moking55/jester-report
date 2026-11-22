@@ -402,6 +402,7 @@ paths:
           required: false
           description: Also list archived templates
           schema: { type: boolean, default: false }
+        - $ref: '#/components/parameters/TagFilter'
       responses:
         '200':
           description: Templates
@@ -631,6 +632,33 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TemplateSummary' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/templates/{templateId}/tags:
+    parameters:
+      - $ref: '#/components/parameters/TemplateId'
+    put:
+      tags: [templates]
+      operationId: setTemplateTags
+      summary: Replace the tags of a template (Studio sessions only)
+      description: |
+        Tags are catalog labels, not part of the report: changing them does not change the draft revision,
+        the versions, `draftChangedSincePublish` or the PDF, and an archived template can still be tagged.
+        Each tag is trimmed, spaces collapsed, NFC; 1-30 characters, no comma or control characters;
+        matching is exact (`VIP` and `vip` differ); duplicates merge; at most 10. The last save wins.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TagList' }
+      responses:
+        '200':
+          description: The tags after normalising
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/InputInvalid' }
@@ -1313,6 +1341,14 @@ components:
       in: path
       required: true
       schema: { $ref: '#/components/schemas/TemplateId' }
+    TagFilter:
+      name: tag
+      in: query
+      required: false
+      description: Only items carrying every `tag` given (repeat the parameter); exact match
+      style: form
+      explode: true
+      schema: { type: array, items: { type: string } }
     IfMatchRevision:
       name: If-Match
       in: header
@@ -1562,7 +1598,7 @@ components:
 
     TemplateSummary:
       type: object
-      required: [id, name, publishedVersion, draftRevision, updatedAt]
+      required: [id, name, publishedVersion, draftRevision, updatedAt, tags]
       properties:
         id: { $ref: '#/components/schemas/TemplateId' }
         name: { type: string }
@@ -1585,6 +1621,18 @@ components:
         updatedAt: { type: string, format: date-time }
         archivedAt: { type: [string, 'null'], format: date-time, description: null while active }
         archivedBy: { type: [string, 'null'] }
+        tags: { $ref: '#/components/schemas/TagNames' }
+    TagNames:
+      type: array
+      description: Tag names in the order they were given
+      maxItems: 10
+      items: { type: string, minLength: 1, maxLength: 30 }
+    TagList:
+      type: object
+      required: [tags]
+      additionalProperties: false
+      properties:
+        tags: { $ref: '#/components/schemas/TagNames' }
     ImportResult:
       type: object
       required: [template, revision, created]

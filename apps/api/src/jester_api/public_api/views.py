@@ -102,6 +102,7 @@ def template(t: TemplateSummary, last: Run | None = None) -> dict[str, Any]:
         "updatedAt": iso(t.updated_at),
         "archivedAt": iso(t.archived_at),
         "archivedBy": t.archived_by,
+        "tags": t.tags,
     }
     if t.page:
         out["page"] = t.page
