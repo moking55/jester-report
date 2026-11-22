@@ -40,7 +40,7 @@ def build(settings: Settings, api: Api, provider: Provider) -> MCPServer:
     show, submit = login.routes(settings, api, provider)
     server.custom_route(LOGIN_PATH, methods=["GET"], include_in_schema=False)(show)
     server.custom_route(LOGIN_PATH, methods=["POST"], include_in_schema=False)(submit)
-    tools.register(server, tools.Caller(api, provider))
+    tools.register(server, tools.Caller(api, provider), settings.studio_public_url)
     return server
 
 

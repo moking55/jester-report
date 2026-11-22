@@ -30,6 +30,12 @@ TOOLS = {
     "list_versions",
     "validate_draft",
     "prepare_draft",
+    "create_template",
+    "duplicate_template",
+    "put_draft_file",
+    "delete_draft_file",
+    "upload_draft_asset",
+    "delete_draft_asset",
 }
 
 

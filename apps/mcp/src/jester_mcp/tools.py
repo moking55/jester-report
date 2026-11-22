@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import base64
+import binascii
 import json
 import logging
 import time
@@ -18,6 +20,9 @@ from .oauth import Provider
 
 log = logging.getLogger("jester_mcp.tools")
 READ = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
+WRITE = ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False)
+DELETE = ToolAnnotations(readOnlyHint=False, destructiveHint=True, openWorldHint=False)
+MAX_ASSET_BYTES = 5 * 1024 * 1024  # the api's limit (template_store/limits.py)
 
 
 class Caller:
@@ -43,7 +48,10 @@ class Caller:
             ) from e
         except ApiProblem as e:
             status = e.code
-            raise ToolError(json.dumps(e.as_dict(), ensure_ascii=False)) from e
+            problem = e.as_dict()
+            if e.status == 412:  # someone (Studio, another chat) changed the draft since it was read
+                problem["hint"] = "the draft changed: call get_draft for the current revision and content"
+            raise ToolError(json.dumps(problem, ensure_ascii=False)) from e
         except NotAllowed as e:
             status = "not allowed"
             raise ToolError(str(e)) from e
@@ -82,7 +90,17 @@ def _data_body(params: dict[str, Any] | None, data: Any, sample_file: str | None
     return body
 
 
-def register(server: MCPServer, caller: Caller) -> None:
+def _if_match(revision: int) -> dict[str, str]:
+    return {"If-Match": f'"{revision}"'}
+
+
+def register(server: MCPServer, caller: Caller, studio_url: str) -> None:
+    def studio(template_id: str) -> str:
+        """Where people review the draft and press publish (the connector cannot publish)."""
+        return f"{studio_url}{path('templates', template_id)}"
+
+    _register_write(server, caller, studio)
+
     @server.tool(annotations=READ)
     async def whoami() -> dict[str, Any]:
         """The Jester account this connector is signed in as."""
@@ -138,3 +156,92 @@ def register(server: MCPServer, caller: Caller) -> None:
             json=_data_body(params, data, sample_file),
         )
         return response.json()
+
+
+def _register_write(server: MCPServer, caller: Caller, studio) -> None:
+    @server.tool(annotations=WRITE)
+    async def create_template(
+        template_id: str,
+        name: str,
+        starter: str = "blank",
+        page: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Create a new report with a starter draft. `template_id` is a permanent slug (a-z, 0-9, '-').
+        `starter`: blank, quotation, grouped-table, master-detail or tax-invoice; `page` (paper, as in
+        report.json) only with blank. Then write files with put_draft_file using the returned revision."""
+        body: dict[str, Any] = {"id": template_id, "name": name, "starter": starter}
+        if page is not None:
+            body["page"] = page
+        summary = (await caller.call("create_template", "POST", "/v1/templates", json=body)).json()
+        return {**summary, "revision": summary.get("draftRevision"), "studioUrl": studio(template_id)}
+
+    @server.tool(annotations=WRITE)
+    async def duplicate_template(
+        source_id: str, template_id: str, name: str, version: str | int = "draft"
+    ) -> dict[str, Any]:
+        """Start a new report from an existing one (its draft, or a published version number)."""
+        summary = (
+            await caller.call(
+                "duplicate_template",
+                "POST",
+                _template(source_id, "duplicate"),
+                json={"id": template_id, "name": name, "version": version},
+            )
+        ).json()
+        return {**summary, "revision": summary.get("draftRevision"), "studioUrl": studio(template_id)}
+
+    @server.tool(annotations=WRITE)
+    async def put_draft_file(template_id: str, file_name: str, content: str, revision: int) -> dict[str, Any]:
+        """Create or replace one text file of the draft (.html, .json or .css; not index.html).
+        `revision` must be the draft's current revision; the answer has the new one."""
+        response = await caller.call(
+            "put_draft_file",
+            "PUT",
+            _template(template_id, "draft", "files", file_name),
+            content=content.encode("utf-8"),
+            headers={**_if_match(revision), "Content-Type": "text/plain; charset=utf-8"},
+        )
+        return {**response.json(), "studioUrl": studio(template_id)}
+
+    @server.tool(annotations=DELETE)
+    async def delete_draft_file(template_id: str, file_name: str, revision: int) -> dict[str, Any]:
+        """Delete one text file from the draft (report.json and template.html cannot be deleted)."""
+        response = await caller.call(
+            "delete_draft_file",
+            "DELETE",
+            _template(template_id, "draft", "files", file_name),
+            headers=_if_match(revision),
+        )
+        return {**response.json(), "studioUrl": studio(template_id)}
+
+    @server.tool(annotations=WRITE)
+    async def upload_draft_asset(
+        template_id: str, asset_name: str, content_type: str, base64_content: str, revision: int
+    ) -> dict[str, Any]:
+        """Add an image or font to the draft (png, jpeg, gif, svg, webp, avif, bmp, ttf, otf; at most 5 MB),
+        e.g. a logo the person attached. Reference it from template.html by `asset_name`."""
+        try:
+            raw = base64.b64decode(base64_content, validate=True)
+        except (binascii.Error, ValueError) as e:
+            raise ToolError("base64_content is not valid base64") from e
+        if len(raw) > MAX_ASSET_BYTES:
+            raise ToolError(f"asset is {len(raw)} bytes; the limit is {MAX_ASSET_BYTES}")
+        response = await caller.call(
+            "upload_draft_asset",
+            "POST",
+            _template(template_id, "draft", "assets"),
+            files={"file": (asset_name, raw, content_type)},
+            headers=_if_match(revision),
+        )
+        return {**response.json(), "studioUrl": studio(template_id)}
+
+    @server.tool(annotations=DELETE)
+    async def delete_draft_asset(template_id: str, asset_name: str, revision: int) -> dict[str, Any]:
+        """Remove an image or font from the draft."""
+        response = await caller.call(
+            "delete_draft_asset",
+            "DELETE",
+            _template(template_id, "draft", "assets", asset_name),
+            headers=_if_match(revision),
+        )
+        return {**response.json(), "studioUrl": studio(template_id)}
