@@ -18,6 +18,7 @@ export type IssueSource = {
   schemaJson: string;
   sampleJson?: string;
   formJson?: string; // v1.6: widgets and widths
+  tags?: string[]; // v1.11: the template's tags, where the issued document's tags start
 };
 
 export type Result<T> = { ok: true; data: T } | { ok: false; problem: Problem };

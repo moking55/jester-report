@@ -18,11 +18,12 @@ type Props = {
   colors?: Record<string, string>;
   onColor?: (tag: string, color: TagColor) => void;
   label?: string;
+  inputId?: string; // for a <label htmlFor>
 };
 
 /** Chips and a box: Enter or a comma adds, Backspace on an empty box removes the last, × removes one.
  *  The names of tags already in use are offered as you type (they are loaded the first time the box is used). */
-export function TagField({ value, onChange, typed, onTyped, colors = {}, onColor, label = "tag" }: Props) {
+export function TagField({ value, onChange, typed, onTyped, colors = {}, onColor, label = "tag", inputId }: Props) {
   const id = useId();
   const [error, setError] = useState<string | null>(null);
   const [picking, setPicking] = useState<string | null>(null);
@@ -73,6 +74,7 @@ export function TagField({ value, onChange, typed, onTyped, colors = {}, onColor
           />
         ))}
         <input
+          id={inputId}
           aria-label={label}
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}

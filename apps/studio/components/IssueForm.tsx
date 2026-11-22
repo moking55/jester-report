@@ -21,7 +21,10 @@ import {
   type Value,
 } from "@/lib/form";
 import { problemMessage } from "@/lib/messages";
+import { withPending } from "@/lib/tags";
 import type { IssueSource } from "@/lib/workspace";
+
+import { TagField } from "./TagField";
 
 import styles from "./IssueForm.module.css";
 
@@ -76,14 +79,16 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
   const spec = useMemo(() => formSpec(source.reportJson, source.schemaJson, source.formJson), [source]);
   const [values, setValues] = useState<FormValues>(() => emptyValues(spec));
   const [filename, setFilename] = useState("");
+  const [tags, setTags] = useState(source.tags ?? []); // the document starts with the template's tags and may change them
+  const [typedTag, setTypedTag] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [general, setGeneral] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [kept, setKept] = useState(false); // v1.5: every issued PDF is stored
 
   useEffect(() => {
-    onBody?.(renderBody(templateId, spec, values, filename));
-  }, [onBody, templateId, spec, values, filename]);
+    onBody?.(renderBody(templateId, spec, values, filename, tags));
+  }, [onBody, templateId, spec, values, filename, tags]);
 
   const setParam = (key: string, v: Value) => setValues((s) => ({ ...s, params: { ...s.params, [key]: v } }));
   const setData = (path: (string | number)[], v: Value) => setValues((s) => ({ ...s, data: setAt(s.data, path, v) }));
@@ -105,12 +110,14 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
     setGeneral([]);
     setKept(false);
     if (Object.keys(found).length) return focusFirst(found);
+    const issued = withPending(tags, typedTag); // a tag typed but not yet confirmed with Enter still counts
+    if (!issued.ok) return setGeneral([issued.error]);
     setBusy(true);
     try {
       const response = await fetch(`/issue/${templateId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: renderBody(templateId, spec, values, filename),
+        body: renderBody(templateId, spec, values, filename, issued.tags),
       });
       if (response.ok) {
         const blob = await response.blob();
@@ -315,6 +322,8 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
           onClick={() => {
             setValues(emptyValues(spec));
             setFilename("");
+            setTags(source.tags ?? []);
+            setTypedTag("");
             setErrors({});
             setGeneral([]);
           }}
@@ -356,6 +365,10 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
           placeholder={`${templateId}-v${source.version}.pdf`}
           onChange={(e) => setFilename(e.target.value)}
         />
+      </div>
+      <div className={styles.field}>
+        <label htmlFor="issue-tags">tag ของเอกสาร (เริ่มจาก tag ของรายงาน แก้ได้)</label>
+        <TagField inputId="issue-tags" label="tag ของเอกสาร" value={tags} onChange={setTags} typed={typedTag} onTyped={setTypedTag} />
       </div>
     </form>
   );

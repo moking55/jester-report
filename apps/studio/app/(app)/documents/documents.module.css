@@ -1,6 +1,6 @@
 .row {
   display: grid;
-  grid-template-columns: 1.3fr 1fr 1fr 2.2fr 1.4fr 0.8fr;
+  grid-template-columns: 1.2fr 1fr 0.9fr 1.8fr 1.2fr 1.3fr 1.1fr;
   gap: calc(var(--sp) * 1.5);
   align-items: center;
   padding: calc(var(--sp) * 0.8) calc(var(--sp) * 2);
@@ -23,4 +23,69 @@
 
 .search input {
   width: 100%;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(var(--sp) * 1);
+  align-items: center;
+}
+
+/* "แก้ tag" is a button that reads as a link, like the download beside it */
+.edit {
+  all: unset;
+  cursor: pointer;
+  color: var(--color-primary);
+}
+
+.edit:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* tag filter: a plain GET form, so the chips are checkboxes; the chosen ones get a ring */
+.tags {
+  display: flex;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tags legend {
+  float: left;
+  margin-right: 6px;
+  padding: 0;
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}
+
+.tagOption {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.tagOption input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tagOption:has(input:checked) {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.tagOption:has(input:focus-visible) {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

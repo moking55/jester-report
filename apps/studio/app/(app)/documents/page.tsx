@@ -1,8 +1,11 @@
 import Link from "next/link";
 
+import { TagChip, TagChips } from "@/components/TagChip";
+import { TagEditor } from "@/components/TagEditor";
 import { api } from "@/lib/api";
 import { isRunId, issuer, paramTitles, paramsLine } from "@/lib/documents";
 import { isTemplateId } from "@/lib/result";
+import { colorMap, tagsFromQuery } from "@/lib/tags";
 import type { components } from "@/lib/types.gen";
 
 import styles from "../history/history.module.css";
@@ -11,7 +14,8 @@ import own from "./documents.module.css";
 type TemplateSummary = components["schemas"]["TemplateSummary"];
 type DocumentSummary = components["schemas"]["DocumentSummary"];
 type RunRetention = components["schemas"]["RunRetention"];
-type Search = { template?: string; q?: string; before?: string };
+type TagUse = components["schemas"]["TagUse"];
+type Search = { template?: string; q?: string; before?: string; tag?: string | string[] };
 type VersionFiles = { files: { name: string; content: string }[] };
 
 /** Parameter titles of every (template, version) on this page; a version that cannot be read shows keys. */
@@ -43,12 +47,23 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
   if (template) query.set("templateId", template);
   if (q) query.set("q", q);
   if (before) query.set("before", before);
-  const [page, templates, retention] = await Promise.all([
+  const wanted = tagsFromQuery(search.tag).slice(0, 10);
+  for (const tag of wanted) query.append("tag", tag);
+  const [page, templates, retention, uses] = await Promise.all([
     api<{ items: DocumentSummary[]; next: string | null }>(`/v1/documents?${query}`),
     api<TemplateSummary[]>("/v1/templates"),
     api<RunRetention>("/v1/runs/retention"),
+    api<TagUse[]>("/v1/tags"),
   ]);
-  const filters = new URLSearchParams({ ...(template && { template }), ...(q && { q }) });
+  const colors = colorMap(uses);
+  // the tags some document carries, to filter by; chosen ones stay listed even when nothing has them now
+  const options = uses.filter((u) => u.documents > 0 || wanted.includes(u.tag));
+  // the same filters for the pager links (several tags: one `tag=` each)
+  const link = (extra: Record<string, string> = {}) => {
+    const params = new URLSearchParams({ ...(template && { template }), ...(q && { q }), ...extra });
+    for (const tag of wanted) params.append("tag", tag);
+    return `/documents?${params}`;
+  };
   const titles = await titlesFor(page.items);
 
   return (
@@ -82,13 +97,24 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
             placeholder="เลขเอกสาร ชื่อลูกค้า หรือค่าใดก็ได้ที่กรอก"
           />
         </label>
+        {options.length > 0 && (
+          <fieldset className={own.tags}>
+            <legend>tag (ต้องมีครบทุกอันที่เลือก)</legend>
+            {options.map((o) => (
+              <label key={o.tag} className={own.tagOption}>
+                <input type="checkbox" name="tag" value={o.tag} defaultChecked={wanted.includes(o.tag)} />
+                <TagChip tag={o.tag} color={o.color} />
+              </label>
+            ))}
+          </fieldset>
+        )}
         <button type="submit">ค้นหา</button>
       </form>
 
       {page.items.length === 0 ? (
         <p className={styles.muted}>
-          {q
-            ? `ไม่พบเอกสารที่ตรงกับ “${q}”`
+          {q || wanted.length > 0
+            ? `ไม่พบเอกสารที่ตรงกับ ${[q && `“${q}”`, ...wanted.map((t) => `tag ${t}`)].filter(Boolean).join(" และ ")}`
             : "ยังไม่มีเอกสาร — ออกจากปุ่ม ออกเอกสาร หรือผ่าน API แล้วจะขึ้นที่นี่"}
         </p>
       ) : (
@@ -99,6 +125,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
             <span>ผู้ออก</span>
             <span>ค่าที่กรอก</span>
             <span>ชื่อไฟล์</span>
+            <span>tag</span>
             <span />
           </div>
           {page.items.map((doc) => (
@@ -111,21 +138,21 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
               <span className={own.params}>{paramsLine(doc.params as Record<string, unknown>, titles.get(`${doc.templateId}/${doc.version}`))}</span>
               <span className={own.params}>{doc.filename}</span>
               <span>
+                <TagChips tags={doc.tags} colors={colors} />
+              </span>
+              <span className={own.actions}>
                 <a href={`/documents/${doc.runId}`} download>
                   ดาวน์โหลด
                 </a>
+                <TagEditor kind="document" id={doc.runId} name={doc.filename} tags={doc.tags} label="แก้ tag" className={own.edit} />
               </span>
             </div>
           ))}
         </div>
       )}
       <nav className={styles.pager}>
-        {before && <Link href={`/documents?${filters}`}>« หน้าแรก</Link>}
-        {page.next && (
-          <Link href={`/documents?${new URLSearchParams({ ...Object.fromEntries(filters), before: page.next })}`}>
-            หน้าถัดไป »
-          </Link>
-        )}
+        {before && <Link href={link()}>« หน้าแรก</Link>}
+        {page.next && <Link href={link({ before: page.next })}>หน้าถัดไป »</Link>}
       </nav>
     </section>
   );

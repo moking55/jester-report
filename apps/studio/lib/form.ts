@@ -307,13 +307,20 @@ function json(field: Field, value: Value | undefined): string | undefined {
 }
 
 /** The /v1/render body for the published version. Call validate first: this trusts the values. */
-export function renderBody(templateId: string, spec: FormSpec, values: FormValues, filename = ""): string {
+export function renderBody(
+  templateId: string,
+  spec: FormSpec,
+  values: FormValues,
+  filename = "",
+  tags?: string[],
+): string {
   const params = spec.params.flatMap((f) => {
     const v = json(f, values.params[f.key]);
     return v === undefined ? [] : [`${JSON.stringify(f.key)}:${v}`];
   });
   const data = json({ ...spec.data, required: true }, values.data) ?? "{}";
   const name = filename.trim() ? `,"filename":${JSON.stringify(filename.trim())}` : "";
+  const tagged = tags ? `,"tags":${JSON.stringify(tags)}` : ""; // given: sent as they are (none = no tags)
   const template = `{"id":${JSON.stringify(templateId)},"version":"published"}`;
-  return `{"template":${template},"params":{${params.join(",")}},"data":${data}${name}}`;
+  return `{"template":${template},"params":{${params.join(",")}},"data":${data}${name}${tagged}}`;
 }

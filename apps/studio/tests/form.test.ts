@@ -242,3 +242,15 @@ describe("form.json (v1.6)", () => {
     expect(moneyDisplay("")).toBe("");
   });
 });
+
+describe("renderBody tags", () => {
+  it("sends the tags it is given, as they are, after the filename", () => {
+    const body = renderBody("tax", spec, filled(), "a.pdf", ["vip", "ไตรมาส 4"]);
+    expect(body.endsWith('"filename":"a.pdf","tags":["vip","ไตรมาส 4"]}')).toBe(true);
+    expect(JSON.parse(body).tags).toEqual(["vip", "ไตรมาส 4"]);
+  });
+  it("an empty list is sent too (no tags), while leaving it out means the template's tags", () => {
+    expect(JSON.parse(renderBody("tax", spec, filled(), "", [])).tags).toEqual([]);
+    expect(JSON.parse(renderBody("tax", spec, filled())).tags).toBeUndefined();
+  });
+});

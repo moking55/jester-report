@@ -11,7 +11,7 @@ type TemplateSummary = components["schemas"]["TemplateSummary"];
 type VersionFiles = { files: { name: string; content: string }[] };
 
 /** The published version's form inputs (SPEC-studio v1.4: the form always uses the published version). */
-async function issueSource(id: string, version: number): Promise<IssueSource | null> {
+async function issueSource(id: string, version: number, tags: string[]): Promise<IssueSource | null> {
   const { files } = await api<VersionFiles>(`/v1/templates/${id}/versions/${version}`);
   const byName = new Map(files.map((f) => [f.name, f.content]));
   const reportJson = byName.get("report.json");
@@ -26,6 +26,7 @@ async function issueSource(id: string, version: number): Promise<IssueSource | n
       schemaJson,
       sampleJson: data.samples?.[0] ? byName.get(data.samples[0]) : undefined,
       formJson: byName.get(FORM_FILE),
+      tags,
     };
   } catch {
     return null; // a published version always parses; anything else falls back to the code view
@@ -66,7 +67,7 @@ export default async function WorkspacePage({
   const archived = Boolean(template.archivedAt);
   const canIssue = template.publishedVersion !== null && !archived;
   const mode = (await searchParams).mode;
-  const issue = canIssue && mode === "issue" ? await issueSource(id, template.publishedVersion!) : null;
+  const issue = canIssue && mode === "issue" ? await issueSource(id, template.publishedVersion!, template.tags) : null;
   // a new key when the archive state or the mode flips: the editors are made read-only (or editable) from scratch
   return (
     <Workspace
