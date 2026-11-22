@@ -279,3 +279,32 @@ CREATE TABLE api_key_usage (
 ## Open Questions v1.1
 
 ไม่มี — HTTP (429 + `Retry-After`, endpoint ใหม่ของ set password, body ของการสร้าง key) อยู่ใน spec ของ `public-api`
+
+---
+
+# v1.13: session อายุยาวสำหรับ MCP
+
+ที่มา: [SPEC-mcp.md](SPEC-mcp.md) ข้อ 4a (ผู้ใช้ยืนยัน 23 พ.ย. 2026) — คนทำรายงานใช้ Jester ผ่าน claude.ai และไม่อยาก login ใหม่ทุกสัปดาห์
+
+## สมมติฐาน v1.13
+
+1. **แทนที่สมมติฐาน v1 ข้อ 3 เฉพาะ session ที่ขอแบบ `long`:** หมดเมื่อไม่ได้ใช้ 30 วัน; ใช้ตอนเหลือไม่ถึง 15 วัน → ต่อเป็น 30 วัน; เพดาน 90 วันหลัง login; session ปกติยัง 12 ชม. / 6 ชม. / 7 วัน
+2. **ขอได้เฉพาะผู้ที่ถือค่าลับร่วม:** `login(..., long_lived=True)` เรียกได้เมื่อ route ยืนยัน `X-Jester-Studio-Key` แล้วเท่านั้น (service `mcp` มีค่านี้เหมือน Studio); คนที่มีแค่รหัสผ่านได้ session ปกติเสมอ
+3. **การเพิกถอนเหมือนเดิมทุกทาง:** ลบผู้ใช้, `set_password`, `reset-password`, `change_password` (session อื่น) ลบ session ยาวด้วย เพราะลบตาม `user_id`
+4. **Rate limit ของ login ไม่เปลี่ยน**
+
+## Interface ที่เพิ่ม/เปลี่ยน
+
+```python
+async def login(self, username: str, password: str, client_ip: str, long_lived: bool = False) -> Session
+```
+
+- migration `0010_long_sessions.sql`: `ALTER TABLE sessions ADD COLUMN long_lived boolean NOT NULL DEFAULT false`
+- `POST /v1/auth/login` body เพิ่ม `lifetime?: "standard" | "long"`; `long` โดยไม่มี studio key ที่ถูกต้อง → `422 INPUT_INVALID`
+
+## Testing Strategy v1.13
+
+- session ยาว: วันที่ 29 ยังใช้ได้, ไม่ได้ใช้ 31 วัน → 401, ใช้ตอนเหลือ 14 วัน → ต่อเป็น 30 วัน, วันที่ 91 → 401 แม้ใช้ทุกวัน
+- session ปกติยังเป็น 12 ชม. / 7 วัน (test เดิมผ่านโดยไม่แก้)
+- ลบผู้ใช้ / ตั้งรหัสให้ → session ยาวใช้ไม่ได้ทันที
+- route: `lifetime: long` ไม่มีหรือผิด studio key → 422; ถูก → `expiresAt` ห่างจากตอนนี้ 30 วัน
