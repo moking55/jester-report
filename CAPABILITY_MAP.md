@@ -208,3 +208,22 @@ module `tags` เล็กและไม่ขึ้นกับใคร: `tem
 ปล่อยเป็น `v1.11.0` · spec: [docs/ideas/tags-v1-11.md](docs/ideas/tags-v1-11.md) และหัวข้อ v1.11 ของ SPEC-template-store/render-service/public-api/studio
 
 **ไม่ทำ:** เปลี่ยนชื่อ/ลบ tag ทั้งระบบ · bulk edit · tag ใน PDF · สี hex เอง · ให้ API key แก้ tag ย้อนหลัง
+
+## v1.13: MCP สำหรับคนทำรายงาน (อนุมัติ 23 พ.ย. 2026)
+
+เป้า: คนทำรายงานใช้ Jester ผ่าน claude.ai (remote MCP connector, login ด้วยบัญชีตัวเองผ่าน OAuth) ให้ AI สร้าง/แก้ draft จนเป็นรายงานที่ validate ผ่านและ preview ตรงต้นฉบับ; publish ยังทำใน Studio
+
+| Module id | หน้าที่ | ขึ้นกับ |
+| --- | --- | --- |
+| `mcp` | แพ็กเกจแยก `apps/mcp`: Streamable HTTP + OAuth (หน้า login, DCR ตาม allow-list), tool ระดับ draft, preview เป็นภาพ, guide จาก skill `to-jester`; session ของ Jester เก็บใน SQLite ของตัวเอง | `public-api` (ผ่าน HTTP ตาม contract เท่านั้น) |
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| T1–T2 session อายุยาว (idle 30 วัน, เพดาน 90 วัน) + `lifetime` ใน login + migration `0010` | `auth`, `public-api` | — |
+| T3–T6 โครง `apps/mcp`, OAuth, หน้า login, token หมดอายุ | `mcp` | T2 |
+| T7–T10 tool อ่าน/เขียน draft, preview, guide | `mcp` | T6 |
+| T11–T12 Docker, compose (subdomain `mcp` หลัง proxy), live + claude.ai | `mcp`, `infra` | T10 |
+
+ปล่อยเป็น `v1.13.0` · spec: [SPEC-mcp.md](SPEC-mcp.md), หัวข้อ v1.13 ของ SPEC-auth/public-api · intent: [docs/intent/mcp-report-authoring.md](docs/intent/mcp-report-authoring.md) · task: [tasks/v1.13/todo.md](tasks/v1.13/todo.md)
+
+**ไม่ทำ:** publish/alias ผ่าน AI · จัดการผู้ใช้/API key/retention/theme ผ่าน MCP · stdio สำหรับ dev · role/RBAC

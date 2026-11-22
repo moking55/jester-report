@@ -312,3 +312,20 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 ## Testing Strategy v1.12
 
 - `test_contract`: ทุก operation มี summary/description; ทุก JSON body มี example; ทุก example ผ่าน schema ของตัวเอง (validate ผ่าน pointer ใน contract เพื่อให้ `$ref` ภายใน resolve ได้)
+
+---
+
+# v1.13: session อายุยาวสำหรับ MCP
+
+สถานะ: **อนุมัติ 23 พ.ย. 2026** · ที่มา: [SPEC-mcp.md](SPEC-mcp.md) ข้อ 4a · auth: หัวข้อ v1.13 ใน [SPEC-auth.md](SPEC-auth.md)
+
+## Contract ที่เปลี่ยน
+
+- `POST /v1/auth/login` body เพิ่ม `lifetime` (`"standard"` | `"long"`, ไม่บังคับ, ค่าเริ่มต้น `standard`) — `additionalProperties: false` เดิมคงไว้
+- `long` ต้องมาพร้อม `X-Jester-Studio-Key` ที่ตรงกับ `JESTER_STUDIO_KEY` (เทียบแบบ constant-time ด้วย helper เดียวกับ `client_ip`); ไม่มี/ผิด หรือ api ไม่ได้ตั้งค่าลับ → `422 INPUT_INVALID` (ไม่ใช่ 401 เพราะรหัสผ่านยังไม่ถูกตรวจ และไม่ให้เดาได้ว่ารหัสถูกไหม)
+- response เหมือนเดิม (`Session`); `expiresAt` ของ session ยาวห่างจากตอนนี้ 30 วัน
+
+## Testing Strategy v1.13
+
+- `lifetime: long` + key ถูก → 200, `expiresAt` ≈ +30 วัน; ไม่มี key / key ผิด / api ไม่ตั้งค่าลับ → 422 และไม่นับเป็น login ผิด; `lifetime` ค่าอื่น → 422; ไม่ส่ง → session ปกติ
+- `test_contract` ผ่าน (example ใหม่ผ่าน schema)

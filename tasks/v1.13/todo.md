@@ -6,7 +6,7 @@
 
 ## Phase 0: เอกสาร
 
-- [ ] **T0 contract และ capability map** (S, docs)
+- [x] **T0 contract และ capability map** (S, docs)
   - Acceptance: หัวข้อ "v1.13" ต่อท้าย `SPEC-public-api.md` (`lifetime` ของ login); แถว `mcp` ใน `CAPABILITY_MAP.md` (ขึ้นกับ `public-api` ผ่าน HTTP) และแถวลำดับงาน v1.13
   - Verify: อ่านทวน; ลิงก์เปิดได้; ตรงกับ SPEC-mcp ข้อ 4a
   - Files: `SPEC-public-api.md`, `CAPABILITY_MAP.md`
