@@ -100,3 +100,11 @@ export function tagsFromQuery(value: string | string[] | undefined): string[] {
   const list = value === undefined ? [] : Array.isArray(value) ? value : [value];
   return [...new Set(list.map((t) => t.trim()).filter(Boolean))];
 }
+
+/** The set plus whatever is still typed in the box (a user who types a tag and presses Save did mean it). */
+export function withPending(
+  current: string[],
+  typed: string,
+): { ok: true; tags: string[] } | { ok: false; error: string } {
+  return typed.trim() ? addTag(current, typed) : { ok: true, tags: current };
+}

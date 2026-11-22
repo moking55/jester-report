@@ -11,6 +11,7 @@ import {
   normalizeTags,
   TAG_COLORS,
   tagsFromQuery,
+  withPending,
 } from "@/lib/tags";
 
 // the api's own test reads this file too: both sides must give these answers
@@ -86,5 +87,13 @@ describe("filters", () => {
     expect(tagsFromQuery(undefined)).toEqual([]);
     expect(tagsFromQuery("a")).toEqual(["a"]);
     expect(tagsFromQuery(["a", " ", "b", "a"])).toEqual(["a", "b"]);
+  });
+});
+
+describe("withPending", () => {
+  it("adds what is still typed, and leaves the set alone when nothing is", () => {
+    expect(withPending(["a"], " b ")).toEqual({ ok: true, tags: ["a", "b"] });
+    expect(withPending(["a"], "   ")).toEqual({ ok: true, tags: ["a"] });
+    expect(withPending(["a"], "x,y").ok).toBe(false);
   });
 });

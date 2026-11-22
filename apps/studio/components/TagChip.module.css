@@ -1,0 +1,71 @@
+/* A tag chip. The colour is one custom property (--tag-base, from lib/tags.ts) mixed with the theme's own
+   surface and text, so it reads on any theme; tests/tag-contrast.test.ts checks every colour on every built-in
+   theme with the same percentages (CHIP_MIX in lib/tags.ts). The name is always text: colour never carries
+   the meaning alone. */
+.chip {
+  --tag-base: #64748b;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid color-mix(in srgb, var(--tag-base) 38%, var(--color-surface));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tag-base) 14%, var(--color-surface));
+  color: color-mix(in srgb, var(--tag-base) 55%, var(--color-text));
+  font-size: 0.85em;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.6em;
+}
+
+/* the name or the × as a button: no button chrome of its own */
+button.name,
+.remove {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+button.name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 0.6em;
+}
+
+button.name:hover,
+.remove:hover {
+  background: color-mix(in srgb, var(--tag-base) 18%, transparent);
+}
+
+button.name:focus-visible,
+.remove:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.remove {
+  padding: 0 0.45em 0 0.1em;
+  font-size: 1.1em;
+}
+
+.picked {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tag-base) 55%, transparent);
+}
+
+/* classic: a glass chip, the same colour with a highlight and a darker lower half */
+:root[data-look="aero"] .chip {
+  border-color: color-mix(in srgb, var(--tag-base) 55%, var(--color-surface));
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tag-base) 6%, #ffffff),
+    color-mix(in srgb, var(--tag-base) 20%, var(--color-surface)) 50%,
+    color-mix(in srgb, var(--tag-base) 26%, var(--color-surface)) 51%,
+    color-mix(in srgb, var(--tag-base) 14%, var(--color-surface))
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
