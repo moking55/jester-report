@@ -35,11 +35,13 @@ export function TagEditor({ kind, id, name, tags, label = "แก้ tag…", cl
   const [colors, setColors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [shown, setShown] = useState(false); // the form exists only while the dialog is open: a catalog has many rows
 
   function open() {
     setValue(tags);
     setTyped("");
     setError(null);
+    setShown(true);
     dialog.current?.showModal();
     // the colours of the tags already in use; a tag nobody has coloured is gray
     void listTagUse().then((uses) => setColors(colorMap(uses)));
@@ -73,43 +75,51 @@ export function TagEditor({ kind, id, name, tags, label = "แก้ tag…", cl
       <button type="button" className={className} onClick={open}>
         {label}
       </button>
-      <dialog ref={dialog} className={styles.dialog} aria-label={`แก้ tag ของ ${name}`} style={{ width: "min(520px, calc(100vw - 32px))" }}>
-        <form
-          className={styles.form}
-          onSubmit={(e) => {
-            e.preventDefault();
-            void save();
-          }}
-        >
-          <div className={styles.head}>
-            <h2>
-              แก้ tag · <span>{name}</span>
-            </h2>
-            <button type="button" className={styles.close} onClick={() => dialog.current?.close()} aria-label="ปิด">
-              ×
-            </button>
-          </div>
-          <TagField
-            value={value}
-            onChange={setValue}
-            typed={typed}
-            onTyped={setTyped}
-            colors={colors}
-            onColor={(tag, color) => void changeColor(tag, color)}
-          />
-          <p className={styles.hint}>
-            ใส่ได้ไม่เกิน 10 อัน อันละ 1–30 ตัวอักษร (ไม่ใช้จุลภาค) · ตัวพิมพ์ใหญ่เล็กถือว่าต่างกัน · กดชื่อ tag เพื่อเลือกสี
-          </p>
-          <div className={styles.buttons}>
-            <button type="button" onClick={() => dialog.current?.close()}>
-              ยกเลิก
-            </button>
-            <button type="submit" className={styles.primary} disabled={busy}>
-              {busy ? "กำลังบันทึก…" : "บันทึก"}
-            </button>
-          </div>
-          {error && <p role="alert">{error}</p>}
-        </form>
+      <dialog
+        ref={dialog}
+        className={styles.dialog}
+        aria-label={`แก้ tag ของ ${name}`}
+        style={{ width: "min(520px, calc(100vw - 32px))" }}
+        onClose={() => setShown(false)}
+      >
+        {shown && (
+          <form
+            className={styles.form}
+            onSubmit={(e) => {
+              e.preventDefault();
+              void save();
+            }}
+          >
+            <div className={styles.head}>
+              <h2>
+                แก้ tag · <span>{name}</span>
+              </h2>
+              <button type="button" className={styles.close} onClick={() => dialog.current?.close()} aria-label="ปิด">
+                ×
+              </button>
+            </div>
+            <TagField
+              value={value}
+              onChange={setValue}
+              typed={typed}
+              onTyped={setTyped}
+              colors={colors}
+              onColor={(tag, color) => void changeColor(tag, color)}
+            />
+            <p className={styles.hint}>
+              ใส่ได้ไม่เกิน 10 อัน อันละ 1–30 ตัวอักษร (ไม่ใช้จุลภาค) · ตัวพิมพ์ใหญ่เล็กถือว่าต่างกัน · กดชื่อ tag เพื่อเลือกสี
+            </p>
+            <div className={styles.buttons}>
+              <button type="button" onClick={() => dialog.current?.close()}>
+                ยกเลิก
+              </button>
+              <button type="submit" className={styles.primary} disabled={busy}>
+                {busy ? "กำลังบันทึก…" : "บันทึก"}
+              </button>
+            </div>
+            {error && <p role="alert">{error}</p>}
+          </form>
+        )}
       </dialog>
     </>
   );

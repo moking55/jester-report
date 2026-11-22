@@ -28,6 +28,7 @@ beforeEach(() => {
   };
   HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
     this.removeAttribute("open");
+    this.dispatchEvent(new Event("close")); // what a browser does; the dialog unmounts its form on it
   };
 });
 afterEach(() => {

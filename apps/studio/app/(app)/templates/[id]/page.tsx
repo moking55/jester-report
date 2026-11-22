@@ -77,6 +77,7 @@ export default async function WorkspacePage({
       archived={archived}
       canIssue={canIssue}
       issue={issue}
+      tags={template.tags}
       // v1.6: the form builder lives in the code view; an old ?mode=form link opens the data schema there
       openFile={mode === "form" ? schemaFile(draft) : undefined}
     />

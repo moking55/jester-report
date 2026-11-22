@@ -352,3 +352,46 @@ a.documents {
 a.documents:hover {
   background: var(--fill-button-hover);
 }
+
+/* tag filter: every tag in this catalog as a toggle; the chosen ones get a ring (and aria-pressed) */
+.tagBar {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-height: 7.5em;
+  overflow-y: auto;
+}
+
+.tagLabel {
+  color: var(--color-textMuted);
+  font-size: 0.85em;
+}
+
+.tagToggle {
+  all: unset;
+  cursor: pointer;
+  border-radius: 999px;
+}
+
+.tagToggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.tagOn {
+  box-shadow: 0 0 0 2px var(--color-primary);
+}
+
+.tagClear {
+  all: unset;
+  cursor: pointer;
+  color: var(--color-primary);
+  font-size: 0.85em;
+  text-decoration: underline;
+}
+
+.tagClear:focus-visible {
+  outline: 2px solid var(--color-primary);
+}

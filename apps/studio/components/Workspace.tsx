@@ -71,6 +71,7 @@ export function Workspace({
   canIssue = false,
   issue = null,
   openFile,
+  tags,
 }: {
   draft: Draft;
   name: string;
@@ -79,6 +80,7 @@ export function Workspace({
   canIssue?: boolean; // a published, active template: the "ออกเอกสาร" button shows
   issue?: IssueSource | null; // set: the issue mode (form + PDF), no code view
   openFile?: string; // a file to show first (an old ?mode=form link opens the data schema)
+  tags?: string[]; // the template's tags, for "แก้ tag…" in the ⋯ menu
 }) {
   const [state, update] = useImmer(() => {
     const s = initialState(draft, defaultParams(draft.files.find((f) => f.name === "report.json")?.content, today));
@@ -474,7 +476,7 @@ export function Workspace({
         <code>{state.templateId}</code>
         <span className={styles.revision}>draft r{state.revision}</span>
         <span className={styles.spacer} />
-        <TemplateMenu templateId={state.templateId} archived={archived} back={`/templates/${state.templateId}`} />
+        <TemplateMenu templateId={state.templateId} archived={archived} back={`/templates/${state.templateId}`} name={name} tags={tags} />
         <span role="status" className={styles.saveState}>
           {state.saving ? "กำลังบันทึก…" : unsaved ? `ยังไม่บันทึก ${state.dirty.length} ไฟล์` : "บันทึกแล้ว"}
         </span>
