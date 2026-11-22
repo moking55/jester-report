@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   emptyValues,
+  exampleValues,
+  fieldRows,
   fieldFromSchema,
   fieldPointer,
   formSpec,
@@ -252,5 +254,49 @@ describe("renderBody tags", () => {
   it("an empty list is sent too (no tags), while leaving it out means the template's tags", () => {
     expect(JSON.parse(renderBody("tax", spec, filled(), "", [])).tags).toEqual([]);
     expect(JSON.parse(renderBody("tax", spec, filled())).tags).toBeUndefined();
+  });
+});
+
+describe("exampleValues (developer dialog, v1.12)", () => {
+  const sample = JSON.stringify({ buyer: { name: "ตัวอย่าง จำกัด", taxId: "0105555555555" }, items: [{ qty: 3, unitPrice: "99.50" }] });
+
+  it("fills an empty form from sample.json and placeholders, so the body passes the form's checks", () => {
+    const values = exampleValues(spec, emptyValues(spec), sample);
+    expect(validate(spec, values)).toEqual({});
+    const body = JSON.parse(renderBody("tax", spec, values));
+    expect(body.params).toEqual({ invoiceNo: "SAMPLE", issueDate: "2000-01-01", copies: 1, lang: "th" });
+    expect(body.data.buyer).toEqual({ name: "ตัวอย่าง จำกัด", taxId: "0105555555555" });
+    expect(body.data.items).toEqual([{ qty: 3, unitPrice: "99.50" }]);
+  });
+
+  it("keeps what the user typed and fills only the gaps", () => {
+    const values = exampleValues(spec, filled(), sample);
+    const body = JSON.parse(renderBody("tax", spec, values));
+    expect(body.params.invoiceNo).toBe("INV-1");
+    expect(body.data.buyer).toEqual({ name: "บริษัท ก", taxId: "0105555555555" });
+    expect(body.data.items).toHaveLength(2); // typed rows win over the sample's rows
+  });
+
+  it("works without a sample: required fields get a placeholder by type", () => {
+    const values = exampleValues(spec, emptyValues(spec));
+    const errors = validate(spec, values);
+    expect(errors["/params/invoiceNo"]).toBeUndefined();
+    expect(errors["/data/items/0/qty"]).toBeUndefined();
+    expect(errors["/data/items/0/unitPrice"]).toBeUndefined();
+  });
+});
+
+describe("fieldRows (developer dialog, v1.12)", () => {
+  it("lists every field by the pointer a 422 uses, with type, required and the text from report.json/schema", () => {
+    const rows = fieldRows(spec);
+    const by = Object.fromEntries(rows.map((r) => [r.pointer, r]));
+    expect(rows[0]).toMatchObject({ pointer: "/params/invoiceNo", type: "string", required: true, label: "เลขที่", description: "เช่น INV-1" });
+    expect(by["/params/issueDate"].type).toBe("string (date: YYYY-MM-DD)");
+    expect(by["/params/lang"].type).toBe('enum: "th" | "en"');
+    expect(by["/data/buyer/name"]).toMatchObject({ required: true, label: "ชื่อผู้ซื้อ" });
+    expect(by["/data/items"]).toMatchObject({ type: "array (อย่างน้อย 1)", required: true });
+    expect(by["/data/items/0/unitPrice"].type).toBe('string (decimal เช่น "1250.50")');
+    expect(by["/data/items/0/qty"]).toMatchObject({ type: "integer", required: true });
+    expect(by["/data"]).toBeUndefined();
   });
 });

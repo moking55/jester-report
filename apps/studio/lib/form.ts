@@ -186,6 +186,83 @@ export function sampleValues(spec: FormSpec, sampleJson: string): FormValues {
   return { params: emptyValues(spec).params, data: valueFromJson(spec.data, JSON.parse(sampleJson)) };
 }
 
+// ---- developer dialog (v1.12) ---------------------------------------------------------------------
+
+// the same placeholders the api uses for a draft preview (render_service placeholder_params)
+const PLACEHOLDER: Partial<Record<Scalar, string>> = { text: "SAMPLE", date: "2000-01-01", decimal: "1", integer: "1", number: "1" };
+
+const blank = (v: Value | undefined): boolean =>
+  typeof v === "boolean" ? true : Array.isArray(v) ? v.every(blank) : isObject(v) ? Object.values(v).every(blank) : isEmpty(v);
+
+function fill(field: Field, value: Value | undefined, sample: unknown): Value {
+  if (field.kind === "object") {
+    const obj = isObject(value) ? (value as Record<string, Value>) : {};
+    const s = isObject(sample) ? sample : {};
+    return Object.fromEntries(field.fields.map((f) => [f.key, fill(f, obj[f.key], s[f.key])]));
+  }
+  if (field.kind === "array") {
+    const rows = Array.isArray(value) ? value : [];
+    if (!blank(rows) || !Array.isArray(sample) || !sample.length) return rows.map((r) => fill(field.item, r, undefined));
+    return sample.map((s) => fill(field.item, undefined, s)); // rows the user typed win over the sample's rows
+  }
+  if (field.kind === "boolean") return value ?? emptyValue(field);
+  if (!isEmpty(value)) return value!;
+  if (sample !== undefined && sample !== null) return valueFromJson(field, sample);
+  if (!field.required) return value ?? "";
+  // shortcut: a placeholder may still miss a pattern or minLength; the api's 422 then names the field
+  return field.kind === "enum" ? (field.options?.[0] ?? "") : (PLACEHOLDER[field.kind] ?? "");
+}
+
+/** The form's values with every gap filled from sample.json or a placeholder, so the developer's request runs. */
+export function exampleValues(spec: FormSpec, values: FormValues, sampleJson?: string | null): FormValues {
+  let sample: unknown;
+  try {
+    sample = sampleJson ? JSON.parse(sampleJson) : undefined;
+  } catch {
+    sample = undefined; // a broken sample.json: placeholders only
+  }
+  return {
+    params: Object.fromEntries(spec.params.map((f) => [f.key, fill(f, values.params[f.key], undefined)])),
+    data: fill(spec.data, values.data, sample),
+  };
+}
+
+export type FieldRow = { pointer: string; type: string; required: boolean; label: string; description?: string };
+
+function typeName(f: Field): string {
+  switch (f.kind) {
+    case "object":
+      return "object";
+    case "array":
+      return f.minItems ? `array (อย่างน้อย ${f.minItems})` : "array";
+    case "text":
+      return "string";
+    case "date":
+      return "string (date: YYYY-MM-DD)";
+    case "decimal":
+      return 'string (decimal เช่น "1250.50")';
+    case "enum":
+      return `enum: ${(f.options ?? []).map((o) => JSON.stringify(o)).join(" | ")}`;
+    case "json":
+      return "JSON";
+    default:
+      return f.kind; // integer, number, boolean
+  }
+}
+
+/** Every field of the request by the JSON pointer a 422 uses (array rows as /0), for the developer dialog. */
+export function fieldRows(spec: FormSpec): FieldRow[] {
+  const rows: FieldRow[] = [];
+  const walk = (f: Field, pointer: string, own = true) => {
+    if (own) rows.push({ pointer, type: typeName(f), required: f.required, label: f.label, description: f.description });
+    if (f.kind === "object") f.fields.forEach((c) => walk(c, `${pointer}/${c.key}`));
+    if (f.kind === "array") walk(f.item, `${pointer}/0`, f.item.kind !== "object");
+  };
+  spec.params.forEach((f) => walk(f, `/params/${f.key}`));
+  walk(spec.data, "/data", spec.data.kind !== "object");
+  return rows;
+}
+
 // ---- checks ---------------------------------------------------------------------------------------
 
 const isEmpty = (v: Value | undefined) => v === undefined || v === "" || (typeof v === "string" && !v.trim());

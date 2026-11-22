@@ -395,7 +395,7 @@ export function Workspace({
   if (issue) {
     return (
       <div className={styles.workspace}>
-        {showDev && <DeveloperDialog body={devBody} onClose={() => setShowDev(false)} />}
+        {showDev && <DeveloperDialog body={devBody} source={issue} onClose={() => setShowDev(false)} />}
         <div className={styles.toolbar}>
           <b>{name}</b>
           <code>{state.templateId}</code>

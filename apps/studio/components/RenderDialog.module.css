@@ -128,3 +128,51 @@
 .close:hover {
   color: var(--color-danger);
 }
+
+/* developer dialog (v1.12): language tabs and the field table */
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tabs button {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: none;
+  color: var(--color-textMuted);
+  padding: 2px 10px;
+  cursor: pointer;
+}
+
+.tabs button[aria-pressed="true"] {
+  background: var(--color-surfaceAlt);
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.fields {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  font-size: 0.85em;
+}
+
+.fields table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fields th,
+.fields td {
+  padding: 3px 8px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.fields th {
+  position: sticky;
+  top: 0;
+  background: var(--color-surfaceAlt);
+}

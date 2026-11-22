@@ -48,8 +48,9 @@ export default async function ApiPage() {
         {curlExample(`{"template":{"id":"${example}","version":"published"},"params":{},"data":{}}`)}
       </pre>
       <p className={styles.hint}>
-        ตั้ง <code>JESTER_API</code> เป็น URL ของ api ส่วน params และ data ของแต่ละรายงานดูได้จากปุ่ม Render… ใน workspace
-        ซึ่งสร้างคำสั่งพร้อมข้อมูลตัวอย่างให้
+        ตั้ง <code>JESTER_API</code> เป็น URL ของ api และ <code>JESTER_API_KEY</code> เป็น key ส่วน params และ data ของแต่ละรายงาน
+        ดูได้จากปุ่ม สำหรับนักพัฒนา ในหน้าออกเอกสาร ซึ่งสร้างคำสั่ง curl, JavaScript และ Python พร้อมข้อมูลตัวอย่างให้
+        · <Link href="/api/reference">API docs ฉบับเต็ม</Link>
       </p>
 
       <h2>3. เมื่อผิดพลาด</h2>

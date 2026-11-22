@@ -6,6 +6,7 @@ import type { Problem } from "@/lib/api-core";
 import {
   emptyValue,
   emptyValues,
+  exampleValues,
   fieldPointer,
   formSpec,
   moneyDisplay,
@@ -88,9 +89,10 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
 
   useEffect(() => {
     // the developer's curl leaves `tags` out unless they were changed: an integrator copying it should get the
-    // template's tags at the time of each call, not today's tags for ever
-    onBody?.(renderBody(templateId, spec, values, filename, sameTags(tags, source.tags ?? []) ? undefined : tags));
-  }, [onBody, templateId, spec, values, filename, tags, source.tags]);
+    // template's tags at the time of each call, not today's tags for ever; gaps are filled so the copy runs (v1.12)
+    const example = exampleValues(spec, values, source.sampleJson);
+    onBody?.(renderBody(templateId, spec, example, filename, sameTags(tags, source.tags ?? []) ? undefined : tags));
+  }, [onBody, templateId, spec, values, filename, tags, source.tags, source.sampleJson]);
 
   const setParam = (key: string, v: Value) => setValues((s) => ({ ...s, params: { ...s.params, [key]: v } }));
   const setData = (path: (string | number)[], v: Value) => setValues((s) => ({ ...s, data: setAt(s.data, path, v) }));
