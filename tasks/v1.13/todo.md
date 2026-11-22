@@ -13,18 +13,18 @@
 
 ## Phase 1: api — session อายุยาว
 
-- [ ] **T1 `auth`: session ยาว + migration 0010** (M)
+- [x] **T1 `auth`: session ยาว + migration 0010** (M)
   - Acceptance: `0010_long_sessions.sql` เพิ่ม `sessions.long_lived boolean NOT NULL DEFAULT false`; `login(..., long_lived=True)` ออก session หมดอายุใน 30 วัน; ใช้ตอนเหลือ < 15 วัน → ต่อเป็น 30 วัน; ไม่เกิน 90 วันหลัง login; session ปกติยัง 12 ชม./6 ชม./7 วัน (test เดิมผ่านโดยไม่แก้); ลบผู้ใช้/`set_password`/`reset_password` เพิกถอน session ยาวด้วย
   - Verify: `pytest tests/auth tests/db/test_migrations.py` (ฐานที่มี 0001–0009 + แถวเดิมย้ายขึ้นได้)
   - Files: `db/migrations/0010_long_sessions.sql`, `auth/service.py`, `tests/auth/test_sessions.py`, `tests/db/test_migrations.py`
 
-- [ ] **T2 `POST /v1/auth/login` รับ `lifetime`** (S)
+- [x] **T2 `POST /v1/auth/login` รับ `lifetime`** (S)
   - Acceptance: body `lifetime?: "standard" | "long"`; `long` + `X-Jester-Studio-Key` ถูก → `expiresAt` ≈ 30 วัน; ไม่มี/ผิด key → `422 INPUT_INVALID`; ค่าอื่น → 422; ไม่ส่ง = เดิม; เทียบ key ด้วยฟังก์ชันเดียวกับ `client_ip` (ย้ายเป็น helper ใน `security.py`); `public-api.yaml` มี field + example
   - Verify: `pytest tests/public_api/test_auth_routes.py tests/public_api/test_contract.py`
   - Files: `public_api/routes/setup_auth.py`, `public_api/security.py`, `openapi/public-api.yaml`, `tests/public_api/test_auth_routes.py`
 
 ### Checkpoint A: api
-- [ ] `pytest tests/auth tests/public_api tests/db` ผ่าน, `ruff` สะอาด, `test_contract` ผ่าน
+- [x] `pytest` ทั้งชุดของ api บนเครื่องทดสอบ: 781 passed / 3 skipped (live_stack) ใน 104 วินาที (23 พ.ย. 2026); `ruff` ของไฟล์ที่แตะสะอาด (E501 เดิม 3 จุดใน `test_contract.py`, `template_store/store.py` ไม่ได้แตะ); Studio: `npm run gen:api` แล้ว `tsc` ผ่าน
 - [ ] ทบทวนกับผู้ใช้ก่อนเริ่ม `apps/mcp` (การแก้ auth เป็น R1)
 
 ## Phase 2: mcp — โครงและ OAuth (เสี่ยงสุด ทำก่อน)
