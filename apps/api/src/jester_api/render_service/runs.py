@@ -54,6 +54,7 @@ class NewDocument:
     params: Any
     data: Any
     pdf: bytes
+    tags: list[str] | None = None  # None: copy the template's tags as they are when the row is written
 
 
 class DocumentStorageError(Exception):
@@ -106,6 +107,7 @@ class DocumentSummary:
     filename: str
     pages: int | None
     params: Any
+    tags: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -182,11 +184,13 @@ class Runs:
                 if doc is not None:
                     await conn.execute(
                         "INSERT INTO documents (run_id, template_id, filename, params, data, pdf_size, "
-                        "pdf_sha256) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                        "pdf_sha256, tags) VALUES (%s, %s, %s, %s, %s, %s, %s, "
+                        "COALESCE(%s::text[], (SELECT tags FROM templates WHERE id = %s), '{}'))",
                         (
                             run_id, run.template_id, doc.filename,
                             Json(doc.params, dumps=_json_text), Json(doc.data, dumps=_json_text),
                             len(doc.pdf), hashlib.sha256(doc.pdf).hexdigest(),
+                            doc.tags, run.template_id,
                         ),
                     )  # fmt: skip
                 cur = await conn.execute("SELECT nextval('run_counter')")
@@ -262,17 +266,27 @@ class Runs:
         return {r[6]: _run(r) for r in rows}
 
     async def list_documents(
-        self, template_id: str | None, q: str | None, limit: int, before: str | None
+        self,
+        template_id: str | None,
+        q: str | None,
+        limit: int,
+        before: str | None,
+        tags: list[str] | None = None,
     ) -> tuple[list[DocumentSummary], str | None]:
-        """Newest first; `q` matches any text in params or data, case-insensitively."""
+        """Newest first; `q` matches text in params, data or tags, case-insensitively; `tags` = has all."""
         where, args = ["TRUE"], []
         if q is not None:
             q = q.strip()
             if not 1 <= len(q) <= MAX_QUERY:
                 raise ValueError(f"q must be 1-{MAX_QUERY} characters")
             # shortcut: sequential ILIKE per template; add a pg_trgm index once a template has 100k+ documents
-            where.append("(d.params::text || ' ' || d.data::text) ILIKE %s")
+            where.append(
+                "(d.params::text || ' ' || d.data::text || ' ' || array_to_string(d.tags, ' ')) ILIKE %s"
+            )
             args.append(_like(q))
+        if tags:
+            where.append("d.tags @> %s")
+            args.append(tags)
         for column, value in (("d.template_id = %s", template_id), ("d.run_id < %s", before)):
             if value is not None:
                 where.append(column)
@@ -280,17 +294,26 @@ class Runs:
         async with self._db.connection() as conn:
             cur = await conn.execute(
                 "SELECT r.id, r.created_at, r.template_id, r.version, r.caller_type, r.caller_id, "
-                "r.caller_name, d.filename, r.pages, d.params FROM documents d JOIN runs r ON r.id = d.run_id"
-                " "
+                "r.caller_name, d.filename, r.pages, d.params, d.tags "
+                "FROM documents d JOIN runs r ON r.id = d.run_id "
                 f"WHERE {' AND '.join(where)} ORDER BY d.run_id DESC LIMIT %s",
                 (*args, limit + 1),
             )
             rows = await cur.fetchall()
         docs = [
-            DocumentSummary(r[0], r[1], r[2], r[3], Caller(r[4], r[5], r[6]), r[7], r[8], r[9])
+            DocumentSummary(r[0], r[1], r[2], r[3], Caller(r[4], r[5], r[6]), r[7], r[8], r[9], r[10])
             for r in rows[:limit]
         ]
         return docs, (docs[-1].run_id if len(rows) > limit else None)
+
+    async def set_document_tags(self, run_id: str, tags: list[str]) -> list[str] | None:
+        """Replaces the tag set of one issued document; None when there is no such document."""
+        async with self._db.connection() as conn:
+            cur = await conn.execute(
+                "UPDATE documents SET tags = %s WHERE run_id = %s RETURNING tags", (tags, run_id)
+            )
+            row = await cur.fetchone()
+        return row[0] if row else None
 
     async def document(self, run_id: str) -> StoredDocument | None:
         async with self._db.connection() as conn:

@@ -11,7 +11,7 @@ import json
 import logging
 import time
 from collections import OrderedDict
-from collections.abc import AsyncIterator, Callable, Mapping
+from collections.abc import AsyncIterator, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -28,6 +28,7 @@ from ..report_definition.lint import engine_font_candidates
 from ..report_definition.loader import ReportDefinition
 from ..report_definition.model import parse_report_json
 from ..report_definition.problems import Problem, error, has_errors
+from ..tags import TagError, normalize_tags
 from ..template_store import StoredDefinition, StoreError, TemplateStore
 from .document_files import DocumentFiles
 from .fonts import EngineFonts
@@ -65,6 +66,16 @@ class RenderOutcome:
     version: int | None  # None for a draft preview
     filename: str
     problems: list[Problem] = field(default_factory=list)  # warnings only
+
+
+def _checked_tags(tags: Sequence[str] | None) -> list[str] | None:
+    """None stays None (copy the template's tags); a list is normalised or rejected with 422."""
+    if tags is None:
+        return None
+    try:
+        return normalize_tags(tags)
+    except TagError as exc:
+        raise RenderError("INPUT_INVALID", 422, exc.message) from None
 
 
 class RenderError(Exception):
@@ -294,7 +305,9 @@ class RenderService:
         caller: Principal,
         request_id: str | None = None,
         filename: str | None = None,
+        tags: Sequence[str] | None = None,
     ) -> RenderOutcome:
+        checked = _checked_tags(tags)  # before anything else: a bad tag costs no run row and no file
         if caller.templates is not None and template_id not in caller.templates:
             # before the store and the queue: the same answer whether the template exists or not
             exc = RenderError("TEMPLATE_NOT_ALLOWED", 403, "this API key cannot render this template")
@@ -322,6 +335,7 @@ class RenderService:
             request_id,
             filename,
             watermark=False,
+            tags=checked,
         )
 
     async def _run(
@@ -336,6 +350,7 @@ class RenderService:
         filename: str | None,
         *,
         watermark: bool,
+        tags: list[str] | None = None,
     ) -> RenderOutcome:
         started = time.monotonic()
         stored: StoredDefinition | None = None
@@ -364,7 +379,7 @@ class RenderService:
         )
         name = filename or default_name
         # v1.5: every successful render of a published version is kept; previews of drafts are not
-        document = NewDocument(name, params, data, result.pdf) if kind == "render" else None
+        document = NewDocument(name, params, data, result.pdf, tags) if kind == "render" else None
         try:
             run_id = await self._record(
                 kind,
@@ -523,12 +538,24 @@ class RenderService:
         return await self._runs.list(template_id, status, limit, before)
 
     async def list_documents(
-        self, template_id: str | None, q: str | None, limit: int = 50, before: str | None = None
+        self,
+        template_id: str | None,
+        q: str | None,
+        limit: int = 50,
+        before: str | None = None,
+        tags: list[str] | None = None,
     ) -> tuple[list[DocumentSummary], str | None]:
         try:
-            return await self._runs.list_documents(template_id, q, limit, before)
+            return await self._runs.list_documents(template_id, q, limit, before, tags)
         except ValueError as exc:
             raise RenderError("INPUT_INVALID", 422, str(exc)) from None
+
+    async def set_document_tags(self, run_id: str, tags: Sequence[str]) -> list[str]:
+        """Replaces the tags of an issued document (the PDF and everything else stay as issued)."""
+        stored = await self._runs.set_document_tags(run_id, _checked_tags(tags) or [])
+        if stored is None:
+            raise RenderError("NOT_FOUND", 404, "document not found")
+        return stored
 
     async def document_pdf(self, run_id: str) -> tuple[str, bytes]:
         """(filename, the PDF bytes that were sent); a lost or changed file is a 404, never wrong bytes."""
