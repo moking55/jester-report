@@ -27,6 +27,7 @@
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
+    "@scalar/api-reference-react": "0.9.95",
     "codemirror": "6.0.2",
     "immer": "11.2.9",
     "lucide-react": "1.70.0",

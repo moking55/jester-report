@@ -29,7 +29,8 @@ export default async function ApiPage() {
         ให้ระบบอื่นสร้าง PDF จากรายงานที่ publish แล้ว ผ่าน HTTP ·{" "}
         <a href="/api/openapi.yaml" download>
           ดาวน์โหลด OpenAPI contract
-        </a>
+        </a>{" "}
+        · <Link href="/api/reference">API docs ฉบับเต็ม (ทุก operation พร้อมตัวอย่าง)</Link>
       </p>
 
       <h2>1. สร้าง API key</h2>

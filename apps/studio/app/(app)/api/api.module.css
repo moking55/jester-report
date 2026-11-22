@@ -61,3 +61,10 @@
   font-weight: 600;
   white-space: nowrap;
 }
+
+/* v1.12: the full reference (Scalar) uses the whole width */
+.reference {
+  display: grid;
+  gap: var(--sp);
+  padding: calc(var(--sp) * 2) calc(var(--sp) * 3);
+}
