@@ -11,8 +11,9 @@ from starlette.applications import Starlette
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+from . import login, tools
 from .api import Api
-from .oauth import Provider, Store
+from .oauth import LOGIN_PATH, Provider, Store
 from .settings import Settings, from_env
 
 
@@ -36,6 +37,10 @@ def build(settings: Settings, api: Api, provider: Provider) -> MCPServer:
         up = await api.health()
         return JSONResponse({"status": "ok" if up else "api down"}, status_code=200 if up else 503)
 
+    show, submit = login.routes(settings, api, provider)
+    server.custom_route(LOGIN_PATH, methods=["GET"], include_in_schema=False)(show)
+    server.custom_route(LOGIN_PATH, methods=["POST"], include_in_schema=False)(submit)
+    tools.register(server, tools.Caller(api, provider))
     return server
 
 
@@ -53,7 +58,7 @@ def create_app(settings: Settings | None = None, api: Api | None = None) -> Star
             allowed_origins=[f"{public.scheme}://{public.netloc}"],
         ),
     )
-    app.state.provider = provider
+    app.state.provider, app.state.server = provider, server
     return app
 
 
