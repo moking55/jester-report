@@ -85,3 +85,20 @@ describe("issue form tags", () => {
     expect(sent?.tags).toEqual([]);
   });
 });
+
+describe("the developer's curl", () => {
+  it("leaves tags out while they are the template's, so an integrator gets the template's tags at each call", () => {
+    const onBody = vi.fn();
+    render(<IssueForm templateId="quote" source={source} onPdf={onPdf} onBody={onBody} />);
+    expect(JSON.parse(onBody.mock.calls.at(-1)?.[0]).tags).toBeUndefined();
+  });
+
+  it("carries the tags once they were changed", () => {
+    const onBody = vi.fn();
+    render(<IssueForm templateId="quote" source={source} onPdf={onPdf} onBody={onBody} />);
+    fireEvent.click(screen.getByRole("button", { name: "ลบ tag vip" }));
+    expect(JSON.parse(onBody.mock.calls.at(-1)?.[0]).tags).toEqual(["ไตรมาส 4"]);
+    fireEvent.click(screen.getByRole("button", { name: "ลบ tag ไตรมาส 4" }));
+    expect(JSON.parse(onBody.mock.calls.at(-1)?.[0]).tags).toEqual([]);
+  });
+});

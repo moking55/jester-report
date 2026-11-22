@@ -91,6 +91,10 @@ export function addTag(current: string[], typed: string): { ok: true; tags: stri
   return { ok: true, tags: [...current, one.tag] };
 }
 
+/** The same tags in the same order? */
+export const sameTags = (a: readonly string[], b: readonly string[]): boolean =>
+  a.length === b.length && a.every((t, i) => t === b[i]);
+
 /** Does the item carry every tag in `wanted` (exact match, like the api)? */
 export const hasAllTags = (tags: readonly string[], wanted: readonly string[]): boolean =>
   wanted.every((t) => tags.includes(t));

@@ -61,7 +61,7 @@ E2E:        rc stack บนเครื่องทดสอบ + npx playwright
 
 ## Testing
 
-- pytest: กติกา tag (ปกติ/ซ้ำ/ยาวเกิน/เกิน 10/ไทย), สี (ชื่อผิด → 422, gray ลบแถว, `/v1/tags` นับถูก), migration รายการเดิมว่าง, กรองหลาย tag (AND), PUT แทนทั้งชุด, สำเนาตอน render (แก้รายงานทีหลังไม่เปลี่ยนเอกสาร), duplicate/export/import, zip เก่านำเข้าได้, API key แก้ tag เอกสารไม่ได้ (403)
+- pytest: กติกา tag (ปกติ/ซ้ำ/ยาวเกิน/เกิน 10/ไทย), สี (ชื่อผิด → 422, gray ลบแถว, `/v1/tags` นับถูก), migration รายการเดิมว่าง, กรองหลาย tag (AND), PUT แทนทั้งชุด, สำเนาตอน render (แก้รายงานทีหลังไม่เปลี่ยนเอกสาร), duplicate/export/import, zip เก่านำเข้าได้, API key แก้ tag เอกสารไม่ได้ (401 เหมือนทุก route ของ session)
 - vitest: ตัวช่วย normalize tag ฝั่ง Studio ตรงกับ API, ชิป/dialog, สีทุกสีอ่านออก (contrast ≥ 4.5:1) บนทุก theme ที่มากับระบบ
 - E2E: ติด tag รายงาน → กรองใน catalog → ออกเอกสาร (ได้ tag สำเนา) → แก้ tag เอกสาร → กรองหน้าเอกสาร; export→import แล้ว tag ยังอยู่
 

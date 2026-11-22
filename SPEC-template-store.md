@@ -420,3 +420,5 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 - `set_tags` ไม่เปลี่ยน draft revision/สถานะ/`updated_at`; archive แล้วแก้ได้; กรองหลาย tag (AND); duplicate พา tag; export→import คง tag; zip เก่าไม่มี tag นำเข้าได้
 
 ---
+
+- นำเข้า zip **ทับ** รายงานที่มีอยู่: tag ของรายงานนั้นอยู่เหมือนเดิม (tag ไม่ใช่ส่วนของ draft); `manifest.tags` ใช้เฉพาะตอนนำเข้าเป็นรายงานใหม่

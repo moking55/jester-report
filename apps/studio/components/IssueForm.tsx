@@ -21,7 +21,7 @@ import {
   type Value,
 } from "@/lib/form";
 import { problemMessage } from "@/lib/messages";
-import { withPending } from "@/lib/tags";
+import { sameTags, withPending } from "@/lib/tags";
 import type { IssueSource } from "@/lib/workspace";
 
 import { TagField } from "./TagField";
@@ -87,8 +87,10 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
   const [kept, setKept] = useState(false); // v1.5: every issued PDF is stored
 
   useEffect(() => {
-    onBody?.(renderBody(templateId, spec, values, filename, tags));
-  }, [onBody, templateId, spec, values, filename, tags]);
+    // the developer's curl leaves `tags` out unless they were changed: an integrator copying it should get the
+    // template's tags at the time of each call, not today's tags for ever
+    onBody?.(renderBody(templateId, spec, values, filename, sameTags(tags, source.tags ?? []) ? undefined : tags));
+  }, [onBody, templateId, spec, values, filename, tags, source.tags]);
 
   const setParam = (key: string, v: Value) => setValues((s) => ({ ...s, params: { ...s.params, [key]: v } }));
   const setData = (path: (string | number)[], v: Value) => setValues((s) => ({ ...s, data: setAt(s.data, path, v) }));

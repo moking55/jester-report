@@ -1153,3 +1153,6 @@ rowspan · เลือกหลายเซลล์พร้อมกัน (�
 3. E2E เดิม 14 ตัว + `tags.spec.ts` ผ่าน
 
 ---
+
+- เมนู ⋯ ในหน้า workspace ของรายงานมี "แก้ tag…" เหมือนใน catalog; ช่อง tag ของฟอร์มออกเอกสารส่ง `tags` ตามที่เห็นเสมอ แต่ curl ใน Developer dialog ใส่ `tags` เฉพาะเมื่อผู้ใช้แก้จาก tag ของรายงาน (ผู้ผสานระบบที่คัดลอก curl จะได้ tag ของรายงาน ณ ตอนเรียกแต่ละครั้ง ไม่ถูกตรึงเป็น tag วันนี้)
+- dialog ทุกตัวที่ใช้ `RenderDialog.module.css` ตั้ง `white-space: normal; text-align: start` เอง เพราะ `<dialog>` สืบทอดค่าจากตำแหน่งใน DOM (เซลล์ตารางที่ nowrap ทำให้ dialog ล้น)

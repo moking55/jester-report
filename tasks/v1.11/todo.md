@@ -24,7 +24,7 @@
   - Files: `template_store/store.py`, `template_store/bundle.py`, `tests/template_store/test_tags.py`, `tests/template_store/test_bundle.py`
 
 - [x] **T3 route และ OpenAPI ของ tag รายงาน** (M)
-  - Acceptance: `GET /v1/templates` (+ `{id}`) ตอบ `tags`; `?tag=` ซ้ำได้; `PUT /v1/templates/{id}/tags` (Studio session; tag ผิด → 422 บอก tag ไหน; API key → 403); `public-api.yaml` ตรงกับ route
+  - Acceptance: `GET /v1/templates` (+ `{id}`) ตอบ `tags`; `?tag=` ซ้ำได้; `PUT /v1/templates/{id}/tags` (Studio session; tag ผิด → 422 บอก tag ไหน; API key → 401 (route ของ session ตอบ 401 กับ API key ทุก route)); `public-api.yaml` ตรงกับ route
   - Verify: `pytest tests/public_api/test_templates.py tests/public_api/test_contract.py`
   - Files: `public_api/routes/templates.py`, `public_api/views.py`, `openapi/public-api.yaml`, `tests/public_api/test_templates.py`
 
@@ -34,7 +34,7 @@
   - Files: `render_service/service.py`, `render_service/runs.py`, `tests/render_service/test_tags.py`, `tests/render_service/test_runs.py`
 
 - [x] **T5 route และ OpenAPI ของ tag เอกสาร** (M)
-  - Acceptance: `POST /v1/render` รับ `tags?` (API key ได้); `GET /v1/documents` ตอบ `tags`, กรอง `?tag=`; `PUT /v1/documents/{runId}/tags` (Studio session เท่านั้น, API key 403, runId ไม่มี 404); `public-api.yaml` ตรง
+  - Acceptance: `POST /v1/render` รับ `tags?` (API key ได้); `GET /v1/documents` ตอบ `tags`, กรอง `?tag=`; `PUT /v1/documents/{runId}/tags` (Studio session เท่านั้น, API key 401, runId ไม่มี 404); `public-api.yaml` ตรง
   - Verify: `pytest tests/public_api/test_render_runs.py tests/public_api/test_contract.py`
   - Files: `public_api/routes/render.py`, `public_api/routes/documents.py`, `public_api/views.py`, `openapi/public-api.yaml`, `tests/public_api/test_render_runs.py`
 

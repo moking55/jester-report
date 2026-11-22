@@ -9,6 +9,7 @@ import {
   hasAllTags,
   normalizeTag,
   normalizeTags,
+  sameTags,
   TAG_COLORS,
   tagsFromQuery,
   withPending,
@@ -95,5 +96,14 @@ describe("withPending", () => {
     expect(withPending(["a"], " b ")).toEqual({ ok: true, tags: ["a", "b"] });
     expect(withPending(["a"], "   ")).toEqual({ ok: true, tags: ["a"] });
     expect(withPending(["a"], "x,y").ok).toBe(false);
+  });
+});
+
+describe("sameTags", () => {
+  it("needs the same tags in the same order", () => {
+    expect(sameTags(["a", "b"], ["a", "b"])).toBe(true);
+    expect(sameTags(["a", "b"], ["b", "a"])).toBe(false);
+    expect(sameTags(["a"], ["a", "b"])).toBe(false);
+    expect(sameTags([], [])).toBe(true);
   });
 });
