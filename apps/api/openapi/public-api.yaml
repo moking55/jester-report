@@ -1,13 +1,16 @@
 openapi: 3.1.0
 info:
   title: Jester Report Server API
-  version: 0.1.0-draft
+  version: 1.12.0
   description: |
-    DRAFT contract for module `public-api` (CAPABILITY_MAP.md). Not implemented.
-    Written so `studio` (Next.js) can build against a mock while the backend is built.
+    The contract of the Jester api. The api itself serves it at `GET /v1/openapi.yaml`, and Studio's
+    types and these docs are generated from it.
 
     Two callers:
-    - **External systems** call `POST /v1/render` with an API key.
+    - **External systems** call `POST /v1/render` with an API key (Studio › Settings › API keys),
+      sent as `Authorization: Bearer jrk_…`. The answer is the PDF; the `Jester-Run-Id` header names
+      the run, so the document can be found in Studio's history. The issue page's
+      "สำหรับนักพัฒนา" button builds a ready request (curl, JavaScript, Python) for each report.
     - **Studio** (Next.js server, never the browser) calls everything else with the
       user's session token, server-to-server.
 
@@ -18,8 +21,10 @@ info:
     - Template ids are slugs chosen by the author; versions are integers starting at 1.
     - v1 render is synchronous only; no job queue, no stored PDFs, no Idempotency-Key.
 servers:
-  - url: http://localhost:8000
-    description: Local development (FastAPI)
+  - url: '{JESTER_API}'
+    description: Your Jester api (JESTER_API in the examples)
+    variables:
+      JESTER_API: { default: 'http://localhost:8000' }
 
 tags:
   - name: render
@@ -89,6 +94,14 @@ paths:
           description: '`TEMPLATE_NOT_ALLOWED`: this API key may not render this template (same answer whether it exists or not)'
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/template-not-allowed
+                title: Template not allowed
+                status: 403
+                code: TEMPLATE_NOT_ALLOWED
+                detail: this API key cannot render this template
+                retryable: false
+                runId: 019aa61f3c207d3e8a91c0
               schema: { $ref: '#/components/schemas/Problem' }
         '404': { $ref: '#/components/responses/NotFound' }
         '410': { $ref: '#/components/responses/TemplateGone' }
@@ -102,6 +115,13 @@ paths:
               schema: { type: integer, minimum: 1, maximum: 60 }
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/rate-limited
+                title: Rate limited
+                status: 429
+                code: RATE_LIMITED
+                detail: too many renders for this API key; retry later
+                retryable: true
               schema: { $ref: '#/components/schemas/Problem' }
         '502': { $ref: '#/components/responses/RenderFailed' }
         '503': { $ref: '#/components/responses/ServiceUnavailable' }
@@ -111,6 +131,7 @@ paths:
     get:
       tags: [setup]
       operationId: getSetupStatus
+      description: Public. `true` until the first user exists; Studio sends people to the setup page while it is.
       summary: Whether first-run setup is still required
       security: []
       responses:
@@ -118,6 +139,8 @@ paths:
           description: Setup status
           content:
             application/json:
+              example:
+                setupRequired: false
               schema:
                 type: object
                 required: [setupRequired]
@@ -135,6 +158,10 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              setupToken: Qm9vdHN0cmFwVG9rZW4tMDEyMzQ1
+              username: somchai
+              password: correct-horse-battery
             schema:
               type: object
               required: [setupToken, username, password]
@@ -148,16 +175,38 @@ paths:
           description: First user created; returns a session
           content:
             application/json:
+              example:
+                token: jrs_q8Lk2vXc9TzR4mWb7nYp3sFh6dJg1aEu
+                expiresAt: '2026-11-27T09:15:00Z'
+                user:
+                  id: 3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01
+                  username: somchai
+                  createdAt: '2026-11-01T08:00:00Z'
+                  lastLoginAt: '2026-11-20T09:15:00Z'
               schema: { $ref: '#/components/schemas/Session' }
         '403':
           description: Wrong or used setup token
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/setup-token-invalid
+                title: Setup token invalid
+                status: 403
+                code: SETUP_TOKEN_INVALID
+                detail: wrong or used setup token
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '409':
           description: Setup already completed
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/setup-completed
+                title: Setup completed
+                status: 409
+                code: SETUP_COMPLETED
+                detail: setup is already completed
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
@@ -165,11 +214,16 @@ paths:
     post:
       tags: [auth]
       operationId: login
+      summary: Sign in with username and password
+      description: Returns a session token for Studio's server. Failed attempts are limited per (username, client IP); after too many the answer is 429 for a while.
       security: []
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              username: somchai
+              password: correct-horse-battery
             schema:
               type: object
               required: [username, password]
@@ -182,18 +236,35 @@ paths:
           description: Session created
           content:
             application/json:
+              example:
+                token: jrs_q8Lk2vXc9TzR4mWb7nYp3sFh6dJg1aEu
+                expiresAt: '2026-11-27T09:15:00Z'
+                user:
+                  id: 3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01
+                  username: somchai
+                  createdAt: '2026-11-01T08:00:00Z'
+                  lastLoginAt: '2026-11-20T09:15:00Z'
               schema: { $ref: '#/components/schemas/Session' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '429':
           description: Too many failed attempts
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/rate-limited
+                title: Rate limited
+                status: 429
+                code: RATE_LIMITED
+                detail: too many failed attempts; try again later
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/auth/logout:
     post:
       tags: [auth]
       operationId: logout
+      summary: Sign out
+      description: Revokes the session token used for this request. Other sessions of the same user stay valid.
       responses:
         '204': { description: Session revoked }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -202,11 +273,18 @@ paths:
     get:
       tags: [auth]
       operationId: getCurrentUser
+      summary: The signed-in user
+      description: The user the session token belongs to.
       responses:
         '200':
           description: Current user
           content:
             application/json:
+              example:
+                id: 3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01
+                username: somchai
+                createdAt: '2026-11-01T08:00:00Z'
+                lastLoginAt: '2026-11-20T09:15:00Z'
               schema: { $ref: '#/components/schemas/User' }
         '401': { $ref: '#/components/responses/Unauthorized' }
 
@@ -224,6 +302,9 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              currentPassword: correct-horse-battery
+              newPassword: a-longer-better-passphrase
             schema:
               type: object
               required: [currentPassword, newPassword]
@@ -239,17 +320,31 @@ paths:
           description: Too many failed attempts
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/rate-limited
+                title: Rate limited
+                status: 429
+                code: RATE_LIMITED
+                detail: too many failed attempts; try again later
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/users:
     get:
       tags: [users]
       operationId: listUsers
+      summary: List users
+      description: Every user. All users have the same rights (single tenant).
       responses:
         '200':
           description: Users
           content:
             application/json:
+              example:
+              - id: 3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01
+                username: somchai
+                createdAt: '2026-11-01T08:00:00Z'
+                lastLoginAt: '2026-11-20T09:15:00Z'
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/User' }
@@ -257,10 +352,15 @@ paths:
     post:
       tags: [users]
       operationId: createUser
+      summary: Create a user
+      description: The new user signs in with this password and can change it with `changePassword`.
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              username: malee
+              password: first-password-1234
             schema:
               type: object
               required: [username, password]
@@ -273,12 +373,24 @@ paths:
           description: Created
           content:
             application/json:
+              example:
+                id: 8a7b6c5d-4e3f-4a1b-9c8d-7e6f5a4b3c2d
+                username: malee
+                createdAt: '2026-11-01T08:00:00Z'
+                lastLoginAt: null
               schema: { $ref: '#/components/schemas/User' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
           description: Username taken
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: username is taken
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
@@ -288,6 +400,7 @@ paths:
     delete:
       tags: [users]
       operationId: deleteUser
+      summary: Delete a user
       description: The last remaining user cannot be deleted.
       responses:
         '204': { description: Deleted; that user's sessions are revoked }
@@ -297,6 +410,13 @@ paths:
           description: Would delete the last user
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: the last user cannot be deleted
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/users/{userId}/password:
@@ -313,6 +433,8 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              newPassword: reset-by-admin-5678
             schema:
               type: object
               required: [newPassword]
@@ -329,11 +451,24 @@ paths:
     get:
       tags: [api-keys]
       operationId: listApiKeys
+      summary: List API keys
+      description: Every key with its limits and last use. The secret is never returned again after `createApiKey`.
       responses:
         '200':
           description: API keys (never includes the secret)
           content:
             application/json:
+              example:
+              - id: b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f
+                name: ERP production
+                prefix: jrk_5Zq9
+                createdAt: '2026-11-20T09:15:00Z'
+                createdBy: somchai
+                lastUsedAt: null
+                expiresAt: '2027-11-20T00:00:00Z'
+                templates:
+                - quotation
+                rateLimitPerMinute: 60
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/ApiKey' }
@@ -341,10 +476,18 @@ paths:
     post:
       tags: [api-keys]
       operationId: createApiKey
+      summary: Create an API key for another system
+      description: 'The key renders through `POST /v1/render` only. It can be limited to some templates, a number of renders per minute and an expiry time. Keep the `secret`: it is shown once.'
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              name: ERP production
+              expiresAt: '2027-11-20T00:00:00Z'
+              templates:
+              - quotation
+              rateLimitPerMinute: 60
             schema:
               type: object
               required: [name]
@@ -371,6 +514,18 @@ paths:
           description: Created. `secret` is shown only in this response; only its hash is stored.
           content:
             application/json:
+              example:
+                id: b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f
+                name: ERP production
+                prefix: jrk_5Zq9
+                createdAt: '2026-11-20T09:15:00Z'
+                createdBy: somchai
+                lastUsedAt: null
+                expiresAt: '2027-11-20T00:00:00Z'
+                templates:
+                - quotation
+                rateLimitPerMinute: 60
+                secret: jrk_5Zq9Wm3xT8vB2nK7cR4yH6pL1dF0gJsA
               schema:
                 allOf:
                   - $ref: '#/components/schemas/ApiKey'
@@ -387,6 +542,8 @@ paths:
     delete:
       tags: [api-keys]
       operationId: revokeApiKey
+      summary: Revoke an API key
+      description: Takes effect immediately; documents already issued with the key stay.
       responses:
         '204': { description: Revoked; later requests with it get 401 }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -396,6 +553,7 @@ paths:
     get:
       tags: [templates]
       operationId: listTemplates
+      description: Active templates by default, with publish state, the last run and tags. `tag` filters by tags (every one given must match).
       summary: Catalog for the Studio report list
       parameters:
         - name: includeArchived
@@ -409,6 +567,28 @@ paths:
           description: Templates
           content:
             application/json:
+              example:
+              - id: quotation
+                name: ใบเสนอราคา
+                publishedVersion: 3
+                latestVersion: 3
+                draftRevision: 14
+                draftChangedSincePublish: false
+                page:
+                  size: A4
+                  orientation: portrait
+                  layout: flow
+                lastRun:
+                  id: 019aa61f3c207d3e8a91c0
+                  status: succeeded
+                  errorCode: null
+                  pages: 2
+                  createdAt: '2026-11-20T09:15:00Z'
+                updatedAt: '2026-11-20T09:15:00Z'
+                archivedAt: null
+                archivedBy: null
+                tags:
+                - ขาย
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/TemplateSummary' }
@@ -416,11 +596,19 @@ paths:
     post:
       tags: [templates]
       operationId: createTemplate
+      description: The id is a permanent slug used in `/v1/render`. `starter` fills the draft with a working example; `page` sets the sheet of the blank starter.
       summary: Create a template with an empty or starter draft
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              id: quotation-2027
+              name: ใบเสนอราคา 2027
+              starter: blank
+              page:
+                size: A4
+                orientation: portrait
             schema:
               type: object
               required: [id, name]
@@ -439,12 +627,36 @@ paths:
           description: Created
           content:
             application/json:
+              example:
+                id: quotation-2027
+                name: ใบเสนอราคา 2027
+                publishedVersion: null
+                latestVersion: null
+                draftRevision: 1
+                draftChangedSincePublish: true
+                page:
+                  size: A4
+                  orientation: portrait
+                  layout: flow
+                lastRun: null
+                updatedAt: '2026-11-20T09:15:00Z'
+                archivedAt: null
+                archivedBy: null
+                tags:
+                - ขาย
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
           description: Template id taken
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: a template with this id already exists
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
@@ -454,21 +666,49 @@ paths:
     get:
       tags: [templates]
       operationId: getTemplate
+      summary: One template
+      description: The same summary as in `listTemplates`.
       responses:
         '200':
           description: Template
           content:
             application/json:
+              example:
+                id: quotation
+                name: ใบเสนอราคา
+                publishedVersion: 3
+                latestVersion: 3
+                draftRevision: 14
+                draftChangedSincePublish: false
+                page:
+                  size: A4
+                  orientation: portrait
+                  layout: flow
+                lastRun:
+                  id: 019aa61f3c207d3e8a91c0
+                  status: succeeded
+                  errorCode: null
+                  pages: 2
+                  createdAt: '2026-11-20T09:15:00Z'
+                updatedAt: '2026-11-20T09:15:00Z'
+                archivedAt: null
+                archivedBy: null
+                tags:
+                - ขาย
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [templates]
       operationId: renameTemplate
+      summary: Rename a template
+      description: Only the display name changes; the id used in `/v1/render` stays.
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              name: ใบเสนอราคา (ใหม่)
             schema:
               type: object
               required: [name]
@@ -480,6 +720,28 @@ paths:
           description: Updated
           content:
             application/json:
+              example:
+                id: quotation
+                name: ใบเสนอราคา (ใหม่)
+                publishedVersion: 3
+                latestVersion: 3
+                draftRevision: 14
+                draftChangedSincePublish: false
+                page:
+                  size: A4
+                  orientation: portrait
+                  layout: flow
+                lastRun:
+                  id: 019aa61f3c207d3e8a91c0
+                  status: succeeded
+                  errorCode: null
+                  pages: 2
+                  createdAt: '2026-11-20T09:15:00Z'
+                updatedAt: '2026-11-20T09:15:00Z'
+                archivedAt: null
+                archivedBy: null
+                tags:
+                - ขาย
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/TemplateArchived' }
@@ -517,11 +779,56 @@ paths:
           description: The existing draft was replaced
           content:
             application/json:
+              example:
+                template:
+                  id: quotation
+                  name: ใบเสนอราคา
+                  publishedVersion: 3
+                  latestVersion: 3
+                  draftRevision: 14
+                  draftChangedSincePublish: false
+                  page:
+                    size: A4
+                    orientation: portrait
+                    layout: flow
+                  lastRun:
+                    id: 019aa61f3c207d3e8a91c0
+                    status: succeeded
+                    errorCode: null
+                    pages: 2
+                    createdAt: '2026-11-20T09:15:00Z'
+                  updatedAt: '2026-11-20T09:15:00Z'
+                  archivedAt: null
+                  archivedBy: null
+                  tags:
+                  - ขาย
+                revision: 15
+                created: false
               schema: { $ref: '#/components/schemas/ImportResult' }
         '201':
           description: A new template was created
           content:
             application/json:
+              example:
+                template:
+                  id: quotation-2027
+                  name: ใบเสนอราคา 2027
+                  publishedVersion: null
+                  latestVersion: null
+                  draftRevision: 1
+                  draftChangedSincePublish: true
+                  page:
+                    size: A4
+                    orientation: portrait
+                    layout: flow
+                  lastRun: null
+                  updatedAt: '2026-11-20T09:15:00Z'
+                  archivedAt: null
+                  archivedBy: null
+                  tags:
+                  - ขาย
+                revision: 1
+                created: true
               schema: { $ref: '#/components/schemas/ImportResult' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -529,6 +836,13 @@ paths:
           description: '`CONFLICT` (exists and no If-Match, or report.json/template.html missing) or `TEMPLATE_ARCHIVED`'
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: the zip has no report.json
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
         '413': { $ref: '#/components/responses/PayloadTooLarge' }
@@ -536,6 +850,13 @@ paths:
           description: An asset's bytes do not match its extension
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/unsupported-media-type
+                title: Unsupported media type
+                status: 415
+                code: UNSUPPORTED_MEDIA_TYPE
+                detail: logo.png is not a PNG image
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
@@ -545,6 +866,7 @@ paths:
     get:
       tags: [templates]
       operationId: exportTemplate
+      description: A flat zip with a `jester.json` manifest that `importTemplate` reads back. Use it for backups or to move a report to another Jester.
       summary: Download the draft or one version as a zip
       parameters:
         - name: version
@@ -578,6 +900,10 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              id: quotation-2027
+              name: ใบเสนอราคา 2027
+              version: 3
             schema:
               type: object
               required: [id, name]
@@ -596,6 +922,23 @@ paths:
           description: Created
           content:
             application/json:
+              example:
+                id: quotation-2027
+                name: ใบเสนอราคา 2027
+                publishedVersion: null
+                latestVersion: null
+                draftRevision: 1
+                draftChangedSincePublish: true
+                page:
+                  size: A4
+                  orientation: portrait
+                  layout: flow
+                lastRun: null
+                updatedAt: '2026-11-20T09:15:00Z'
+                archivedAt: null
+                archivedBy: null
+                tags:
+                - ขาย
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -603,6 +946,13 @@ paths:
           description: Template id taken
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: a template with this id already exists
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
@@ -621,6 +971,8 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              archived: true
             schema:
               type: object
               required: [archived]
@@ -632,6 +984,28 @@ paths:
           description: Template after the change
           content:
             application/json:
+              example:
+                id: quotation
+                name: ใบเสนอราคา
+                publishedVersion: 3
+                latestVersion: 3
+                draftRevision: 14
+                draftChangedSincePublish: false
+                page:
+                  size: A4
+                  orientation: portrait
+                  layout: flow
+                lastRun:
+                  id: 019aa61f3c207d3e8a91c0
+                  status: succeeded
+                  errorCode: null
+                  pages: 2
+                  createdAt: '2026-11-20T09:15:00Z'
+                updatedAt: '2026-11-20T09:15:00Z'
+                archivedAt: '2026-11-20T09:15:00Z'
+                archivedBy: somchai
+                tags:
+                - ขาย
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -653,12 +1027,20 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              tags:
+              - ขาย
+              - ' ไตรมาส  4 '
             schema: { $ref: '#/components/schemas/TagList' }
       responses:
         '200':
           description: The tags after normalising
           content:
             application/json:
+              example:
+                tags:
+                - ขาย
+                - ไตรมาส 4
               schema: { $ref: '#/components/schemas/TagList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -670,12 +1052,33 @@ paths:
     get:
       tags: [draft]
       operationId: getDraft
+      description: Text files come with their content; assets with their metadata only (read the bytes with `getDraftAsset`). `revision` is what `If-Match` needs when changing the draft.
       summary: Draft file list with text contents and asset metadata
       responses:
         '200':
           description: Draft
           content:
             application/json:
+              example:
+                templateId: quotation
+                revision: 14
+                basedOnVersion: 3
+                files:
+                - name: report.json
+                  content: "{\n  \"reportVersion\": 1,\n  \"name\": \"ใบเสนอราคา\",\n  \"parameters\": {\"quoteId\": {\"type\": \"string\", \"required\": true}}\n}\n"
+                  sha256: 7689c5c76d1bf5f5e99aa708f9fcc3070912a7cd948afc9d2db4260587e45e00
+                - name: template.html
+                  content: '<h1>ใบเสนอราคา {{ params.quoteId }}</h1>
+              
+                    '
+                  sha256: 6ca7dfbf65170876547eee1c43a8e48241320fdba6ca19a6a26b9041b0755a97
+                assets:
+                - name: logo.png
+                  contentType: image/png
+                  size: 18234
+                  sha256: ab211233b6576dbb0f8b5826447eeac61e2a833a99ac5d788fbc1a174c3c6ce5
+                updatedAt: '2026-11-20T09:15:00Z'
+                updatedBy: somchai
               schema: { $ref: '#/components/schemas/Draft' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -706,6 +1109,8 @@ paths:
           description: Saved
           content:
             application/json:
+              example:
+                revision: 15
               schema: { $ref: '#/components/schemas/DraftRevision' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/TemplateArchived' }
@@ -716,6 +1121,7 @@ paths:
     delete:
       tags: [draft]
       operationId: deleteDraftFile
+      summary: Delete a text file from the draft
       description: '`report.json` and `template.html` cannot be deleted.'
       parameters:
         - $ref: '#/components/parameters/IfMatchRevision'
@@ -724,6 +1130,8 @@ paths:
           description: Deleted
           content:
             application/json:
+              example:
+                revision: 16
               schema: { $ref: '#/components/schemas/DraftRevision' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -731,6 +1139,13 @@ paths:
           description: Required file, or the template is archived (`TEMPLATE_ARCHIVED`)
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: report.json cannot be deleted
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
         '428': { $ref: '#/components/responses/RevisionRequired' }
@@ -766,6 +1181,13 @@ paths:
           description: Stored (content-addressed by sha256; uploading the same bytes is a no-op)
           content:
             application/json:
+              example:
+                asset:
+                  name: logo.png
+                  contentType: image/png
+                  size: 18234
+                  sha256: ab211233b6576dbb0f8b5826447eeac61e2a833a99ac5d788fbc1a174c3c6ce5
+                revision: 15
               schema:
                 type: object
                 required: [asset, revision]
@@ -778,6 +1200,13 @@ paths:
           description: An asset with this name already exists in the draft, or the template is archived (`TEMPLATE_ARCHIVED`)
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: an asset with this name already exists in the draft
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '412': { $ref: '#/components/responses/RevisionConflict' }
         '428': { $ref: '#/components/responses/RevisionRequired' }
@@ -786,6 +1215,13 @@ paths:
           description: File type not allowed
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/unsupported-media-type
+                title: Unsupported media type
+                status: 415
+                code: UNSUPPORTED_MEDIA_TYPE
+                detail: only images and TTF/OTF fonts can be uploaded
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/templates/{templateId}/draft/assets/{assetName}:
@@ -817,6 +1253,7 @@ paths:
     delete:
       tags: [draft]
       operationId: deleteDraftAsset
+      summary: Detach an asset from the draft
       description: Detaches the asset from the draft. Bytes stay in storage while any published version uses them.
       parameters:
         - $ref: '#/components/parameters/IfMatchRevision'
@@ -825,6 +1262,8 @@ paths:
           description: Detached
           content:
             application/json:
+              example:
+                revision: 16
               schema: { $ref: '#/components/schemas/DraftRevision' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/TemplateArchived' }
@@ -838,12 +1277,27 @@ paths:
     post:
       tags: [draft]
       operationId: validateDraft
+      description: Checks report.json, the data schema, expressions, the template, fonts and the sample data. Errors stop a publish; warnings do not.
       summary: Validate the draft definition, template and sample data without rendering
       responses:
         '200':
           description: Validation result (empty `problems` means valid)
           content:
             application/json:
+              example:
+                valid: false
+                revision: 14
+                problems:
+                - severity: error
+                  code: EXPRESSION_INVALID
+                  message: unknown function 'sumx'
+                  file: report.json
+                  line: 12
+                  column: 18
+                - severity: warning
+                  code: FONT_MISSING
+                  message: 'footer.html uses a font that is not installed: Kanit'
+                  file: footer.html
               schema: { $ref: '#/components/schemas/ValidationResult' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '410': { $ref: '#/components/responses/TemplateGone' }
@@ -863,6 +1317,12 @@ paths:
         required: false
         content:
           application/json:
+            example:
+              params:
+                quoteId: Q-DEMO-001
+                locale: th-TH
+                docDate: '2026-11-12'
+              sampleFile: sample.json
             schema:
               type: object
               additionalProperties: false
@@ -901,6 +1361,18 @@ paths:
         required: false
         content:
           application/json:
+            example:
+              params:
+                quoteId: Q-DEMO-001
+                locale: th-TH
+                docDate: '2026-11-12'
+              data:
+                customer:
+                  name: บริษัท ลูกค้า จำกัด
+                items:
+                - id: QL01
+                  qty: 2
+                  unitPrice: '1250.50'
             schema:
               type: object
               additionalProperties: false
@@ -913,6 +1385,31 @@ paths:
           description: The prepared view model
           content:
             application/json:
+              example:
+                params:
+                  quoteId: Q-DEMO-001
+                  locale: th-TH
+                  docDate: '2026-11-12'
+                data:
+                  customer:
+                    name: บริษัท ลูกค้า จำกัด
+                  items:
+                  - id: QL01
+                    qty: 2
+                    unitPrice: '1250.50'
+                lists:
+                  items:
+                    rows:
+                    - id: QL01
+                      qty: 2
+                      unitPrice: '1250.50'
+                      amount: '2501.00'
+                    groups: []
+                totals:
+                  subtotal: '2501.00'
+                  vat: '175.07'
+                  grandTotal: '2676.07'
+                problems: []
               schema: { $ref: '#/components/schemas/PreparedData' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '410': { $ref: '#/components/responses/TemplateGone' }
@@ -928,11 +1425,28 @@ paths:
     get:
       tags: [versions]
       operationId: listVersions
+      summary: List published versions
+      description: Every frozen version, newest first; `isPublished` marks the one `"published"` renders.
       responses:
         '200':
           description: Published versions, newest first
           content:
             application/json:
+              example:
+              - templateId: quotation
+                version: 3
+                publishedAt: '2026-11-20T09:15:00Z'
+                publishedBy: somchai
+                note: เพิ่มช่องส่วนลด
+                sha256: 922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3
+                isPublished: true
+              - templateId: quotation
+                version: 2
+                publishedAt: '2026-11-20T09:15:00Z'
+                publishedBy: somchai
+                note: null
+                sha256: d39c3d992be9d0ade6c2431b49d3bae12a417cc8a067eddbe4c6a3ee8e9154f8
+                isPublished: false
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/Version' }
@@ -949,6 +1463,8 @@ paths:
         required: false
         content:
           application/json:
+            example:
+              note: เพิ่มช่องส่วนลด
             schema:
               type: object
               additionalProperties: false
@@ -959,6 +1475,14 @@ paths:
           description: Published
           content:
             application/json:
+              example:
+                templateId: quotation
+                version: 3
+                publishedAt: '2026-11-20T09:15:00Z'
+                publishedBy: somchai
+                note: เพิ่มช่องส่วนลด
+                sha256: 922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3
+                isPublished: true
               schema: { $ref: '#/components/schemas/Version' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/TemplateArchived' }
@@ -969,6 +1493,18 @@ paths:
           description: Draft does not validate
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/draft-invalid
+                title: Draft invalid
+                status: 422
+                code: DRAFT_INVALID
+                detail: the draft does not validate
+                retryable: false
+                problems:
+                - severity: error
+                  code: FILE_MISSING
+                  message: template.html is not in the draft
+                  file: template.html
               schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/templates/{templateId}/versions/{version}:
@@ -978,12 +1514,35 @@ paths:
     get:
       tags: [versions]
       operationId: getVersion
+      description: The exact files and assets a version renders with. Versions never change.
       summary: Read-only files of a published version
       responses:
         '200':
           description: Version with files
           content:
             application/json:
+              example:
+                templateId: quotation
+                version: 3
+                publishedAt: '2026-11-20T09:15:00Z'
+                publishedBy: somchai
+                note: เพิ่มช่องส่วนลด
+                sha256: 922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3
+                isPublished: true
+                files:
+                - name: report.json
+                  content: "{\n  \"reportVersion\": 1,\n  \"name\": \"ใบเสนอราคา\",\n  \"parameters\": {\"quoteId\": {\"type\": \"string\", \"required\": true}}\n}\n"
+                  sha256: 7689c5c76d1bf5f5e99aa708f9fcc3070912a7cd948afc9d2db4260587e45e00
+                - name: template.html
+                  content: '<h1>ใบเสนอราคา {{ params.quoteId }}</h1>
+              
+                    '
+                  sha256: 6ca7dfbf65170876547eee1c43a8e48241320fdba6ca19a6a26b9041b0755a97
+                assets:
+                - name: logo.png
+                  contentType: image/png
+                  size: 18234
+                  sha256: ab211233b6576dbb0f8b5826447eeac61e2a833a99ac5d788fbc1a174c3c6ce5
               schema:
                 allOf:
                   - $ref: '#/components/schemas/Version'
@@ -1001,11 +1560,14 @@ paths:
     put:
       tags: [versions]
       operationId: setPublishedVersion
+      description: 'Renders with `version: "published"` use the new version from the next request. No files change.'
       summary: Roll back or forward by moving the published alias to an existing version
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              version: 2
             schema:
               type: object
               required: [version]
@@ -1017,6 +1579,28 @@ paths:
           description: Alias moved
           content:
             application/json:
+              example:
+                id: quotation
+                name: ใบเสนอราคา
+                publishedVersion: 2
+                latestVersion: 3
+                draftRevision: 14
+                draftChangedSincePublish: true
+                page:
+                  size: A4
+                  orientation: portrait
+                  layout: flow
+                lastRun:
+                  id: 019aa61f3c207d3e8a91c0
+                  status: succeeded
+                  errorCode: null
+                  pages: 2
+                  createdAt: '2026-11-20T09:15:00Z'
+                updatedAt: '2026-11-20T09:15:00Z'
+                archivedAt: null
+                archivedBy: null
+                tags:
+                - ขาย
               schema: { $ref: '#/components/schemas/TemplateSummary' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/TemplateArchived' }
@@ -1028,6 +1612,7 @@ paths:
     post:
       tags: [draft]
       operationId: resetDraftFromVersion
+      description: The draft's files and assets become a copy of that version; the draft revision goes up. Versions are untouched.
       summary: Replace the draft with a copy of a published version
       parameters:
         - $ref: '#/components/parameters/IfMatchRevision'
@@ -1035,6 +1620,8 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              version: 2
             schema:
               type: object
               required: [version]
@@ -1046,6 +1633,8 @@ paths:
           description: Draft replaced
           content:
             application/json:
+              example:
+                revision: 15
               schema: { $ref: '#/components/schemas/DraftRevision' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409': { $ref: '#/components/responses/TemplateArchived' }
@@ -1057,6 +1646,7 @@ paths:
     get:
       tags: [runs]
       operationId: listRuns
+      description: Every render and preview, newest first, without params or data (only their hashes). Page with `next` as `before`.
       summary: Render history (metadata; `hasDocument` says whether the PDF can be downloaded again)
       parameters:
         - { name: templateId, in: query, schema: { $ref: '#/components/schemas/TemplateId' } }
@@ -1068,6 +1658,40 @@ paths:
           description: Runs, newest first
           content:
             application/json:
+              example:
+                items:
+                - id: 019aa61f3c207d3e8a91c0
+                  status: succeeded
+                  errorCode: null
+                  pages: 2
+                  createdAt: '2026-11-20T09:15:00Z'
+                  kind: render
+                  hasDocument: true
+                  templateId: quotation
+                  version: 3
+                  draftRevision: null
+                  caller:
+                    type: api-key
+                    id: b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f
+                    name: ERP production
+                  requestId: erp-7781
+                  durationMs: 840
+                  provenance:
+                    templateSha256: 922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3
+                    paramsSha256: a20b52fae57cc7a99c9651f1b573950fd211823e3ace3bb9c273c06430f24cd3
+                    dataSha256: 3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7
+                    engineVersion: 8.25.1
+                    engineImage: jester/gotenberg:9.4.1-th1
+                    fonts:
+                    - name: THSarabunNew.ttf
+                      sha256: 795ea3efa43d0872b63bf0067be97553b46983e4f075097669391e9d15388ecc
+                    options:
+                      paperWidth: '8.27'
+                      paperHeight: '11.7'
+                    outputSha256: c35b21d6ca39aa7cc3b79a705d989f1a6e88b99ab43988d74048799e3db926a3
+                    engineTrace: null
+                  problems: []
+                next: 019aa61e00000000000000
               schema:
                 type: object
                 required: [items]
@@ -1082,11 +1706,45 @@ paths:
     get:
       tags: [runs]
       operationId: getRun
+      summary: One run with provenance
+      description: What was rendered, by whom, how long it took and the hashes that prove which template, data and engine made the PDF.
       responses:
         '200':
           description: Run with provenance
           content:
             application/json:
+              example:
+                id: 019aa61f3c207d3e8a91c0
+                status: succeeded
+                errorCode: null
+                pages: 2
+                createdAt: '2026-11-20T09:15:00Z'
+                kind: render
+                hasDocument: true
+                templateId: quotation
+                version: 3
+                draftRevision: null
+                caller:
+                  type: api-key
+                  id: b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f
+                  name: ERP production
+                requestId: erp-7781
+                durationMs: 840
+                provenance:
+                  templateSha256: 922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3
+                  paramsSha256: a20b52fae57cc7a99c9651f1b573950fd211823e3ace3bb9c273c06430f24cd3
+                  dataSha256: 3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7
+                  engineVersion: 8.25.1
+                  engineImage: jester/gotenberg:9.4.1-th1
+                  fonts:
+                  - name: THSarabunNew.ttf
+                    sha256: 795ea3efa43d0872b63bf0067be97553b46983e4f075097669391e9d15388ecc
+                  options:
+                    paperWidth: '8.27'
+                    paperHeight: '11.7'
+                  outputSha256: c35b21d6ca39aa7cc3b79a705d989f1a6e88b99ab43988d74048799e3db926a3
+                  engineTrace: null
+                problems: []
               schema: { $ref: '#/components/schemas/Run' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1110,6 +1768,25 @@ paths:
           description: Documents, newest first
           content:
             application/json:
+              example:
+                items:
+                - runId: 019aa61f3c207d3e8a91c0
+                  createdAt: '2026-11-20T09:15:00Z'
+                  templateId: quotation
+                  version: 3
+                  caller:
+                    type: api-key
+                    id: b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f
+                    name: ERP production
+                  filename: Q-DEMO-001.pdf
+                  pages: 2
+                  params:
+                    quoteId: Q-DEMO-001
+                    locale: th-TH
+                    docDate: '2026-11-12'
+                  tags:
+                  - ขาย
+                next: null
               schema:
                 type: object
                 required: [items, next]
@@ -1133,12 +1810,20 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              tags:
+              - ขาย
+              - ส่งแล้ว
             schema: { $ref: '#/components/schemas/TagList' }
       responses:
         '200':
           description: The tags after normalising
           content:
             application/json:
+              example:
+                tags:
+                - ขาย
+                - ส่งแล้ว
               schema: { $ref: '#/components/schemas/TagList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1150,6 +1835,7 @@ paths:
     get:
       tags: [documents]
       operationId: getDocument
+      description: The stored PDF of a render of a published version, byte for byte; previews are not stored.
       summary: The exact PDF a render returned (Studio sessions only)
       responses:
         '200':
@@ -1180,17 +1866,26 @@ paths:
           description: Current policy (and preview count when asked)
           content:
             application/json:
+              example:
+                days: 365
+                setBy: somchai
+                setAt: '2026-11-20T09:15:00Z'
+                wouldDelete: 1280
+                wouldDeleteDocuments: 1105
               schema: { $ref: '#/components/schemas/RunRetention' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/InputInvalid' }
     put:
       tags: [runs]
       operationId: setRunRetention
+      description: Runs older than `days` (and their stored PDFs) are deleted from now on, in the background. `null` keeps everything.
       summary: Keep runs for N days (older ones are deleted from now on), or for ever with null
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              days: 365
             schema:
               type: object
               required: [days]
@@ -1202,6 +1897,12 @@ paths:
           description: Policy saved
           content:
             application/json:
+              example:
+                days: 365
+                setBy: somchai
+                setAt: '2026-11-20T09:15:00Z'
+                wouldDelete: null
+                wouldDeleteDocuments: null
               schema: { $ref: '#/components/schemas/RunRetention' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/InputInvalid' }
@@ -1210,34 +1911,114 @@ paths:
     get:
       tags: [themes]
       operationId: listThemes
+      description: Themes colour Studio only; they never change a PDF.
       summary: Every theme, the two built-in ones first
       responses:
         '200':
           description: Themes
           content:
             application/json:
+              example:
+              - id: mahasamut
+                name: มหาสมุทร
+                builtIn: true
+                tokens: &id001
+                  color.background: '#f5f7fa'
+                  color.surface: '#ffffff'
+                  color.surfaceAlt: '#eef2f7'
+                  color.border: '#d0d7e2'
+                  color.text: '#1d2733'
+                  color.textMuted: '#5b6b7f'
+                  color.primary: '#0b6bcb'
+                  color.onPrimary: '#ffffff'
+                  color.danger: '#c62828'
+                  color.warning: '#b26a00'
+                  color.success: '#2e7d32'
+                  font.family: Sarabun
+                  font.size: 14
+                  radius: 6
+                  shadow: soft
+                  density: comfortable
+                createdBy: null
+                updatedAt: null
+              - id: 6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f
+                name: สีองค์กร
+                builtIn: false
+                tokens: *id001
+                createdBy: somchai
+                updatedAt: '2026-11-20T09:15:00Z'
               schema: { type: array, items: { $ref: '#/components/schemas/Theme' } }
         '401': { $ref: '#/components/responses/Unauthorized' }
     post:
       tags: [themes]
       operationId: createTheme
+      description: A theme is a name plus the fixed set of tokens; every value is checked, raw CSS is never accepted. At most 50 themes.
       summary: Create a theme (also used by Studio's JSON import)
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              name: สีองค์กร
+              tokens:
+                color.background: '#f5f7fa'
+                color.surface: '#ffffff'
+                color.surfaceAlt: '#eef2f7'
+                color.border: '#d0d7e2'
+                color.text: '#1d2733'
+                color.textMuted: '#5b6b7f'
+                color.primary: '#0b6bcb'
+                color.onPrimary: '#ffffff'
+                color.danger: '#c62828'
+                color.warning: '#b26a00'
+                color.success: '#2e7d32'
+                font.family: Sarabun
+                font.size: 14
+                radius: 6
+                shadow: soft
+                density: comfortable
             schema: { $ref: '#/components/schemas/ThemeInput' }
       responses:
         '201':
           description: Created
           content:
             application/json:
+              example:
+                id: 6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f
+                name: สีองค์กร
+                builtIn: false
+                tokens:
+                  color.background: '#f5f7fa'
+                  color.surface: '#ffffff'
+                  color.surfaceAlt: '#eef2f7'
+                  color.border: '#d0d7e2'
+                  color.text: '#1d2733'
+                  color.textMuted: '#5b6b7f'
+                  color.primary: '#0b6bcb'
+                  color.onPrimary: '#ffffff'
+                  color.danger: '#c62828'
+                  color.warning: '#b26a00'
+                  color.success: '#2e7d32'
+                  font.family: Sarabun
+                  font.size: 14
+                  radius: 6
+                  shadow: soft
+                  density: comfortable
+                createdBy: somchai
+                updatedAt: '2026-11-20T09:15:00Z'
               schema: { $ref: '#/components/schemas/Theme' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '409':
           description: A theme with that name exists, or there are already 50 themes
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: a theme named สีองค์กร exists
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
@@ -1254,6 +2035,15 @@ paths:
           description: Tags in use
           content:
             application/json:
+              example:
+              - tag: ขาย
+                color: green
+                templates: 3
+                documents: 412
+              - tag: ไตรมาส 4
+                color: gray
+                templates: 0
+                documents: 37
               schema:
                 type: array
                 items: { $ref: '#/components/schemas/TagUse' }
@@ -1271,12 +2061,18 @@ paths:
         required: true
         content:
           application/json:
+            example:
+              tag: ขาย
+              color: green
             schema: { $ref: '#/components/schemas/TagColor' }
       responses:
         '200':
           description: The tag (normalised) and its colour
           content:
             application/json:
+              example:
+                tag: ขาย
+                color: green
               schema: { $ref: '#/components/schemas/TagColor' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/InputInvalid' }
@@ -1293,15 +2089,41 @@ paths:
           description: The default theme
           content:
             application/json:
+              example:
+                id: mahasamut
+                name: มหาสมุทร
+                builtIn: true
+                tokens:
+                  color.background: '#f5f7fa'
+                  color.surface: '#ffffff'
+                  color.surfaceAlt: '#eef2f7'
+                  color.border: '#d0d7e2'
+                  color.text: '#1d2733'
+                  color.textMuted: '#5b6b7f'
+                  color.primary: '#0b6bcb'
+                  color.onPrimary: '#ffffff'
+                  color.danger: '#c62828'
+                  color.warning: '#b26a00'
+                  color.success: '#2e7d32'
+                  font.family: Sarabun
+                  font.size: 14
+                  radius: 6
+                  shadow: soft
+                  density: comfortable
+                createdBy: null
+                updatedAt: null
               schema: { $ref: '#/components/schemas/Theme' }
     put:
       tags: [themes]
       operationId: setDefaultTheme
+      description: Used on the login and setup pages and by users who have not picked a theme.
       summary: Make a theme the default for everyone
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              themeId: 6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f
             schema:
               type: object
               required: [themeId]
@@ -1313,6 +2135,29 @@ paths:
           description: The new default theme
           content:
             application/json:
+              example:
+                id: 6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f
+                name: สีองค์กร
+                builtIn: false
+                tokens:
+                  color.background: '#f5f7fa'
+                  color.surface: '#ffffff'
+                  color.surfaceAlt: '#eef2f7'
+                  color.border: '#d0d7e2'
+                  color.text: '#1d2733'
+                  color.textMuted: '#5b6b7f'
+                  color.primary: '#0b6bcb'
+                  color.onPrimary: '#ffffff'
+                  color.danger: '#c62828'
+                  color.warning: '#b26a00'
+                  color.success: '#2e7d32'
+                  font.family: Sarabun
+                  font.size: 14
+                  radius: 6
+                  shadow: soft
+                  density: comfortable
+                createdBy: somchai
+                updatedAt: '2026-11-20T09:15:00Z'
               schema: { $ref: '#/components/schemas/Theme' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1324,17 +2169,60 @@ paths:
     put:
       tags: [themes]
       operationId: updateTheme
+      description: Replaces the whole theme; send every token.
       summary: Replace a theme's name and tokens (built-in themes are 409)
       requestBody:
         required: true
         content:
           application/json:
+            example:
+              name: สีองค์กร
+              tokens:
+                color.background: '#f5f7fa'
+                color.surface: '#ffffff'
+                color.surfaceAlt: '#eef2f7'
+                color.border: '#d0d7e2'
+                color.text: '#1d2733'
+                color.textMuted: '#5b6b7f'
+                color.primary: '#0b6bcb'
+                color.onPrimary: '#ffffff'
+                color.danger: '#c62828'
+                color.warning: '#b26a00'
+                color.success: '#2e7d32'
+                font.family: Sarabun
+                font.size: 14
+                radius: 6
+                shadow: soft
+                density: comfortable
             schema: { $ref: '#/components/schemas/ThemeInput' }
       responses:
         '200':
           description: Saved
           content:
             application/json:
+              example:
+                id: 6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f
+                name: สีองค์กร
+                builtIn: false
+                tokens:
+                  color.background: '#f5f7fa'
+                  color.surface: '#ffffff'
+                  color.surfaceAlt: '#eef2f7'
+                  color.border: '#d0d7e2'
+                  color.text: '#1d2733'
+                  color.textMuted: '#5b6b7f'
+                  color.primary: '#0b6bcb'
+                  color.onPrimary: '#ffffff'
+                  color.danger: '#c62828'
+                  color.warning: '#b26a00'
+                  color.success: '#2e7d32'
+                  font.family: Sarabun
+                  font.size: 14
+                  radius: 6
+                  shadow: soft
+                  density: comfortable
+                createdBy: somchai
+                updatedAt: '2026-11-20T09:15:00Z'
               schema: { $ref: '#/components/schemas/Theme' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1342,11 +2230,19 @@ paths:
           description: Built-in theme, or another theme has that name
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: built-in themes cannot be changed; make a copy instead
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/InputInvalid' }
     delete:
       tags: [themes]
       operationId: deleteTheme
+      description: Users who picked it see the default theme.
       summary: Delete a theme; if it was the default, the default goes back to `mahasamut`
       responses:
         '204': { description: Deleted }
@@ -1356,12 +2252,20 @@ paths:
           description: Built-in theme
           content:
             application/problem+json:
+              example:
+                type: https://jester-report.dev/errors/conflict
+                title: Conflict
+                status: 409
+                code: CONFLICT
+                detail: built-in themes cannot be deleted
+                retryable: false
               schema: { $ref: '#/components/schemas/Problem' }
 
   /v1/openapi.yaml:
     get:
       tags: [system]
       operationId: getContract
+      description: Public. The single source of these docs and of Studio's generated types.
       summary: This contract (FastAPI's generated docs are turned off because they would not match it)
       security: []
       responses:
@@ -1375,6 +2279,7 @@ paths:
     get:
       tags: [system]
       operationId: getHealth
+      description: Public, for load balancers and monitoring. `status` is `down` or `degraded` when a dependency is down, and the answer is then 503.
       security: []
       summary: API, database, object storage and engine status
       responses:
@@ -1382,11 +2287,29 @@ paths:
           description: Status (also returned with 503 when a dependency is down)
           content:
             application/json:
+              example:
+                status: up
+                version: 1.12.0
+                components:
+                  database: up
+                  objectStorage: up
+                  engine:
+                    status: up
+                    version: 8.25.1
               schema: { $ref: '#/components/schemas/Health' }
         '503':
           description: A dependency is down
           content:
             application/json:
+              example:
+                status: degraded
+                version: 1.12.0
+                components:
+                  database: up
+                  objectStorage: up
+                  engine:
+                    status: down
+                    version: null
               schema: { $ref: '#/components/schemas/Health' }
 
 components:
@@ -1439,56 +2362,184 @@ components:
       description: Missing, invalid, expired or revoked credentials
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/unauthorized
+            title: Unauthorized
+            status: 401
+            code: UNAUTHORIZED
+            detail: missing, invalid, expired or revoked credentials
+            retryable: false
           schema: { $ref: '#/components/schemas/Problem' }
     NotFound:
       description: Not found (also used for objects the caller cannot see)
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/not-found
+            title: Not found
+            status: 404
+            code: NOT_FOUND
+            detail: template not found
+            retryable: false
           schema: { $ref: '#/components/schemas/Problem' }
     PayloadTooLarge:
       description: Request exceeds the configured size limit
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/payload-too-large
+            title: Payload too large
+            status: 413
+            code: PAYLOAD_TOO_LARGE
+            detail: the request is larger than 10485760 bytes
+            retryable: false
           schema: { $ref: '#/components/schemas/Problem' }
     InputInvalid:
       description: Request, params or data failed validation; see `problems`
       content:
         application/problem+json:
+          examples:
+            params:
+              summary: A parameter is missing (render)
+              value:
+                type: https://jester-report.dev/errors/input-invalid
+                title: Input invalid
+                status: 422
+                code: INPUT_INVALID
+                detail: params or data do not fit the template
+                retryable: false
+                problems:
+                - severity: error
+                  code: PARAM_REQUIRED
+                  message: parameter 'docDate' is required
+                  pointer: /params/docDate
+                runId: 019aa61f3c207d3e8a91c0
+            data:
+              summary: A data value breaks data.schema.json (render)
+              value:
+                type: https://jester-report.dev/errors/input-invalid
+                title: Input invalid
+                status: 422
+                code: INPUT_INVALID
+                detail: params or data do not fit the template
+                retryable: false
+                problems:
+                - severity: error
+                  code: DATA_INVALID
+                  message: '''qty'' is a required property'
+                  pointer: /data/items/0
+                - severity: error
+                  code: DATA_INVALID
+                  message: value does not satisfy minimum 1
+                  pointer: /data/items/1/qty
+                runId: 019aa61f3c207d3e8a91c0
+            contract:
+              summary: The body does not match this contract
+              value:
+                type: https://jester-report.dev/errors/input-invalid
+                title: Input invalid
+                status: 422
+                code: INPUT_INVALID
+                detail: the request does not match the contract
+                retryable: false
+                problems:
+                - severity: error
+                  code: INPUT_INVALID
+                  message: Field required
+                  pointer: /template
           schema: { $ref: '#/components/schemas/Problem' }
     RevisionRequired:
       description: If-Match with the draft revision is missing
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/revision-required
+            title: Revision required
+            status: 428
+            code: REVISION_REQUIRED
+            detail: send If-Match with the draft revision you are changing
+            retryable: false
           schema: { $ref: '#/components/schemas/Problem' }
     RevisionConflict:
       description: Draft changed since the given revision; reload and retry
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/revision-conflict
+            title: Revision conflict
+            status: 412
+            code: REVISION_CONFLICT
+            detail: the draft changed since this revision; reload and retry
+            retryable: false
           schema: { $ref: '#/components/schemas/Problem' }
     RenderFailed:
       description: '`RENDER_RESOURCE_FAILED`, `RENDER_FAILED`, `FONT_MISSING` or `ENGINE_MISCONFIGURED`'
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/render-failed
+            title: Render failed
+            status: 502
+            code: RENDER_FAILED
+            detail: the data could not be prepared
+            retryable: false
+            problems:
+            - severity: error
+              code: DIVISION_BY_ZERO
+              message: division by zero
+              file: report.json
+            runId: 019aa61f3c207d3e8a91c0
           schema: { $ref: '#/components/schemas/Problem' }
     ServiceUnavailable:
       description: Engine unreachable or busy; `retryable` is true
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/service-unavailable
+            title: Service unavailable
+            status: 503
+            code: SERVICE_UNAVAILABLE
+            detail: too many renders at once; retry shortly
+            retryable: true
+            runId: 019aa61f3c207d3e8a91c0
           schema: { $ref: '#/components/schemas/Problem' }
     RenderTimeout:
       description: Render exceeded the time limit; `retryable` is true
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/render-timeout
+            title: Render timeout
+            status: 504
+            code: RENDER_TIMEOUT
+            detail: preparing the document took too long
+            retryable: true
+            runId: 019aa61f3c207d3e8a91c0
           schema: { $ref: '#/components/schemas/Problem' }
     TemplateArchived:
       description: '`TEMPLATE_ARCHIVED`: the template is archived; unarchive it to change it'
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/template-archived
+            title: Template archived
+            status: 409
+            code: TEMPLATE_ARCHIVED
+            detail: the template is archived; unarchive it to change it
+            retryable: false
           schema: { $ref: '#/components/schemas/Problem' }
     TemplateGone:
       description: '`TEMPLATE_ARCHIVED`: the template is archived and cannot be rendered'
       content:
         application/problem+json:
+          example:
+            type: https://jester-report.dev/errors/template-archived
+            title: Template archived
+            status: 410
+            code: TEMPLATE_ARCHIVED
+            detail: the template is archived
+            retryable: false
+            runId: 019aa61f3c207d3e8a91c0
           schema: { $ref: '#/components/schemas/Problem' }
 
   schemas:

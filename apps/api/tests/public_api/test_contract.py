@@ -96,3 +96,73 @@ def test_routes_with_path_ids_use_the_contract_names():
 def test_schema_checker_catches_a_wrong_response():
     assert list(schema_validator("DraftRevision").iter_errors({"revision": "two"}))
     assert not list(schema_validator("DraftRevision").iter_errors({"revision": 2}))
+
+
+# ---- v1.12: the contract is the API docs, so every operation explains itself with examples ------------
+
+JSON_TYPES = {"application/json", "application/problem+json"}
+
+
+def _escape(part: str) -> str:
+    return part.replace("~", "~0").replace("/", "~1")
+
+
+def _deref(node: dict, pointer: str) -> tuple[dict, str]:
+    """Follow a local `$ref` (one level is all the contract uses) and say where the node really lives."""
+    ref = node.get("$ref")
+    if not ref:
+        return node, pointer
+    target: object = CONTRACT
+    for part in ref.removeprefix("#/").split("/"):
+        target = target[part.replace("~1", "/").replace("~0", "~")]  # type: ignore[index]
+    return target, ref.removeprefix("#")  # type: ignore[return-value]
+
+
+def json_media() -> list[tuple[str, str, dict]]:
+    """(label, pointer of the media object, media object) for every JSON request and response body."""
+    found = []
+    for path, item in CONTRACT["paths"].items():
+        for method, operation in item.items():
+            if method not in METHODS:
+                continue
+            base = f"/paths/{_escape(path)}/{method}"
+            bodies = []
+            if "requestBody" in operation:
+                bodies.append(("request", *_deref(operation["requestBody"], f"{base}/requestBody")))
+            for status, response in operation["responses"].items():
+                bodies.append((status, *_deref(response, f"{base}/responses/{status}")))
+            for what, body, where in bodies:
+                for media_type, media in body.get("content", {}).items():
+                    if media_type in JSON_TYPES:
+                        found.append((f"{method.upper()} {path} {what}", f"{where}/content/{_escape(media_type)}", media))
+    return found
+
+
+def media_examples(media: dict) -> list[object]:
+    if "example" in media:
+        return [media["example"]]
+    return [_deref(e, "")[0]["value"] for e in media.get("examples", {}).values()]
+
+
+def test_every_operation_has_a_summary_and_a_description():
+    missing = [f"{m} {p}" for (m, p), op in contract_operations().items() if not (op.get("summary") and op.get("description"))]
+    assert not missing, missing
+
+
+def test_every_json_body_has_an_example():
+    missing = [label for label, _, media in json_media() if not media_examples(media)]
+    assert not missing, f"{len(missing)} bodies without an example: {missing[:20]}"
+
+
+def test_every_example_fits_its_schema():
+    wrong = []
+    for label, where, media in json_media():
+        validator = Draft202012Validator({"$ref": f"urn:contract#{where}/schema"}, registry=_REGISTRY)
+        for example in media_examples(media):
+            wrong += [f"{label}: {list(e.path)} {e.message}" for e in validator.iter_errors(example)]
+    assert not wrong, "; ".join(wrong[:10])
+
+
+def test_the_example_checker_catches_a_wrong_example():
+    validator = Draft202012Validator({"$ref": "urn:contract#/components/schemas/Problem"}, registry=_REGISTRY)
+    assert list(validator.iter_errors({"type": "x", "title": "x", "status": "422", "code": "INPUT_INVALID"}))

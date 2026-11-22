@@ -34,7 +34,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Whether first-run setup is still required */
+        /**
+         * Whether first-run setup is still required
+         * @description Public. `true` until the first user exists; Studio sends people to the setup page while it is.
+         */
         get: operations["getSetupStatus"];
         put?: never;
         /**
@@ -58,6 +61,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign in with username and password
+         * @description Returns a session token for Studio's server. Failed attempts are limited per (username, client IP); after too many the answer is 429 for a while.
+         */
         post: operations["login"];
         delete?: never;
         options?: never;
@@ -74,6 +81,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
+        /**
+         * Sign out
+         * @description Revokes the session token used for this request. Other sessions of the same user stay valid.
+         */
         post: operations["logout"];
         delete?: never;
         options?: never;
@@ -88,6 +99,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * The signed-in user
+         * @description The user the session token belongs to.
+         */
         get: operations["getCurrentUser"];
         put?: never;
         post?: never;
@@ -127,8 +142,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List users
+         * @description Every user. All users have the same rights (single tenant).
+         */
         get: operations["listUsers"];
         put?: never;
+        /**
+         * Create a user
+         * @description The new user signs in with this password and can change it with `changePassword`.
+         */
         post: operations["createUser"];
         delete?: never;
         options?: never;
@@ -148,7 +171,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** @description The last remaining user cannot be deleted. */
+        /**
+         * Delete a user
+         * @description The last remaining user cannot be deleted.
+         */
         delete: operations["deleteUser"];
         options?: never;
         head?: never;
@@ -185,8 +211,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * List API keys
+         * @description Every key with its limits and last use. The secret is never returned again after `createApiKey`.
+         */
         get: operations["listApiKeys"];
         put?: never;
+        /**
+         * Create an API key for another system
+         * @description The key renders through `POST /v1/render` only. It can be limited to some templates, a number of renders per minute and an expiry time. Keep the `secret`: it is shown once.
+         */
         post: operations["createApiKey"];
         delete?: never;
         options?: never;
@@ -206,6 +240,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Revoke an API key
+         * @description Takes effect immediately; documents already issued with the key stay.
+         */
         delete: operations["revokeApiKey"];
         options?: never;
         head?: never;
@@ -219,10 +257,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Catalog for the Studio report list */
+        /**
+         * Catalog for the Studio report list
+         * @description Active templates by default, with publish state, the last run and tags. `tag` filters by tags (every one given must match).
+         */
         get: operations["listTemplates"];
         put?: never;
-        /** Create a template with an empty or starter draft */
+        /**
+         * Create a template with an empty or starter draft
+         * @description The id is a permanent slug used in `/v1/render`. `starter` fills the draft with a working example; `page` sets the sheet of the blank starter.
+         */
         post: operations["createTemplate"];
         delete?: never;
         options?: never;
@@ -239,12 +283,20 @@ export interface paths {
             };
             cookie?: never;
         };
+        /**
+         * One template
+         * @description The same summary as in `listTemplates`.
+         */
         get: operations["getTemplate"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
+        /**
+         * Rename a template
+         * @description Only the display name changes; the id used in `/v1/render` stays.
+         */
         patch: operations["renameTemplate"];
         trace?: never;
     };
@@ -281,7 +333,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Download the draft or one version as a zip */
+        /**
+         * Download the draft or one version as a zip
+         * @description A flat zip with a `jester.json` manifest that `importTemplate` reads back. Use it for backups or to move a report to another Jester.
+         */
         get: operations["exportTemplate"];
         put?: never;
         post?: never;
@@ -372,7 +427,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Draft file list with text contents and asset metadata */
+        /**
+         * Draft file list with text contents and asset metadata
+         * @description Text files come with their content; assets with their metadata only (read the bytes with `getDraftAsset`). `revision` is what `If-Match` needs when changing the draft.
+         */
         get: operations["getDraft"];
         put?: never;
         post?: never;
@@ -400,7 +458,10 @@ export interface paths {
          */
         put: operations["putDraftFile"];
         post?: never;
-        /** @description `report.json` and `template.html` cannot be deleted. */
+        /**
+         * Delete a text file from the draft
+         * @description `report.json` and `template.html` cannot be deleted.
+         */
         delete: operations["deleteDraftFile"];
         options?: never;
         head?: never;
@@ -450,7 +511,10 @@ export interface paths {
         get: operations["getDraftAsset"];
         put?: never;
         post?: never;
-        /** @description Detaches the asset from the draft. Bytes stay in storage while any published version uses them. */
+        /**
+         * Detach an asset from the draft
+         * @description Detaches the asset from the draft. Bytes stay in storage while any published version uses them.
+         */
         delete: operations["deleteDraftAsset"];
         options?: never;
         head?: never;
@@ -468,7 +532,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Validate the draft definition, template and sample data without rendering */
+        /**
+         * Validate the draft definition, template and sample data without rendering
+         * @description Checks report.json, the data schema, expressions, the template, fonts and the sample data. Errors stop a publish; warnings do not.
+         */
         post: operations["validateDraft"];
         delete?: never;
         options?: never;
@@ -532,6 +599,10 @@ export interface paths {
             };
             cookie?: never;
         };
+        /**
+         * List published versions
+         * @description Every frozen version, newest first; `isPublished` marks the one `"published"` renders.
+         */
         get: operations["listVersions"];
         put?: never;
         /**
@@ -555,7 +626,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Read-only files of a published version */
+        /**
+         * Read-only files of a published version
+         * @description The exact files and assets a version renders with. Versions never change.
+         */
         get: operations["getVersion"];
         put?: never;
         post?: never;
@@ -575,7 +649,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Roll back or forward by moving the published alias to an existing version */
+        /**
+         * Roll back or forward by moving the published alias to an existing version
+         * @description Renders with `version: "published"` use the new version from the next request. No files change.
+         */
         put: operations["setPublishedVersion"];
         post?: never;
         delete?: never;
@@ -595,7 +672,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Replace the draft with a copy of a published version */
+        /**
+         * Replace the draft with a copy of a published version
+         * @description The draft's files and assets become a copy of that version; the draft revision goes up. Versions are untouched.
+         */
         post: operations["resetDraftFromVersion"];
         delete?: never;
         options?: never;
@@ -610,7 +690,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Render history (metadata; `hasDocument` says whether the PDF can be downloaded again) */
+        /**
+         * Render history (metadata; `hasDocument` says whether the PDF can be downloaded again)
+         * @description Every render and preview, newest first, without params or data (only their hashes). Page with `next` as `before`.
+         */
         get: operations["listRuns"];
         put?: never;
         post?: never;
@@ -629,6 +712,10 @@ export interface paths {
             };
             cookie?: never;
         };
+        /**
+         * One run with provenance
+         * @description What was rendered, by whom, how long it took and the hashes that prove which template, data and engine made the PDF.
+         */
         get: operations["getRun"];
         put?: never;
         post?: never;
@@ -691,7 +778,10 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** The exact PDF a render returned (Studio sessions only) */
+        /**
+         * The exact PDF a render returned (Studio sessions only)
+         * @description The stored PDF of a render of a published version, byte for byte; previews are not stored.
+         */
         get: operations["getDocument"];
         put?: never;
         post?: never;
@@ -715,7 +805,10 @@ export interface paths {
          *     Studio can show the effect before the user confirms.
          */
         get: operations["getRunRetention"];
-        /** Keep runs for N days (older ones are deleted from now on), or for ever with null */
+        /**
+         * Keep runs for N days (older ones are deleted from now on), or for ever with null
+         * @description Runs older than `days` (and their stored PDFs) are deleted from now on, in the background. `null` keeps everything.
+         */
         put: operations["setRunRetention"];
         post?: never;
         delete?: never;
@@ -731,10 +824,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Every theme, the two built-in ones first */
+        /**
+         * Every theme, the two built-in ones first
+         * @description Themes colour Studio only; they never change a PDF.
+         */
         get: operations["listThemes"];
         put?: never;
-        /** Create a theme (also used by Studio's JSON import) */
+        /**
+         * Create a theme (also used by Studio's JSON import)
+         * @description A theme is a name plus the fixed set of tokens; every value is checked, raw CSS is never accepted. At most 50 themes.
+         */
         post: operations["createTheme"];
         delete?: never;
         options?: never;
@@ -796,7 +895,10 @@ export interface paths {
          * @description Public, because the login page needs it. A theme holds only colours, a font and sizes.
          */
         get: operations["getDefaultTheme"];
-        /** Make a theme the default for everyone */
+        /**
+         * Make a theme the default for everyone
+         * @description Used on the login and setup pages and by users who have not picked a theme.
+         */
         put: operations["setDefaultTheme"];
         post?: never;
         delete?: never;
@@ -815,10 +917,16 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Replace a theme's name and tokens (built-in themes are 409) */
+        /**
+         * Replace a theme's name and tokens (built-in themes are 409)
+         * @description Replaces the whole theme; send every token.
+         */
         put: operations["updateTheme"];
         post?: never;
-        /** Delete a theme; if it was the default, the default goes back to `mahasamut` */
+        /**
+         * Delete a theme; if it was the default, the default goes back to `mahasamut`
+         * @description Users who picked it see the default theme.
+         */
         delete: operations["deleteTheme"];
         options?: never;
         head?: never;
@@ -832,7 +940,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** This contract (FastAPI's generated docs are turned off because they would not match it) */
+        /**
+         * This contract (FastAPI's generated docs are turned off because they would not match it)
+         * @description Public. The single source of these docs and of Studio's generated types.
+         */
         get: operations["getContract"];
         put?: never;
         post?: never;
@@ -849,7 +960,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** API, database, object storage and engine status */
+        /**
+         * API, database, object storage and engine status
+         * @description Public, for load balancers and monitoring. `status` is `down` or `degraded` when a dependency is down, and the answer is then 503.
+         */
         get: operations["getHealth"];
         put?: never;
         post?: never;
@@ -1270,6 +1384,16 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/unauthorized",
+                 *       "title": "Unauthorized",
+                 *       "status": 401,
+                 *       "code": "UNAUTHORIZED",
+                 *       "detail": "missing, invalid, expired or revoked credentials",
+                 *       "retryable": false
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1279,6 +1403,16 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/not-found",
+                 *       "title": "Not found",
+                 *       "status": 404,
+                 *       "code": "NOT_FOUND",
+                 *       "detail": "template not found",
+                 *       "retryable": false
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1288,6 +1422,16 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/payload-too-large",
+                 *       "title": "Payload too large",
+                 *       "status": 413,
+                 *       "code": "PAYLOAD_TOO_LARGE",
+                 *       "detail": "the request is larger than 10485760 bytes",
+                 *       "retryable": false
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1306,6 +1450,16 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/revision-required",
+                 *       "title": "Revision required",
+                 *       "status": 428,
+                 *       "code": "REVISION_REQUIRED",
+                 *       "detail": "send If-Match with the draft revision you are changing",
+                 *       "retryable": false
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1315,6 +1469,16 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/revision-conflict",
+                 *       "title": "Revision conflict",
+                 *       "status": 412,
+                 *       "code": "REVISION_CONFLICT",
+                 *       "detail": "the draft changed since this revision; reload and retry",
+                 *       "retryable": false
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1324,6 +1488,25 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/render-failed",
+                 *       "title": "Render failed",
+                 *       "status": 502,
+                 *       "code": "RENDER_FAILED",
+                 *       "detail": "the data could not be prepared",
+                 *       "retryable": false,
+                 *       "problems": [
+                 *         {
+                 *           "severity": "error",
+                 *           "code": "DIVISION_BY_ZERO",
+                 *           "message": "division by zero",
+                 *           "file": "report.json"
+                 *         }
+                 *       ],
+                 *       "runId": "019aa61f3c207d3e8a91c0"
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1333,6 +1516,17 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/service-unavailable",
+                 *       "title": "Service unavailable",
+                 *       "status": 503,
+                 *       "code": "SERVICE_UNAVAILABLE",
+                 *       "detail": "too many renders at once; retry shortly",
+                 *       "retryable": true,
+                 *       "runId": "019aa61f3c207d3e8a91c0"
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1342,6 +1536,17 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/render-timeout",
+                 *       "title": "Render timeout",
+                 *       "status": 504,
+                 *       "code": "RENDER_TIMEOUT",
+                 *       "detail": "preparing the document took too long",
+                 *       "retryable": true,
+                 *       "runId": "019aa61f3c207d3e8a91c0"
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1351,6 +1556,16 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/template-archived",
+                 *       "title": "Template archived",
+                 *       "status": 409,
+                 *       "code": "TEMPLATE_ARCHIVED",
+                 *       "detail": "the template is archived; unarchive it to change it",
+                 *       "retryable": false
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1360,6 +1575,17 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
+                /**
+                 * @example {
+                 *       "type": "https://jester-report.dev/errors/template-archived",
+                 *       "title": "Template archived",
+                 *       "status": 410,
+                 *       "code": "TEMPLATE_ARCHIVED",
+                 *       "detail": "the template is archived",
+                 *       "retryable": false,
+                 *       "runId": "019aa61f3c207d3e8a91c0"
+                 *     }
+                 */
                 "application/problem+json": components["schemas"]["Problem"];
             };
         };
@@ -1453,6 +1679,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/template-not-allowed",
+                     *       "title": "Template not allowed",
+                     *       "status": 403,
+                     *       "code": "TEMPLATE_NOT_ALLOWED",
+                     *       "detail": "this API key cannot render this template",
+                     *       "retryable": false,
+                     *       "runId": "019aa61f3c207d3e8a91c0"
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1468,6 +1705,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/rate-limited",
+                     *       "title": "Rate limited",
+                     *       "status": 429,
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "too many renders for this API key; retry later",
+                     *       "retryable": true
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1491,6 +1738,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "setupRequired": false
+                     *     }
+                     */
                     "application/json": {
                         setupRequired: boolean;
                     };
@@ -1507,6 +1759,13 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "setupToken": "Qm9vdHN0cmFwVG9rZW4tMDEyMzQ1",
+                 *       "username": "somchai",
+                 *       "password": "correct-horse-battery"
+                 *     }
+                 */
                 "application/json": {
                     setupToken: string;
                     username: components["schemas"]["Username"];
@@ -1521,6 +1780,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "token": "jrs_q8Lk2vXc9TzR4mWb7nYp3sFh6dJg1aEu",
+                     *       "expiresAt": "2026-11-27T09:15:00Z",
+                     *       "user": {
+                     *         "id": "3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01",
+                     *         "username": "somchai",
+                     *         "createdAt": "2026-11-01T08:00:00Z",
+                     *         "lastLoginAt": "2026-11-20T09:15:00Z"
+                     *       }
+                     *     }
+                     */
                     "application/json": components["schemas"]["Session"];
                 };
             };
@@ -1530,6 +1801,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/setup-token-invalid",
+                     *       "title": "Setup token invalid",
+                     *       "status": 403,
+                     *       "code": "SETUP_TOKEN_INVALID",
+                     *       "detail": "wrong or used setup token",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1539,6 +1820,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/setup-completed",
+                     *       "title": "Setup completed",
+                     *       "status": 409,
+                     *       "code": "SETUP_COMPLETED",
+                     *       "detail": "setup is already completed",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1554,6 +1845,12 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "username": "somchai",
+                 *       "password": "correct-horse-battery"
+                 *     }
+                 */
                 "application/json": {
                     username: string;
                     password: string;
@@ -1567,6 +1864,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "token": "jrs_q8Lk2vXc9TzR4mWb7nYp3sFh6dJg1aEu",
+                     *       "expiresAt": "2026-11-27T09:15:00Z",
+                     *       "user": {
+                     *         "id": "3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01",
+                     *         "username": "somchai",
+                     *         "createdAt": "2026-11-01T08:00:00Z",
+                     *         "lastLoginAt": "2026-11-20T09:15:00Z"
+                     *       }
+                     *     }
+                     */
                     "application/json": components["schemas"]["Session"];
                 };
             };
@@ -1577,6 +1886,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/rate-limited",
+                     *       "title": "Rate limited",
+                     *       "status": 429,
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "too many failed attempts; try again later",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1616,6 +1935,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01",
+                     *       "username": "somchai",
+                     *       "createdAt": "2026-11-01T08:00:00Z",
+                     *       "lastLoginAt": "2026-11-20T09:15:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["User"];
                 };
             };
@@ -1631,6 +1958,12 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "currentPassword": "correct-horse-battery",
+                 *       "newPassword": "a-longer-better-passphrase"
+                 *     }
+                 */
                 "application/json": {
                     currentPassword: string;
                     newPassword: components["schemas"]["Password"];
@@ -1653,6 +1986,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/rate-limited",
+                     *       "title": "Rate limited",
+                     *       "status": 429,
+                     *       "code": "RATE_LIMITED",
+                     *       "detail": "too many failed attempts; try again later",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1673,6 +2016,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01",
+                     *         "username": "somchai",
+                     *         "createdAt": "2026-11-01T08:00:00Z",
+                     *         "lastLoginAt": "2026-11-20T09:15:00Z"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["User"][];
                 };
             };
@@ -1688,6 +2041,12 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "username": "malee",
+                 *       "password": "first-password-1234"
+                 *     }
+                 */
                 "application/json": {
                     username: components["schemas"]["Username"];
                     password: components["schemas"]["Password"];
@@ -1701,6 +2060,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "8a7b6c5d-4e3f-4a1b-9c8d-7e6f5a4b3c2d",
+                     *       "username": "malee",
+                     *       "createdAt": "2026-11-01T08:00:00Z",
+                     *       "lastLoginAt": null
+                     *     }
+                     */
                     "application/json": components["schemas"]["User"];
                 };
             };
@@ -1711,6 +2078,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "username is taken",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1743,6 +2120,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "the last user cannot be deleted",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1759,6 +2146,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "newPassword": "reset-by-admin-5678"
+                 *     }
+                 */
                 "application/json": {
                     newPassword: components["schemas"]["Password"];
                 };
@@ -1792,6 +2184,23 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+                     *         "name": "ERP production",
+                     *         "prefix": "jrk_5Zq9",
+                     *         "createdAt": "2026-11-20T09:15:00Z",
+                     *         "createdBy": "somchai",
+                     *         "lastUsedAt": null,
+                     *         "expiresAt": "2027-11-20T00:00:00Z",
+                     *         "templates": [
+                     *           "quotation"
+                     *         ],
+                     *         "rateLimitPerMinute": 60
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["ApiKey"][];
                 };
             };
@@ -1807,6 +2216,16 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "name": "ERP production",
+                 *       "expiresAt": "2027-11-20T00:00:00Z",
+                 *       "templates": [
+                 *         "quotation"
+                 *       ],
+                 *       "rateLimitPerMinute": 60
+                 *     }
+                 */
                 "application/json": {
                     name: string;
                     /**
@@ -1828,6 +2247,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+                     *       "name": "ERP production",
+                     *       "prefix": "jrk_5Zq9",
+                     *       "createdAt": "2026-11-20T09:15:00Z",
+                     *       "createdBy": "somchai",
+                     *       "lastUsedAt": null,
+                     *       "expiresAt": "2027-11-20T00:00:00Z",
+                     *       "templates": [
+                     *         "quotation"
+                     *       ],
+                     *       "rateLimitPerMinute": 60,
+                     *       "secret": "jrk_5Zq9Wm3xT8vB2nK7cR4yH6pL1dF0gJsA"
+                     *     }
+                     */
                     "application/json": components["schemas"]["ApiKey"] & {
                         /** @example jrk_5Zq9... */
                         secret: string;
@@ -1880,6 +2315,36 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "quotation",
+                     *         "name": "ใบเสนอราคา",
+                     *         "publishedVersion": 3,
+                     *         "latestVersion": 3,
+                     *         "draftRevision": 14,
+                     *         "draftChangedSincePublish": false,
+                     *         "page": {
+                     *           "size": "A4",
+                     *           "orientation": "portrait",
+                     *           "layout": "flow"
+                     *         },
+                     *         "lastRun": {
+                     *           "id": "019aa61f3c207d3e8a91c0",
+                     *           "status": "succeeded",
+                     *           "errorCode": null,
+                     *           "pages": 2,
+                     *           "createdAt": "2026-11-20T09:15:00Z"
+                     *         },
+                     *         "updatedAt": "2026-11-20T09:15:00Z",
+                     *         "archivedAt": null,
+                     *         "archivedBy": null,
+                     *         "tags": [
+                     *           "ขาย"
+                     *         ]
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["TemplateSummary"][];
                 };
             };
@@ -1895,6 +2360,17 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "id": "quotation-2027",
+                 *       "name": "ใบเสนอราคา 2027",
+                 *       "starter": "blank",
+                 *       "page": {
+                 *         "size": "A4",
+                 *         "orientation": "portrait"
+                 *       }
+                 *     }
+                 */
                 "application/json": {
                     id: components["schemas"]["TemplateId"];
                     name: string;
@@ -1914,6 +2390,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "quotation-2027",
+                     *       "name": "ใบเสนอราคา 2027",
+                     *       "publishedVersion": null,
+                     *       "latestVersion": null,
+                     *       "draftRevision": 1,
+                     *       "draftChangedSincePublish": true,
+                     *       "page": {
+                     *         "size": "A4",
+                     *         "orientation": "portrait",
+                     *         "layout": "flow"
+                     *       },
+                     *       "lastRun": null,
+                     *       "updatedAt": "2026-11-20T09:15:00Z",
+                     *       "archivedAt": null,
+                     *       "archivedBy": null,
+                     *       "tags": [
+                     *         "ขาย"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TemplateSummary"];
                 };
             };
@@ -1924,6 +2422,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "a template with this id already exists",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -1947,6 +2455,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "quotation",
+                     *       "name": "ใบเสนอราคา",
+                     *       "publishedVersion": 3,
+                     *       "latestVersion": 3,
+                     *       "draftRevision": 14,
+                     *       "draftChangedSincePublish": false,
+                     *       "page": {
+                     *         "size": "A4",
+                     *         "orientation": "portrait",
+                     *         "layout": "flow"
+                     *       },
+                     *       "lastRun": {
+                     *         "id": "019aa61f3c207d3e8a91c0",
+                     *         "status": "succeeded",
+                     *         "errorCode": null,
+                     *         "pages": 2,
+                     *         "createdAt": "2026-11-20T09:15:00Z"
+                     *       },
+                     *       "updatedAt": "2026-11-20T09:15:00Z",
+                     *       "archivedAt": null,
+                     *       "archivedBy": null,
+                     *       "tags": [
+                     *         "ขาย"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TemplateSummary"];
                 };
             };
@@ -1965,6 +2501,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "name": "ใบเสนอราคา (ใหม่)"
+                 *     }
+                 */
                 "application/json": {
                     name: string;
                 };
@@ -1977,6 +2518,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "quotation",
+                     *       "name": "ใบเสนอราคา (ใหม่)",
+                     *       "publishedVersion": 3,
+                     *       "latestVersion": 3,
+                     *       "draftRevision": 14,
+                     *       "draftChangedSincePublish": false,
+                     *       "page": {
+                     *         "size": "A4",
+                     *         "orientation": "portrait",
+                     *         "layout": "flow"
+                     *       },
+                     *       "lastRun": {
+                     *         "id": "019aa61f3c207d3e8a91c0",
+                     *         "status": "succeeded",
+                     *         "errorCode": null,
+                     *         "pages": 2,
+                     *         "createdAt": "2026-11-20T09:15:00Z"
+                     *       },
+                     *       "updatedAt": "2026-11-20T09:15:00Z",
+                     *       "archivedAt": null,
+                     *       "archivedBy": null,
+                     *       "tags": [
+                     *         "ขาย"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TemplateSummary"];
                 };
             };
@@ -2011,6 +2580,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "template": {
+                     *         "id": "quotation",
+                     *         "name": "ใบเสนอราคา",
+                     *         "publishedVersion": 3,
+                     *         "latestVersion": 3,
+                     *         "draftRevision": 14,
+                     *         "draftChangedSincePublish": false,
+                     *         "page": {
+                     *           "size": "A4",
+                     *           "orientation": "portrait",
+                     *           "layout": "flow"
+                     *         },
+                     *         "lastRun": {
+                     *           "id": "019aa61f3c207d3e8a91c0",
+                     *           "status": "succeeded",
+                     *           "errorCode": null,
+                     *           "pages": 2,
+                     *           "createdAt": "2026-11-20T09:15:00Z"
+                     *         },
+                     *         "updatedAt": "2026-11-20T09:15:00Z",
+                     *         "archivedAt": null,
+                     *         "archivedBy": null,
+                     *         "tags": [
+                     *           "ขาย"
+                     *         ]
+                     *       },
+                     *       "revision": 15,
+                     *       "created": false
+                     *     }
+                     */
                     "application/json": components["schemas"]["ImportResult"];
                 };
             };
@@ -2020,6 +2621,32 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "template": {
+                     *         "id": "quotation-2027",
+                     *         "name": "ใบเสนอราคา 2027",
+                     *         "publishedVersion": null,
+                     *         "latestVersion": null,
+                     *         "draftRevision": 1,
+                     *         "draftChangedSincePublish": true,
+                     *         "page": {
+                     *           "size": "A4",
+                     *           "orientation": "portrait",
+                     *           "layout": "flow"
+                     *         },
+                     *         "lastRun": null,
+                     *         "updatedAt": "2026-11-20T09:15:00Z",
+                     *         "archivedAt": null,
+                     *         "archivedBy": null,
+                     *         "tags": [
+                     *           "ขาย"
+                     *         ]
+                     *       },
+                     *       "revision": 1,
+                     *       "created": true
+                     *     }
+                     */
                     "application/json": components["schemas"]["ImportResult"];
                 };
             };
@@ -2031,6 +2658,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "the zip has no report.json",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2042,6 +2679,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/unsupported-media-type",
+                     *       "title": "Unsupported media type",
+                     *       "status": 415,
+                     *       "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *       "detail": "logo.png is not a PNG image",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2088,6 +2735,13 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "id": "quotation-2027",
+                 *       "name": "ใบเสนอราคา 2027",
+                 *       "version": 3
+                 *     }
+                 */
                 "application/json": {
                     id: components["schemas"]["TemplateId"];
                     name: string;
@@ -2106,6 +2760,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "quotation-2027",
+                     *       "name": "ใบเสนอราคา 2027",
+                     *       "publishedVersion": null,
+                     *       "latestVersion": null,
+                     *       "draftRevision": 1,
+                     *       "draftChangedSincePublish": true,
+                     *       "page": {
+                     *         "size": "A4",
+                     *         "orientation": "portrait",
+                     *         "layout": "flow"
+                     *       },
+                     *       "lastRun": null,
+                     *       "updatedAt": "2026-11-20T09:15:00Z",
+                     *       "archivedAt": null,
+                     *       "archivedBy": null,
+                     *       "tags": [
+                     *         "ขาย"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TemplateSummary"];
                 };
             };
@@ -2117,6 +2793,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "a template with this id already exists",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2134,6 +2820,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "archived": true
+                 *     }
+                 */
                 "application/json": {
                     archived: boolean;
                 };
@@ -2146,6 +2837,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "quotation",
+                     *       "name": "ใบเสนอราคา",
+                     *       "publishedVersion": 3,
+                     *       "latestVersion": 3,
+                     *       "draftRevision": 14,
+                     *       "draftChangedSincePublish": false,
+                     *       "page": {
+                     *         "size": "A4",
+                     *         "orientation": "portrait",
+                     *         "layout": "flow"
+                     *       },
+                     *       "lastRun": {
+                     *         "id": "019aa61f3c207d3e8a91c0",
+                     *         "status": "succeeded",
+                     *         "errorCode": null,
+                     *         "pages": 2,
+                     *         "createdAt": "2026-11-20T09:15:00Z"
+                     *       },
+                     *       "updatedAt": "2026-11-20T09:15:00Z",
+                     *       "archivedAt": "2026-11-20T09:15:00Z",
+                     *       "archivedBy": "somchai",
+                     *       "tags": [
+                     *         "ขาย"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TemplateSummary"];
                 };
             };
@@ -2165,6 +2884,14 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "tags": [
+                 *         "ขาย",
+                 *         " ไตรมาส  4 "
+                 *       ]
+                 *     }
+                 */
                 "application/json": components["schemas"]["TagList"];
             };
         };
@@ -2175,6 +2902,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "tags": [
+                     *         "ขาย",
+                     *         "ไตรมาส 4"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TagList"];
                 };
             };
@@ -2200,6 +2935,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "templateId": "quotation",
+                     *       "revision": 14,
+                     *       "basedOnVersion": 3,
+                     *       "files": [
+                     *         {
+                     *           "name": "report.json",
+                     *           "content": "{\n  \"reportVersion\": 1,\n  \"name\": \"ใบเสนอราคา\",\n  \"parameters\": {\"quoteId\": {\"type\": \"string\", \"required\": true}}\n}\n",
+                     *           "sha256": "7689c5c76d1bf5f5e99aa708f9fcc3070912a7cd948afc9d2db4260587e45e00"
+                     *         },
+                     *         {
+                     *           "name": "template.html",
+                     *           "content": "<h1>ใบเสนอราคา {{ params.quoteId }}</h1>\n",
+                     *           "sha256": "6ca7dfbf65170876547eee1c43a8e48241320fdba6ca19a6a26b9041b0755a97"
+                     *         }
+                     *       ],
+                     *       "assets": [
+                     *         {
+                     *           "name": "logo.png",
+                     *           "contentType": "image/png",
+                     *           "size": 18234,
+                     *           "sha256": "ab211233b6576dbb0f8b5826447eeac61e2a833a99ac5d788fbc1a174c3c6ce5"
+                     *         }
+                     *       ],
+                     *       "updatedAt": "2026-11-20T09:15:00Z",
+                     *       "updatedBy": "somchai"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Draft"];
                 };
             };
@@ -2232,6 +2996,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "revision": 15
+                     *     }
+                     */
                     "application/json": components["schemas"]["DraftRevision"];
                 };
             };
@@ -2264,6 +3033,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "revision": 16
+                     *     }
+                     */
                     "application/json": components["schemas"]["DraftRevision"];
                 };
             };
@@ -2275,6 +3049,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "report.json cannot be deleted",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2309,6 +3093,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "asset": {
+                     *         "name": "logo.png",
+                     *         "contentType": "image/png",
+                     *         "size": 18234,
+                     *         "sha256": "ab211233b6576dbb0f8b5826447eeac61e2a833a99ac5d788fbc1a174c3c6ce5"
+                     *       },
+                     *       "revision": 15
+                     *     }
+                     */
                     "application/json": {
                         asset: components["schemas"]["Asset"];
                         revision: number;
@@ -2323,6 +3118,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "an asset with this name already exists in the draft",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2334,6 +3139,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/unsupported-media-type",
+                     *       "title": "Unsupported media type",
+                     *       "status": 415,
+                     *       "code": "UNSUPPORTED_MEDIA_TYPE",
+                     *       "detail": "only images and TTF/OTF fonts can be uploaded",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2394,6 +3209,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "revision": 16
+                     *     }
+                     */
                     "application/json": components["schemas"]["DraftRevision"];
                 };
             };
@@ -2421,6 +3241,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "valid": false,
+                     *       "revision": 14,
+                     *       "problems": [
+                     *         {
+                     *           "severity": "error",
+                     *           "code": "EXPRESSION_INVALID",
+                     *           "message": "unknown function 'sumx'",
+                     *           "file": "report.json",
+                     *           "line": 12,
+                     *           "column": 18
+                     *         },
+                     *         {
+                     *           "severity": "warning",
+                     *           "code": "FONT_MISSING",
+                     *           "message": "footer.html uses a font that is not installed: Kanit",
+                     *           "file": "footer.html"
+                     *         }
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["ValidationResult"];
                 };
             };
@@ -2440,6 +3282,16 @@ export interface operations {
         };
         requestBody?: {
             content: {
+                /**
+                 * @example {
+                 *       "params": {
+                 *         "quoteId": "Q-DEMO-001",
+                 *         "locale": "th-TH",
+                 *         "docDate": "2026-11-12"
+                 *       },
+                 *       "sampleFile": "sample.json"
+                 *     }
+                 */
                 "application/json": {
                     params?: {
                         [key: string]: unknown;
@@ -2480,6 +3332,27 @@ export interface operations {
         };
         requestBody?: {
             content: {
+                /**
+                 * @example {
+                 *       "params": {
+                 *         "quoteId": "Q-DEMO-001",
+                 *         "locale": "th-TH",
+                 *         "docDate": "2026-11-12"
+                 *       },
+                 *       "data": {
+                 *         "customer": {
+                 *           "name": "บริษัท ลูกค้า จำกัด"
+                 *         },
+                 *         "items": [
+                 *           {
+                 *             "id": "QL01",
+                 *             "qty": 2,
+                 *             "unitPrice": "1250.50"
+                 *           }
+                 *         ]
+                 *       }
+                 *     }
+                 */
                 "application/json": {
                     params?: {
                         [key: string]: unknown;
@@ -2496,6 +3369,46 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "params": {
+                     *         "quoteId": "Q-DEMO-001",
+                     *         "locale": "th-TH",
+                     *         "docDate": "2026-11-12"
+                     *       },
+                     *       "data": {
+                     *         "customer": {
+                     *           "name": "บริษัท ลูกค้า จำกัด"
+                     *         },
+                     *         "items": [
+                     *           {
+                     *             "id": "QL01",
+                     *             "qty": 2,
+                     *             "unitPrice": "1250.50"
+                     *           }
+                     *         ]
+                     *       },
+                     *       "lists": {
+                     *         "items": {
+                     *           "rows": [
+                     *             {
+                     *               "id": "QL01",
+                     *               "qty": 2,
+                     *               "unitPrice": "1250.50",
+                     *               "amount": "2501.00"
+                     *             }
+                     *           ],
+                     *           "groups": []
+                     *         }
+                     *       },
+                     *       "totals": {
+                     *         "subtotal": "2501.00",
+                     *         "vat": "175.07",
+                     *         "grandTotal": "2676.07"
+                     *       },
+                     *       "problems": []
+                     *     }
+                     */
                     "application/json": components["schemas"]["PreparedData"];
                 };
             };
@@ -2525,6 +3438,28 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "templateId": "quotation",
+                     *         "version": 3,
+                     *         "publishedAt": "2026-11-20T09:15:00Z",
+                     *         "publishedBy": "somchai",
+                     *         "note": "เพิ่มช่องส่วนลด",
+                     *         "sha256": "922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3",
+                     *         "isPublished": true
+                     *       },
+                     *       {
+                     *         "templateId": "quotation",
+                     *         "version": 2,
+                     *         "publishedAt": "2026-11-20T09:15:00Z",
+                     *         "publishedBy": "somchai",
+                     *         "note": null,
+                     *         "sha256": "d39c3d992be9d0ade6c2431b49d3bae12a417cc8a067eddbe4c6a3ee8e9154f8",
+                     *         "isPublished": false
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["Version"][];
                 };
             };
@@ -2546,6 +3481,11 @@ export interface operations {
         };
         requestBody?: {
             content: {
+                /**
+                 * @example {
+                 *       "note": "เพิ่มช่องส่วนลด"
+                 *     }
+                 */
                 "application/json": {
                     note?: string;
                 };
@@ -2558,6 +3498,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "templateId": "quotation",
+                     *       "version": 3,
+                     *       "publishedAt": "2026-11-20T09:15:00Z",
+                     *       "publishedBy": "somchai",
+                     *       "note": "เพิ่มช่องส่วนลด",
+                     *       "sha256": "922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3",
+                     *       "isPublished": true
+                     *     }
+                     */
                     "application/json": components["schemas"]["Version"];
                 };
             };
@@ -2571,6 +3522,24 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/draft-invalid",
+                     *       "title": "Draft invalid",
+                     *       "status": 422,
+                     *       "code": "DRAFT_INVALID",
+                     *       "detail": "the draft does not validate",
+                     *       "retryable": false,
+                     *       "problems": [
+                     *         {
+                     *           "severity": "error",
+                     *           "code": "FILE_MISSING",
+                     *           "message": "template.html is not in the draft",
+                     *           "file": "template.html"
+                     *         }
+                     *       ]
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2595,6 +3564,37 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "templateId": "quotation",
+                     *       "version": 3,
+                     *       "publishedAt": "2026-11-20T09:15:00Z",
+                     *       "publishedBy": "somchai",
+                     *       "note": "เพิ่มช่องส่วนลด",
+                     *       "sha256": "922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3",
+                     *       "isPublished": true,
+                     *       "files": [
+                     *         {
+                     *           "name": "report.json",
+                     *           "content": "{\n  \"reportVersion\": 1,\n  \"name\": \"ใบเสนอราคา\",\n  \"parameters\": {\"quoteId\": {\"type\": \"string\", \"required\": true}}\n}\n",
+                     *           "sha256": "7689c5c76d1bf5f5e99aa708f9fcc3070912a7cd948afc9d2db4260587e45e00"
+                     *         },
+                     *         {
+                     *           "name": "template.html",
+                     *           "content": "<h1>ใบเสนอราคา {{ params.quoteId }}</h1>\n",
+                     *           "sha256": "6ca7dfbf65170876547eee1c43a8e48241320fdba6ca19a6a26b9041b0755a97"
+                     *         }
+                     *       ],
+                     *       "assets": [
+                     *         {
+                     *           "name": "logo.png",
+                     *           "contentType": "image/png",
+                     *           "size": 18234,
+                     *           "sha256": "ab211233b6576dbb0f8b5826447eeac61e2a833a99ac5d788fbc1a174c3c6ce5"
+                     *         }
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["Version"] & {
                         files: components["schemas"]["TextFile"][];
                         assets: components["schemas"]["Asset"][];
@@ -2616,6 +3616,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "version": 2
+                 *     }
+                 */
                 "application/json": {
                     version: number;
                 };
@@ -2628,6 +3633,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "quotation",
+                     *       "name": "ใบเสนอราคา",
+                     *       "publishedVersion": 2,
+                     *       "latestVersion": 3,
+                     *       "draftRevision": 14,
+                     *       "draftChangedSincePublish": true,
+                     *       "page": {
+                     *         "size": "A4",
+                     *         "orientation": "portrait",
+                     *         "layout": "flow"
+                     *       },
+                     *       "lastRun": {
+                     *         "id": "019aa61f3c207d3e8a91c0",
+                     *         "status": "succeeded",
+                     *         "errorCode": null,
+                     *         "pages": 2,
+                     *         "createdAt": "2026-11-20T09:15:00Z"
+                     *       },
+                     *       "updatedAt": "2026-11-20T09:15:00Z",
+                     *       "archivedAt": null,
+                     *       "archivedBy": null,
+                     *       "tags": [
+                     *         "ขาย"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TemplateSummary"];
                 };
             };
@@ -2650,6 +3683,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "version": 2
+                 *     }
+                 */
                 "application/json": {
                     version: number;
                 };
@@ -2662,6 +3700,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "revision": 15
+                     *     }
+                     */
                     "application/json": components["schemas"]["DraftRevision"];
                 };
             };
@@ -2693,6 +3736,52 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "id": "019aa61f3c207d3e8a91c0",
+                     *           "status": "succeeded",
+                     *           "errorCode": null,
+                     *           "pages": 2,
+                     *           "createdAt": "2026-11-20T09:15:00Z",
+                     *           "kind": "render",
+                     *           "hasDocument": true,
+                     *           "templateId": "quotation",
+                     *           "version": 3,
+                     *           "draftRevision": null,
+                     *           "caller": {
+                     *             "type": "api-key",
+                     *             "id": "b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+                     *             "name": "ERP production"
+                     *           },
+                     *           "requestId": "erp-7781",
+                     *           "durationMs": 840,
+                     *           "provenance": {
+                     *             "templateSha256": "922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3",
+                     *             "paramsSha256": "a20b52fae57cc7a99c9651f1b573950fd211823e3ace3bb9c273c06430f24cd3",
+                     *             "dataSha256": "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7",
+                     *             "engineVersion": "8.25.1",
+                     *             "engineImage": "jester/gotenberg:9.4.1-th1",
+                     *             "fonts": [
+                     *               {
+                     *                 "name": "THSarabunNew.ttf",
+                     *                 "sha256": "795ea3efa43d0872b63bf0067be97553b46983e4f075097669391e9d15388ecc"
+                     *               }
+                     *             ],
+                     *             "options": {
+                     *               "paperWidth": "8.27",
+                     *               "paperHeight": "11.7"
+                     *             },
+                     *             "outputSha256": "c35b21d6ca39aa7cc3b79a705d989f1a6e88b99ab43988d74048799e3db926a3",
+                     *             "engineTrace": null
+                     *           },
+                     *           "problems": []
+                     *         }
+                     *       ],
+                     *       "next": "019aa61e00000000000000"
+                     *     }
+                     */
                     "application/json": {
                         items: components["schemas"]["Run"][];
                         next?: string | null;
@@ -2719,6 +3808,47 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "019aa61f3c207d3e8a91c0",
+                     *       "status": "succeeded",
+                     *       "errorCode": null,
+                     *       "pages": 2,
+                     *       "createdAt": "2026-11-20T09:15:00Z",
+                     *       "kind": "render",
+                     *       "hasDocument": true,
+                     *       "templateId": "quotation",
+                     *       "version": 3,
+                     *       "draftRevision": null,
+                     *       "caller": {
+                     *         "type": "api-key",
+                     *         "id": "b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+                     *         "name": "ERP production"
+                     *       },
+                     *       "requestId": "erp-7781",
+                     *       "durationMs": 840,
+                     *       "provenance": {
+                     *         "templateSha256": "922071d9af6a96ff42962da121dddbc880ed9462fc854505e66c74c6816682e3",
+                     *         "paramsSha256": "a20b52fae57cc7a99c9651f1b573950fd211823e3ace3bb9c273c06430f24cd3",
+                     *         "dataSha256": "3a6eb0790f39ac87c94f3856b2dd2c5d110e6811602261a9a923d3bb23adc8b7",
+                     *         "engineVersion": "8.25.1",
+                     *         "engineImage": "jester/gotenberg:9.4.1-th1",
+                     *         "fonts": [
+                     *           {
+                     *             "name": "THSarabunNew.ttf",
+                     *             "sha256": "795ea3efa43d0872b63bf0067be97553b46983e4f075097669391e9d15388ecc"
+                     *           }
+                     *         ],
+                     *         "options": {
+                     *           "paperWidth": "8.27",
+                     *           "paperHeight": "11.7"
+                     *         },
+                     *         "outputSha256": "c35b21d6ca39aa7cc3b79a705d989f1a6e88b99ab43988d74048799e3db926a3",
+                     *         "engineTrace": null
+                     *       },
+                     *       "problems": []
+                     *     }
+                     */
                     "application/json": components["schemas"]["Run"];
                 };
             };
@@ -2749,6 +3879,34 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "runId": "019aa61f3c207d3e8a91c0",
+                     *           "createdAt": "2026-11-20T09:15:00Z",
+                     *           "templateId": "quotation",
+                     *           "version": 3,
+                     *           "caller": {
+                     *             "type": "api-key",
+                     *             "id": "b1d2e3f4-5a6b-4c7d-8e9f-0a1b2c3d4e5f",
+                     *             "name": "ERP production"
+                     *           },
+                     *           "filename": "Q-DEMO-001.pdf",
+                     *           "pages": 2,
+                     *           "params": {
+                     *             "quoteId": "Q-DEMO-001",
+                     *             "locale": "th-TH",
+                     *             "docDate": "2026-11-12"
+                     *           },
+                     *           "tags": [
+                     *             "ขาย"
+                     *           ]
+                     *         }
+                     *       ],
+                     *       "next": null
+                     *     }
+                     */
                     "application/json": {
                         items: components["schemas"]["DocumentSummary"][];
                         next: string | null;
@@ -2770,6 +3928,14 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "tags": [
+                 *         "ขาย",
+                 *         "ส่งแล้ว"
+                 *       ]
+                 *     }
+                 */
                 "application/json": components["schemas"]["TagList"];
             };
         };
@@ -2780,6 +3946,14 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "tags": [
+                     *         "ขาย",
+                     *         "ส่งแล้ว"
+                     *       ]
+                     *     }
+                     */
                     "application/json": components["schemas"]["TagList"];
                 };
             };
@@ -2831,6 +4005,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "days": 365,
+                     *       "setBy": "somchai",
+                     *       "setAt": "2026-11-20T09:15:00Z",
+                     *       "wouldDelete": 1280,
+                     *       "wouldDeleteDocuments": 1105
+                     *     }
+                     */
                     "application/json": components["schemas"]["RunRetention"];
                 };
             };
@@ -2847,6 +4030,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "days": 365
+                 *     }
+                 */
                 "application/json": {
                     days: number | null;
                 };
@@ -2859,6 +4047,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "days": 365,
+                     *       "setBy": "somchai",
+                     *       "setAt": "2026-11-20T09:15:00Z",
+                     *       "wouldDelete": null,
+                     *       "wouldDeleteDocuments": null
+                     *     }
+                     */
                     "application/json": components["schemas"]["RunRetention"];
                 };
             };
@@ -2881,6 +4078,60 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "mahasamut",
+                     *         "name": "มหาสมุทร",
+                     *         "builtIn": true,
+                     *         "tokens": {
+                     *           "color.background": "#f5f7fa",
+                     *           "color.surface": "#ffffff",
+                     *           "color.surfaceAlt": "#eef2f7",
+                     *           "color.border": "#d0d7e2",
+                     *           "color.text": "#1d2733",
+                     *           "color.textMuted": "#5b6b7f",
+                     *           "color.primary": "#0b6bcb",
+                     *           "color.onPrimary": "#ffffff",
+                     *           "color.danger": "#c62828",
+                     *           "color.warning": "#b26a00",
+                     *           "color.success": "#2e7d32",
+                     *           "font.family": "Sarabun",
+                     *           "font.size": 14,
+                     *           "radius": 6,
+                     *           "shadow": "soft",
+                     *           "density": "comfortable"
+                     *         },
+                     *         "createdBy": null,
+                     *         "updatedAt": null
+                     *       },
+                     *       {
+                     *         "id": "6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f",
+                     *         "name": "สีองค์กร",
+                     *         "builtIn": false,
+                     *         "tokens": {
+                     *           "color.background": "#f5f7fa",
+                     *           "color.surface": "#ffffff",
+                     *           "color.surfaceAlt": "#eef2f7",
+                     *           "color.border": "#d0d7e2",
+                     *           "color.text": "#1d2733",
+                     *           "color.textMuted": "#5b6b7f",
+                     *           "color.primary": "#0b6bcb",
+                     *           "color.onPrimary": "#ffffff",
+                     *           "color.danger": "#c62828",
+                     *           "color.warning": "#b26a00",
+                     *           "color.success": "#2e7d32",
+                     *           "font.family": "Sarabun",
+                     *           "font.size": 14,
+                     *           "radius": 6,
+                     *           "shadow": "soft",
+                     *           "density": "comfortable"
+                     *         },
+                     *         "createdBy": "somchai",
+                     *         "updatedAt": "2026-11-20T09:15:00Z"
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["Theme"][];
                 };
             };
@@ -2896,6 +4147,29 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "name": "สีองค์กร",
+                 *       "tokens": {
+                 *         "color.background": "#f5f7fa",
+                 *         "color.surface": "#ffffff",
+                 *         "color.surfaceAlt": "#eef2f7",
+                 *         "color.border": "#d0d7e2",
+                 *         "color.text": "#1d2733",
+                 *         "color.textMuted": "#5b6b7f",
+                 *         "color.primary": "#0b6bcb",
+                 *         "color.onPrimary": "#ffffff",
+                 *         "color.danger": "#c62828",
+                 *         "color.warning": "#b26a00",
+                 *         "color.success": "#2e7d32",
+                 *         "font.family": "Sarabun",
+                 *         "font.size": 14,
+                 *         "radius": 6,
+                 *         "shadow": "soft",
+                 *         "density": "comfortable"
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["ThemeInput"];
             };
         };
@@ -2906,6 +4180,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f",
+                     *       "name": "สีองค์กร",
+                     *       "builtIn": false,
+                     *       "tokens": {
+                     *         "color.background": "#f5f7fa",
+                     *         "color.surface": "#ffffff",
+                     *         "color.surfaceAlt": "#eef2f7",
+                     *         "color.border": "#d0d7e2",
+                     *         "color.text": "#1d2733",
+                     *         "color.textMuted": "#5b6b7f",
+                     *         "color.primary": "#0b6bcb",
+                     *         "color.onPrimary": "#ffffff",
+                     *         "color.danger": "#c62828",
+                     *         "color.warning": "#b26a00",
+                     *         "color.success": "#2e7d32",
+                     *         "font.family": "Sarabun",
+                     *         "font.size": 14,
+                     *         "radius": 6,
+                     *         "shadow": "soft",
+                     *         "density": "comfortable"
+                     *       },
+                     *       "createdBy": "somchai",
+                     *       "updatedAt": "2026-11-20T09:15:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Theme"];
                 };
             };
@@ -2916,6 +4217,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "a theme named สีองค์กร exists",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -2937,6 +4248,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "tag": "ขาย",
+                     *         "color": "green",
+                     *         "templates": 3,
+                     *         "documents": 412
+                     *       },
+                     *       {
+                     *         "tag": "ไตรมาส 4",
+                     *         "color": "gray",
+                     *         "templates": 0,
+                     *         "documents": 37
+                     *       }
+                     *     ]
+                     */
                     "application/json": components["schemas"]["TagUse"][];
                 };
             };
@@ -2952,6 +4279,12 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "tag": "ขาย",
+                 *       "color": "green"
+                 *     }
+                 */
                 "application/json": components["schemas"]["TagColor"];
             };
         };
@@ -2962,6 +4295,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "tag": "ขาย",
+                     *       "color": "green"
+                     *     }
+                     */
                     "application/json": components["schemas"]["TagColor"];
                 };
             };
@@ -2984,6 +4323,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "mahasamut",
+                     *       "name": "มหาสมุทร",
+                     *       "builtIn": true,
+                     *       "tokens": {
+                     *         "color.background": "#f5f7fa",
+                     *         "color.surface": "#ffffff",
+                     *         "color.surfaceAlt": "#eef2f7",
+                     *         "color.border": "#d0d7e2",
+                     *         "color.text": "#1d2733",
+                     *         "color.textMuted": "#5b6b7f",
+                     *         "color.primary": "#0b6bcb",
+                     *         "color.onPrimary": "#ffffff",
+                     *         "color.danger": "#c62828",
+                     *         "color.warning": "#b26a00",
+                     *         "color.success": "#2e7d32",
+                     *         "font.family": "Sarabun",
+                     *         "font.size": 14,
+                     *         "radius": 6,
+                     *         "shadow": "soft",
+                     *         "density": "comfortable"
+                     *       },
+                     *       "createdBy": null,
+                     *       "updatedAt": null
+                     *     }
+                     */
                     "application/json": components["schemas"]["Theme"];
                 };
             };
@@ -2998,6 +4364,11 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "themeId": "6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f"
+                 *     }
+                 */
                 "application/json": {
                     themeId: components["schemas"]["ThemeId"];
                 };
@@ -3010,6 +4381,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f",
+                     *       "name": "สีองค์กร",
+                     *       "builtIn": false,
+                     *       "tokens": {
+                     *         "color.background": "#f5f7fa",
+                     *         "color.surface": "#ffffff",
+                     *         "color.surfaceAlt": "#eef2f7",
+                     *         "color.border": "#d0d7e2",
+                     *         "color.text": "#1d2733",
+                     *         "color.textMuted": "#5b6b7f",
+                     *         "color.primary": "#0b6bcb",
+                     *         "color.onPrimary": "#ffffff",
+                     *         "color.danger": "#c62828",
+                     *         "color.warning": "#b26a00",
+                     *         "color.success": "#2e7d32",
+                     *         "font.family": "Sarabun",
+                     *         "font.size": 14,
+                     *         "radius": 6,
+                     *         "shadow": "soft",
+                     *         "density": "comfortable"
+                     *       },
+                     *       "createdBy": "somchai",
+                     *       "updatedAt": "2026-11-20T09:15:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Theme"];
                 };
             };
@@ -3029,6 +4427,29 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /**
+                 * @example {
+                 *       "name": "สีองค์กร",
+                 *       "tokens": {
+                 *         "color.background": "#f5f7fa",
+                 *         "color.surface": "#ffffff",
+                 *         "color.surfaceAlt": "#eef2f7",
+                 *         "color.border": "#d0d7e2",
+                 *         "color.text": "#1d2733",
+                 *         "color.textMuted": "#5b6b7f",
+                 *         "color.primary": "#0b6bcb",
+                 *         "color.onPrimary": "#ffffff",
+                 *         "color.danger": "#c62828",
+                 *         "color.warning": "#b26a00",
+                 *         "color.success": "#2e7d32",
+                 *         "font.family": "Sarabun",
+                 *         "font.size": 14,
+                 *         "radius": 6,
+                 *         "shadow": "soft",
+                 *         "density": "comfortable"
+                 *       }
+                 *     }
+                 */
                 "application/json": components["schemas"]["ThemeInput"];
             };
         };
@@ -3039,6 +4460,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "id": "6d1f0b9e-2c4a-4e8b-9f3d-1a2b3c4d5e6f",
+                     *       "name": "สีองค์กร",
+                     *       "builtIn": false,
+                     *       "tokens": {
+                     *         "color.background": "#f5f7fa",
+                     *         "color.surface": "#ffffff",
+                     *         "color.surfaceAlt": "#eef2f7",
+                     *         "color.border": "#d0d7e2",
+                     *         "color.text": "#1d2733",
+                     *         "color.textMuted": "#5b6b7f",
+                     *         "color.primary": "#0b6bcb",
+                     *         "color.onPrimary": "#ffffff",
+                     *         "color.danger": "#c62828",
+                     *         "color.warning": "#b26a00",
+                     *         "color.success": "#2e7d32",
+                     *         "font.family": "Sarabun",
+                     *         "font.size": 14,
+                     *         "radius": 6,
+                     *         "shadow": "soft",
+                     *         "density": "comfortable"
+                     *       },
+                     *       "createdBy": "somchai",
+                     *       "updatedAt": "2026-11-20T09:15:00Z"
+                     *     }
+                     */
                     "application/json": components["schemas"]["Theme"];
                 };
             };
@@ -3050,6 +4498,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "built-in themes cannot be changed; make a copy instead",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -3082,6 +4540,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "type": "https://jester-report.dev/errors/conflict",
+                     *       "title": "Conflict",
+                     *       "status": 409,
+                     *       "code": "CONFLICT",
+                     *       "detail": "built-in themes cannot be deleted",
+                     *       "retryable": false
+                     *     }
+                     */
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
@@ -3122,6 +4590,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "status": "up",
+                     *       "version": "1.12.0",
+                     *       "components": {
+                     *         "database": "up",
+                     *         "objectStorage": "up",
+                     *         "engine": {
+                     *           "status": "up",
+                     *           "version": "8.25.1"
+                     *         }
+                     *       }
+                     *     }
+                     */
                     "application/json": components["schemas"]["Health"];
                 };
             };
@@ -3131,6 +4613,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    /**
+                     * @example {
+                     *       "status": "degraded",
+                     *       "version": "1.12.0",
+                     *       "components": {
+                     *         "database": "up",
+                     *         "objectStorage": "up",
+                     *         "engine": {
+                     *           "status": "down",
+                     *           "version": null
+                     *         }
+                     *       }
+                     *     }
+                     */
                     "application/json": components["schemas"]["Health"];
                 };
             };
