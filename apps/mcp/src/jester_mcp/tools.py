@@ -15,6 +15,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
 from mcp.types import ImageContent, TextContent, ToolAnnotations
 
+from . import guide
 from .api import Api, ApiProblem, NotAllowed, SessionExpired, path
 from .oauth import Provider
 from .preview import pdf_pages_png
@@ -101,6 +102,17 @@ def register(server: MCPServer, caller: Caller, studio_url: str) -> None:
         return f"{studio_url}{path('templates', template_id)}"
 
     _register_write(server, caller, studio)
+
+    @server.tool(annotations=READ)
+    async def get_authoring_guide(topic: str = "mcp") -> dict[str, Any]:
+        """How to build a Jester report. Read `mcp` first (the steps through this connector), then
+        `format` (the rules Jester checks) before writing files; `overview` and `sources` as needed."""
+        try:
+            return {"topic": topic, "content": guide.read(topic)}
+        except KeyError as e:
+            raise ToolError(f"unknown topic {topic!r}; topics: {', '.join(guide.TOPICS)}") from e
+        except FileNotFoundError as e:
+            raise ToolError(str(e)) from e
 
     @server.tool(annotations=READ)
     async def whoami() -> dict[str, Any]:

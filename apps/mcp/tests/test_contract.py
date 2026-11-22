@@ -24,6 +24,7 @@ NEVER = {
 }
 TOOLS = {
     "whoami",
+    "get_authoring_guide",
     "list_templates",
     "get_template",
     "get_draft",

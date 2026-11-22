@@ -11,3 +11,6 @@ infra/.env
 
 # skill-creator test runs of .claude/skills/to-jester
 .claude/skills/to-jester-workspace/
+
+# copies of the to-jester skill for the MCP connector (python -m jester_mcp.guide)
+apps/mcp/src/jester_mcp/guide/
