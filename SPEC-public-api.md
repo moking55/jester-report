@@ -300,3 +300,15 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 - contract test ผ่านกับ operation ใหม่; กรองหลาย tag; PUT แทนทั้งชุด; API key แก้ tag ไม่ได้ (403); สีนอกชุด 422; `gray` ลบแถว; `/v1/tags` นับถูก
 
 ---
+
+# v1.12: contract เป็น API docs
+
+สถานะ: **อนุมัติ 23 พ.ย. 2026** · Studio: หัวข้อ v1.12 ใน [SPEC-studio.md](SPEC-studio.md)
+
+- ทุก operation ใน `public-api.yaml` มี `summary` และ `description`; ทุก body ที่เป็น JSON หรือ problem+json มี example (ยกเว้น multipart, PDF, zip, asset และ YAML ของ contract)
+- error ที่ใช้ร่วม (`components/responses`) มี example ครั้งเดียว ใช้ได้ทุก operation; `InputInvalid` มี 3 แบบ: param ขาด (`PARAM_REQUIRED` ที่ `/params/…`), data ผิด schema (`DATA_INVALID` ที่ `/data/…`), body ไม่ตรง contract
+- `info` และ `servers` บอกของจริง (เวอร์ชันตาม release, server เป็น variable `JESTER_API`)
+
+## Testing Strategy v1.12
+
+- `test_contract`: ทุก operation มี summary/description; ทุก JSON body มี example; ทุก example ผ่าน schema ของตัวเอง (validate ผ่าน pointer ใน contract เพื่อให้ `$ref` ภายใน resolve ได้)

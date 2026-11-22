@@ -1103,6 +1103,7 @@ paths:
         required: true
         content:
           text/plain:
+            example: "<h1>ใบเสนอราคา {{ params.quoteId }}</h1>\n"
             schema: { type: string, maxLength: 1048576 }
       responses:
         '200':

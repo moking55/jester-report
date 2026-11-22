@@ -1156,3 +1156,24 @@ rowspan · เลือกหลายเซลล์พร้อมกัน (�
 
 - เมนู ⋯ ในหน้า workspace ของรายงานมี "แก้ tag…" เหมือนใน catalog; ช่อง tag ของฟอร์มออกเอกสารส่ง `tags` ตามที่เห็นเสมอ แต่ curl ใน Developer dialog ใส่ `tags` เฉพาะเมื่อผู้ใช้แก้จาก tag ของรายงาน (ผู้ผสานระบบที่คัดลอก curl จะได้ tag ของรายงาน ณ ตอนเรียกแต่ละครั้ง ไม่ถูกตรึงเป็น tag วันนี้)
 - dialog ทุกตัวที่ใช้ `RenderDialog.module.css` ตั้ง `white-space: normal; text-align: start` เอง เพราะ `<dialog>` สืบทอดค่าจากตำแหน่งใน DOM (เซลล์ตารางที่ nowrap ทำให้ dialog ล้น)
+
+# v1.12: เชื่อมต่อระบบอื่น
+
+สถานะ: **อนุมัติ 23 พ.ย. 2026** · api: หัวข้อ v1.12 ใน [SPEC-public-api.md](SPEC-public-api.md)
+
+- Developer dialog (หน้าออกเอกสาร): body ใช้ค่าในฟอร์ม ช่องว่างเติมจาก `sample.json` แล้วใช้ค่าแทนแบบเดียวกับ api (`SAMPLE`, `2000-01-01`, `1`, enum ตัวแรก) จึงคัดลอกไปยิงได้ทันที; `tags` ยังใส่เฉพาะเมื่อผู้ใช้แก้
+- แท็บ curl / JavaScript (fetch) / Python (urllib, ไม่ต้องติดตั้งอะไร) จาก `lib/render.ts`; body ส่งเป็นข้อความเดิม (string literal ของ JSON ใช้ได้ทั้ง JS และ Python) ทศนิยมยาวไม่เพี้ยน; key อ่านจาก `JESTER_API_KEY`
+- curl ใช้ `-D -` แสดงบรรทัดสถานะและ header (`Jester-Run-Id`, `Jester-Template-Version`); ไม่ใช้ `--fail-with-body` เพราะ curl ก่อน 7.76 ไม่รู้จัก
+- ตารางฟิลด์จาก `formSpec` (`fieldRows`): pointer แบบเดียวกับ `problems[].pointer` ของ 422 (แถว array เป็น `/0`), ชนิด, บังคับ, title/description จาก `report.json` และ data schema; ตัวอย่าง 422 ชี้ฟิลด์ของรายงานนั้น
+- `/api/reference`: Scalar (`@scalar/api-reference-react`, pin เวอร์ชัน) แสดง contract ที่อ่านจาก `GET /v1/openapi.yaml` ฝั่ง server; ปิดปุ่มส่ง request, client, Ask AI, MCP และฟอนต์จาก CDN (browser ไม่เรียก api ตรง และ stack อาจไม่มีอินเทอร์เน็ต); หน้า `/api` เดิมยังอยู่และลิงก์ไป
+
+## Success Criteria v1.12
+
+1. curl ที่คัดลอกจาก dialog ยิงได้จริงบน stack ทดสอบ ได้ PDF และ `Jester-Run-Id`; ตัวอย่าง JS และ Python ก็เช่นกัน
+2. docs แสดงทุก operation พร้อมตัวอย่าง
+3. vitest/tsc/eslint ผ่าน และ E2E เดิม 15 ตัวผ่าน
+
+## Not Doing v1.12
+
+- ปุ่ม try-it ใน docs, SDK ที่ generate จาก contract, ตัวอย่างภาษาอื่นนอกจาก curl/JS/Python
+- สีของ Scalar ยังไม่ตาม theme ของ Studio

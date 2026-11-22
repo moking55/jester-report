@@ -2986,6 +2986,7 @@ export interface operations {
         };
         requestBody: {
             content: {
+                /** @example <h1>ใบเสนอราคา {{ params.quoteId }}</h1> */
                 "text/plain": string;
             };
         };
