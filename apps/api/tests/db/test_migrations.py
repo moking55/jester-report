@@ -68,9 +68,35 @@ async def test_tags_migration_keeps_existing_rows_with_empty_tags(db_url, tmp_pa
             "VALUES ('r', 'old', 'f.pdf', '{}', '{}', 1, 'x')"
         )
     monkeypatch.setattr(migrate_module, "MIGRATIONS", MIGRATIONS)
-    assert await _migrate(db_url) == ["0009_tags.sql"]
+    assert await _migrate(db_url) == sorted(p.name for p in MIGRATIONS.glob("*.sql") if p.name >= "0009")
     async with await AsyncConnection.connect(db_url) as conn:
         for table in ("templates", "documents"):
             cur = await conn.execute(f"SELECT tags FROM {table}")  # noqa: S608 (fixed names)
             assert await cur.fetchall() == [([],)]
         await conn.execute("INSERT INTO tag_colors (tag, color) VALUES ('a', 'red')")
+
+
+async def test_long_sessions_migration_keeps_existing_sessions_standard(db_url, tmp_path, monkeypatch):
+    migrate_module = importlib.import_module("jester_api.db.migrate")
+
+    old = tmp_path / "old"
+    old.mkdir()
+    for path in sorted(MIGRATIONS.glob("*.sql")):
+        if path.name < "0010":
+            (old / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+    monkeypatch.setattr(migrate_module, "MIGRATIONS", old)
+    await _migrate(db_url)  # a database at 0001-0009 with a signed-in user
+    async with await AsyncConnection.connect(db_url, autocommit=True) as conn:
+        await conn.execute(
+            "INSERT INTO users (id, username, password_hash, created_at) "
+            "VALUES ('3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01', 'old', 'x', now())"
+        )
+        await conn.execute(
+            "INSERT INTO sessions (token_sha256, user_id, created_at, expires_at) "
+            "VALUES ('t', '3f6c2a1e-8b4d-4c2a-9e1f-7a5b6c8d9e01', now(), now())"
+        )
+    monkeypatch.setattr(migrate_module, "MIGRATIONS", MIGRATIONS)
+    assert await _migrate(db_url) == sorted(p.name for p in MIGRATIONS.glob("*.sql") if p.name >= "0010")
+    async with await AsyncConnection.connect(db_url) as conn:
+        cur = await conn.execute("SELECT long_lived FROM sessions")
+        assert await cur.fetchall() == [(False,)]

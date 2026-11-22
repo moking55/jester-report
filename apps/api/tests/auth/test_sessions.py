@@ -94,3 +94,45 @@ async def test_change_password_keeps_this_session_only(auth, alice):
     assert await code_of(auth.authenticate(other.token)) == "UNAUTHORIZED"
     assert await code_of(auth.login("alice", PASSWORD, IP)) == "UNAUTHORIZED"
     assert (await auth.login("alice", new, IP)).user.username == "alice"
+
+
+async def test_long_session_renews_and_has_a_90_day_ceiling(auth, alice, clock, pool):
+    session = await auth.login("alice", PASSWORD, IP, long_lived=True)
+    token, login_at = session.token, clock.now
+    assert session.expires_at == login_at + timedelta(days=30)
+    assert await expires_in_db(pool, token) == login_at + timedelta(days=30)
+
+    clock.advance(days=14)  # 16 days left: no renewal
+    await auth.authenticate(token)
+    assert await expires_in_db(pool, token) == login_at + timedelta(days=30)
+
+    clock.advance(days=2)  # 14 days left: renewed to a full 30 days from now
+    await auth.authenticate(token)
+    assert await expires_in_db(pool, token) == clock.now + timedelta(days=30)
+
+    while True:  # used every 20 days: valid until 90 days after login, never longer
+        clock.advance(days=20)
+        if clock.now >= login_at + timedelta(days=90):
+            break
+        await auth.authenticate(token)
+    assert await expires_in_db(pool, token) == login_at + timedelta(days=90)
+    assert await code_of(auth.authenticate(token)) == "UNAUTHORIZED"
+
+
+async def test_idle_long_session_expires_after_30_days(auth, alice, clock):
+    session = await auth.login("alice", PASSWORD, IP, long_lived=True)
+    clock.advance(days=29, hours=23)
+    await auth.authenticate(session.token)  # still valid (and renewed, under 15 days left)
+    clock.advance(days=30, seconds=1)
+    assert await code_of(auth.authenticate(session.token)) == "UNAUTHORIZED"
+
+
+async def test_long_sessions_are_revoked_like_any_other(auth, alice):
+    bob = await auth.create_user("bob", PASSWORD)
+    long = await auth.login("bob", PASSWORD, IP, long_lived=True)
+    await auth.set_password(bob.id, "a brand new password", alice.user.id)
+    assert await code_of(auth.authenticate(long.token)) == "UNAUTHORIZED"
+
+    long = await auth.login("bob", "a brand new password", IP, long_lived=True)
+    await auth.delete_user(bob.id)
+    assert await code_of(auth.authenticate(long.token)) == "UNAUTHORIZED"

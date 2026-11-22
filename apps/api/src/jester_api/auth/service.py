@@ -23,6 +23,10 @@ from .tokens import API_KEY_PREFIX, SESSION_PREFIX, display_prefix, new_token, s
 IDLE = timedelta(hours=12)
 RENEW_BELOW = timedelta(hours=6)  # a session used with less left than this is renewed to IDLE
 MAX_AGE = timedelta(days=7)  # renewals never go past this, counted from login
+# long-lived sessions (SPEC-auth v1.13): only the MCP service asks for them, with the Studio key
+LONG_IDLE = timedelta(days=30)
+LONG_RENEW_BELOW = timedelta(days=15)
+LONG_MAX_AGE = timedelta(days=90)
 FAIL_WINDOW = timedelta(minutes=15)
 MAX_FAILURES = 5
 SETUP_FRESH = timedelta(minutes=5)  # another process printed a token this recently: do not replace it
@@ -128,12 +132,13 @@ class Auth:
         cur = await conn.execute(sql, args)  # type: ignore[arg-type]
         return await cur.fetchall()
 
-    async def _new_session(self, conn: AsyncConnection, user: User) -> Session:
+    async def _new_session(self, conn: AsyncConnection, user: User, long_lived: bool = False) -> Session:
         token, now = new_token(SESSION_PREFIX), self._now()
-        expires = now + IDLE
+        expires = now + (LONG_IDLE if long_lived else IDLE)
         await conn.execute(
-            "INSERT INTO sessions (token_sha256, user_id, created_at, expires_at) VALUES (%s, %s, %s, %s)",
-            (sha256_hex(token), user.id, now, expires),
+            "INSERT INTO sessions (token_sha256, user_id, created_at, expires_at, long_lived) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (sha256_hex(token), user.id, now, expires, long_lived),
         )
         return Session(token, expires, user)
 
@@ -214,7 +219,7 @@ class Auth:
             return await self._new_session(conn, user)
 
     # ---- sessions --------------------------------------------------------------------------------------
-    async def login(self, username: str, password: str, client_ip: str) -> Session:
+    async def login(self, username: str, password: str, client_ip: str, long_lived: bool = False) -> Session:
         await self._check_rate(username, client_ip)
         async with self._db.connection() as conn:
             row = await self._one(
@@ -236,7 +241,7 @@ class Auth:
                 "WHERE id = %s",
                 (now, new_hash, row[0]),
             )
-            return await self._new_session(conn, User(row[0], row[1], row[2], now))
+            return await self._new_session(conn, User(row[0], row[1], row[2], now), long_lived)
 
     async def logout(self, token: str) -> None:
         async with self._db.connection() as conn:
@@ -255,7 +260,8 @@ class Auth:
         async with self._db.connection() as conn:
             row = await self._one(
                 conn,
-                "SELECT u.id, u.username, u.created_at, u.last_login_at, s.created_at, s.expires_at "
+                "SELECT u.id, u.username, u.created_at, u.last_login_at, "
+                "s.created_at, s.expires_at, s.long_lived "
                 "FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_sha256 = %s",
                 (digest,),
             )
@@ -265,8 +271,11 @@ class Auth:
             if expires <= now:
                 await conn.execute("DELETE FROM sessions WHERE token_sha256 = %s", (digest,))
                 raise _unauthorized()
-            if expires - now < RENEW_BELOW:
-                renewed = min(now + IDLE, created + MAX_AGE)
+            idle, renew_below, max_age = (
+                (LONG_IDLE, LONG_RENEW_BELOW, LONG_MAX_AGE) if row[6] else (IDLE, RENEW_BELOW, MAX_AGE)
+            )
+            if expires - now < renew_below:
+                renewed = min(now + idle, created + max_age)
                 if renewed > expires:
                     await conn.execute(
                         "UPDATE sessions SET expires_at = %s WHERE token_sha256 = %s", (renewed, digest)
