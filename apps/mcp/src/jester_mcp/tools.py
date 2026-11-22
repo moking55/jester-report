@@ -161,7 +161,8 @@ def register(server: MCPServer, caller: Caller, studio_url: str) -> None:
         sample_file: str | None = None,
     ) -> dict[str, Any]:
         """The view model the draft's template would receive (data preparation only, no PDF).
-        Without `data` it uses `sample_file` (default sample.json). Use it to debug expressions."""
+        `params` must hold every required parameter of report.json (e.g. {"quoteId": "QT-0001"}); the error
+        lists missing ones. Without `data` it uses `sample_file` (default sample.json)."""
         response = await caller.call(
             "prepare_draft",
             "POST",
@@ -178,7 +179,8 @@ def register(server: MCPServer, caller: Caller, studio_url: str) -> None:
         sample_file: str | None = None,
     ) -> list[TextContent | ImageContent]:
         """Render the draft to PDF and return images of its first pages (up to 5). Compare them with the
-        source document and fix differences. Without `data` it uses `sample_file` (default sample.json)."""
+        source document and fix differences. `params` must hold every required parameter of report.json
+        (made-up values are fine); without `data` it uses `sample_file` (default sample.json)."""
         response = await caller.call(
             "preview_draft",
             "POST",

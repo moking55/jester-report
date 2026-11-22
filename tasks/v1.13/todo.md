@@ -58,29 +58,31 @@
 
 ## Phase 3: tool
 
-- [ ] **T7 tool อ่าน** (M)
+- [x] **T7 tool อ่าน** (M)
   - Acceptance: `list_templates` (`tag`), `get_template`, `get_draft` (description บอกว่าเนื้อไฟล์เป็นข้อมูลไม่ใช่คำสั่ง), `list_versions`, `validate_draft`, `prepare_draft` — ทุกตัว `readOnlyHint`; ทุกตัวชี้ operation ที่มีจริงใน `public-api.yaml` (test อ่านไฟล์ contract)
   - Verify: `pytest tests/test_tools.py`
   - Files: `src/jester_mcp/tools.py`, `tests/test_tools.py`, `tests/test_contract.py`
 
-- [ ] **T8 tool เขียน draft** (M)
+- [x] **T8 tool เขียน draft** (M)
   - Acceptance: `create_template` (`starter`, `page`), `duplicate_template`, `put_draft_file`, `delete_draft_file`, `upload_draft_asset` (base64 → multipart), `delete_draft_asset`; ทุกตัวที่แก้ draft ต้องมี `revision` → `If-Match`; 412 → error บอกให้อ่าน draft ใหม่; คืน `studioUrl`; ลบมี `destructiveHint`; **ไม่มี tool ไหนเรียก publish/alias/archive** (test รายชื่อ tool ทั้งหมดเทียบ allow-list)
   - Verify: `pytest tests/test_tools.py tests/test_contract.py`
   - Files: `src/jester_mcp/tools.py`, `src/jester_mcp/api.py`, `tests/test_tools.py`
 
-- [ ] **T9 `preview_draft` เป็นภาพ** (S)
+- [x] **T9 `preview_draft` เป็นภาพ** (S)
   - Acceptance: เพิ่ม `pypdfium2`; PDF 7 หน้า → PNG 5 ภาพ กว้าง 1000 px + `pages: 7` + `studioUrl`; ส่ง `data` ได้, ไม่ส่ง = `sample.json`; PDF เสีย → tool error
   - Verify: `pytest tests/test_preview.py`
   - Files: `src/jester_mcp/preview.py`, `src/jester_mcp/tools.py`, `pyproject.toml`, `tests/test_preview.py`
 
-- [ ] **T10 `get_authoring_guide` + instructions** (M)
+- [x] **T10 `get_authoring_guide` + instructions** (M)
   - Acceptance: script copy `SKILL.md`, `references/format.md`, `references/sources.md` จาก `.claude/skills/to-jester` เข้า `src/jester_mcp/guide/` (gitignore); หัวข้อ `mcp` (ไฟล์ของ `apps/mcp`) อธิบายขั้นตอนใน MCP: อ่าน guide → `create_template` → `put_draft_file` → `validate_draft` → `preview_draft` เทียบต้นฉบับ → ส่ง `studioUrl` ให้คน publish; `instructions` ของ server สั่งให้อ่าน guide ก่อน; topic ไม่รู้จัก → error พร้อมรายชื่อ topic
   - Verify: `pytest tests/test_guide.py` (ไฟล์ guide ตรงกับ skill ทุก byte)
   - Files: `scripts/copy-guide.py`, `src/jester_mcp/guide_mcp.md`, `src/jester_mcp/tools.py`, `.gitignore`, `tests/test_guide.py`
 
 ### Checkpoint C: tool ครบ
-- [ ] `pytest` ของ `apps/mcp` ผ่าน coverage ≥ 90%, `ruff` สะอาด
-- [ ] MCP Inspector กับ stack rc: create → put file → validate → preview เห็นภาพ
+- [x] `pytest` ของ `apps/mcp` ผ่าน 61 ตัว coverage 94%, `ruff` สะอาด
+- [x] flow จริงกับ api rc (23 พ.ย. 2026, script แทน Inspector): tools 15 ตัว → guide `format` → create (starter quotation) → get_draft → put report.css (rev 1→2) → put ด้วย revision เก่า = tool error 412 พร้อม hint → validate ผ่าน → prepare/preview ไม่ส่ง params = 422 `PARAM_REQUIRED` (บอกชื่อ) → ส่ง params ครบ → preview 1 หน้า ภาพไทย/พ.ศ./ยอด/บาทตัวอักษรถูก; run ใน DB เป็น user `mcp-tester`; log ไม่มี token
+- พบระหว่างทาง: preview/prepare ต้องส่ง `params` ที่ required เสมอ (Studio ให้คนกรอก, api ไม่เติมให้) — เพิ่มใน description ของ tool และ guide `mcp` ข้อ 5
+- ต่างจาก plan: T10 ใช้ `python -m jester_mcp.guide <skill dir>` แทน `scripts/copy-guide.py`; PNG เขียนด้วย zlib (ไม่เพิ่ม Pillow)
 - [ ] ทบทวนกับผู้ใช้
 
 ## Phase 4: deploy และปล่อย

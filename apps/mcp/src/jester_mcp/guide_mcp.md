@@ -17,7 +17,8 @@
    - ได้ error `REVISION_CONFLICT` = มีคนแก้ draft ใน Studio พร้อมกัน: `get_draft` ใหม่ แล้วรวมงานของเขา ไม่เขียนทับ
    - โลโก้/รูปที่ผู้ใช้แนบ: `upload_draft_asset` (base64, ไม่เกิน 5 MB) แล้วอ้างด้วยชื่อไฟล์ใน template
 4. **ตรวจ** `validate_draft` จนไม่มี `severity: error`; expression ผิดหรือยอดไม่ตรง ใช้ `prepare_draft` ดูข้อมูลที่ template ได้รับ
-5. **ดูภาพจริง** `preview_draft` แล้วเทียบกับต้นฉบับทีละส่วน (หัวกระดาษ ตาราง ยอดรวม ท้ายกระดาษ ตัวหนังสือไทย) แก้แล้ว preview ซ้ำ
+5. **ดูภาพจริง** `preview_draft` (และ `prepare_draft`) ต้องส่ง `params` ครบทุก parameter ที่ `required` ใน `report.json`
+   ใช้ค่าสมมติได้ เช่น `{"quoteId": "QT-0001"}` — ถ้าขาด error `PARAM_REQUIRED` บอกว่าตัวไหน แล้วเทียบกับต้นฉบับทีละส่วน (หัวกระดาษ ตาราง ยอดรวม ท้ายกระดาษ ตัวหนังสือไทย) แก้แล้ว preview ซ้ำ
    จนใกล้เคียง — ยอดเงินใน preview ต้องตรงกับที่คำนวณด้วยมือจาก `sample.json`
 6. **ส่งต่อให้คน** — connector **publish ไม่ได้** (ตั้งใจ): สรุปภาษาไทยสั้น ๆ พร้อม `studioUrl` ให้ผู้ใช้เปิด Studio ตรวจ preview แล้วกด
    Publish เอง; บอก parameter ที่ต้องกรอกต่อฉบับ ยอดที่ระบบคำนวณให้ และสิ่งที่เดาเองหรือทำไม่ได้เหมือนต้นฉบับ
