@@ -64,6 +64,7 @@ export interface paths {
         /**
          * Sign in with username and password
          * @description Returns a session token for Studio's server. Failed attempts are limited per (username, client IP); after too many the answer is 429 for a while.
+         *     `lifetime: long` (30 days idle, at most 90 days) is only for the MCP service: it needs `X-Jester-Studio-Key`, otherwise 422.
          */
         post: operations["login"];
         delete?: never;
@@ -1854,6 +1855,12 @@ export interface operations {
                 "application/json": {
                     username: string;
                     password: string;
+                    /**
+                     * @description `long` needs X-Jester-Studio-Key (the MCP service); standard is 12 hours idle, at most 7 days
+                     * @default standard
+                     * @enum {string}
+                     */
+                    lifetime?: "standard" | "long";
                 };
             };
         };
@@ -1880,6 +1887,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["InputInvalid"];
             /** @description Too many failed attempts */
             429: {
                 headers: {

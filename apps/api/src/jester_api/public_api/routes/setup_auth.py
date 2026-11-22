@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 
 from .. import views
-from ..security import SessionCaller, bearer_token, client_ip
+from ..problems import ApiError
+from ..security import SessionCaller, bearer_token, client_ip, from_studio
 from ..state import services
 
 router = APIRouter()
@@ -19,6 +22,7 @@ class SetupBody(views.Body):
 class LoginBody(views.Body):
     username: str
     password: str
+    lifetime: Literal["standard", "long"] = "standard"
 
 
 class PasswordBody(views.Body):
@@ -39,7 +43,10 @@ async def complete_setup(request: Request, body: SetupBody) -> JSONResponse:
 
 @router.post("/v1/auth/login")
 async def login(request: Request, body: LoginBody) -> dict:
-    session = await services(request).auth.login(body.username, body.password, client_ip(request))
+    long_lived = body.lifetime == "long"
+    if long_lived and not from_studio(request):  # checked before the password, so it reveals nothing
+        raise ApiError("INPUT_INVALID", "lifetime long is only for the MCP service")
+    session = await services(request).auth.login(body.username, body.password, client_ip(request), long_lived)
     return views.session(session)
 
 

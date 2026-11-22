@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+
 import pytest
 
 from .conftest import PASSWORD, STUDIO_KEY
@@ -106,3 +108,25 @@ async def test_set_another_users_password(api, admin):
     key = (await api.post("/v1/api-keys", headers=admin, json={"name": "erp"})).json()["secret"]
     by_key = await api.put(url, headers={"Authorization": f"Bearer {key}"}, json={"newPassword": PASSWORD})
     assert by_key.status_code == 401
+
+
+async def test_long_login_needs_the_studio_key(api, admin):
+    def login(headers, **extra):
+        body = {"username": "alice", "password": PASSWORD, **extra}
+        return api.post("/v1/auth/login", headers=headers, json=body)
+
+    for headers in ({}, {"X-Jester-Studio-Key": "wrong"}):
+        no = await login(headers, lifetime="long")
+        assert (no.status_code, no.json()["code"]) == (422, "INPUT_INVALID")
+    assert (await login({}, lifetime="forever")).status_code == 422
+
+    long = await login({"X-Jester-Studio-Key": STUDIO_KEY}, lifetime="long")
+    assert long.status_code == 200
+    expires = datetime.fromisoformat(long.json()["expiresAt"].replace("Z", "+00:00"))
+    assert abs(expires - (datetime.now(UTC) + timedelta(days=30))) < timedelta(minutes=5)
+    me = await api.get("/v1/auth/me", headers={"Authorization": f"Bearer {long.json()['token']}"})
+    assert me.json()["username"] == "alice"
+
+    standard = await login({"X-Jester-Studio-Key": STUDIO_KEY})
+    expires = datetime.fromisoformat(standard.json()["expiresAt"].replace("Z", "+00:00"))
+    assert expires - datetime.now(UTC) < timedelta(hours=13)

@@ -32,12 +32,17 @@ async def session_caller(request: Request) -> Principal:
     return principal
 
 
-def client_ip(request: Request) -> str:
-    """The browser's IP from Studio when it proves itself with the shared key; else the connection's IP."""
+def from_studio(request: Request) -> bool:
+    """The caller holds the shared Studio key (Studio, or the MCP service); False when no key is set."""
     key = settings(request).studio_key
     sent_key = request.headers.get("X-Jester-Studio-Key", "")
+    return bool(key) and hmac.compare_digest(sent_key.encode(), key.encode())  # type: ignore[union-attr]
+
+
+def client_ip(request: Request) -> str:
+    """The browser's IP from Studio when it proves itself with the shared key; else the connection's IP."""
     forwarded = request.headers.get("X-Jester-Client-IP", "").strip()
-    if key and forwarded and hmac.compare_digest(sent_key.encode(), key.encode()):
+    if forwarded and from_studio(request):
         return forwarded
     return request.client.host if request.client else "unknown"
 
