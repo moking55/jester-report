@@ -37,7 +37,7 @@ export const COLOR_BASE: Record<TagColor, string> = {
 };
 
 /** The mix the chip stylesheet uses; kept here so the contrast test and the CSS cannot drift apart. */
-export const CHIP_MIX = { background: 14, text: 55 } as const;
+export const CHIP_MIX = { background: 14, text: 55, glassDark: 26 } as const;
 
 export const isTagColor = (value: unknown): value is TagColor =>
   typeof value === "string" && (TAG_COLORS as readonly string[]).includes(value);
