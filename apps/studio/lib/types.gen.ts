@@ -338,6 +338,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/templates/{templateId}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the tags of a template (Studio sessions only)
+         * @description Tags are catalog labels, not part of the report: changing them does not change the draft revision,
+         *     the versions, `draftChangedSincePublish` or the PDF, and an archived template can still be tagged.
+         *     Each tag is trimmed, spaces collapsed, NFC; 1-30 characters, no comma or control characters;
+         *     matching is exact (`VIP` and `vip` differ); duplicates merge; at most 10. The last save wins.
+         */
+        put: operations["setTemplateTags"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/templates/{templateId}/draft": {
         parameters: {
             query?: never;
@@ -622,11 +647,34 @@ export interface paths {
         };
         /**
          * Documents successful renders of published versions produced, newest first (Studio sessions only)
-         * @description `q` matches any text in the params or data the caller sent, case-insensitively; `%` and `_` are
+         * @description `q` matches any text in the params, the data or the tags, case-insensitively; `%` and `_` are
          *     ordinary characters. Documents are deleted with their run (see /v1/runs/retention).
          */
         get: operations["listDocuments"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/documents/{runId}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace the tags of an issued document (Studio sessions only)
+         * @description Same rules as `setTemplateTags`. The PDF and everything else stay as issued. API keys can give
+         *     tags when they render but cannot change them afterwards.
+         */
+        put: operations["setDocumentTags"];
         post?: never;
         delete?: never;
         options?: never;
@@ -688,6 +736,48 @@ export interface paths {
         put?: never;
         /** Create a theme (also used by Studio's JSON import) */
         post: operations["createTheme"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tags in use on templates or documents, with colour and counts (Studio sessions only)
+         * @description Busiest first (templates + documents), then by name; at most 500. Colour belongs to the tag name,
+         *     so it is the same everywhere. A tag nobody has set a colour for is `gray`.
+         */
+        get: operations["listTags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/tag-colors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set the colour of a tag name (Studio sessions only)
+         * @description The colour applies to every template and document carrying that tag. `gray` removes the colour
+         *     (gray is the default). A tag nobody carries yet can be coloured; the colour is kept for when it is used.
+         */
+        put: operations["setTagColor"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -841,6 +931,12 @@ export interface components {
              *     No slashes, quotes or control characters (incl. line breaks), so a bad name is a 422 instead of a broken header.
              */
             filename?: string;
+            /**
+             * @description Tags of the issued document (same rules as `setTemplateTags`; a bad tag is a 422 before anything
+             *     is rendered). Left out, the document starts with a copy of the template's tags at that moment;
+             *     `[]` means no tags. Later changes to the template's tags do not reach documents already issued.
+             */
+            tags?: components["schemas"]["TagNames"];
         };
         Session: {
             /** @description Opaque, prefix `jrs_` */
@@ -943,6 +1039,26 @@ export interface components {
              */
             archivedAt?: string | null;
             archivedBy?: string | null;
+            tags: components["schemas"]["TagNames"];
+        };
+        /** @description Tag names in the order they were given */
+        TagNames: string[];
+        /** @enum {string} */
+        TagColorName: "gray" | "red" | "orange" | "yellow" | "green" | "teal" | "blue" | "purple" | "pink";
+        TagColor: {
+            tag: string;
+            color: components["schemas"]["TagColorName"];
+        };
+        TagUse: {
+            tag: string;
+            color: components["schemas"]["TagColorName"];
+            /** @description Templates carrying the tag */
+            templates: number;
+            /** @description Issued documents carrying the tag */
+            documents: number;
+        };
+        TagList: {
+            tags: components["schemas"]["TagNames"];
         };
         ImportResult: {
             template: components["schemas"]["TemplateSummary"];
@@ -1049,6 +1165,7 @@ export interface components {
             pages: number | null;
             /** @description The params the caller sent (decimals as decimal strings) */
             params: Record<string, never>;
+            tags: components["schemas"]["TagNames"];
         };
         RunRetention: {
             /** @description null means runs are kept for ever (the default) */
@@ -1249,6 +1366,8 @@ export interface components {
     };
     parameters: {
         TemplateId: components["schemas"]["TemplateId"];
+        /** @description Only items carrying every `tag` given (repeat the parameter); exact match */
+        TagFilter: string[];
         /** @description Draft revision the change is based on, e.g. `"12"` */
         IfMatchRevision: string;
         /** @description Optional caller correlation id; echoed in logs and the run record */
@@ -1746,6 +1865,8 @@ export interface operations {
             query?: {
                 /** @description Also list archived templates */
                 includeArchived?: boolean;
+                /** @description Only items carrying every `tag` given (repeat the parameter); exact match */
+                tag?: components["parameters"]["TagFilter"];
             };
             header?: never;
             path?: never;
@@ -2026,6 +2147,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TemplateSummary"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["InputInvalid"];
+        };
+    };
+    setTemplateTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                templateId: components["parameters"]["TemplateId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagList"];
+            };
+        };
+        responses: {
+            /** @description The tags after normalising */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagList"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -2584,6 +2734,8 @@ export interface operations {
                 limit?: number;
                 /** @description Cursor from the previous page */
                 before?: string;
+                /** @description Only items carrying every `tag` given (repeat the parameter); exact match */
+                tag?: components["parameters"]["TagFilter"];
             };
             header?: never;
             path?: never;
@@ -2604,6 +2756,35 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            422: components["responses"]["InputInvalid"];
+        };
+    };
+    setDocumentTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagList"];
+            };
+        };
+        responses: {
+            /** @description The tags after normalising */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
             422: components["responses"]["InputInvalid"];
         };
     };
@@ -2738,6 +2919,53 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["InputInvalid"];
+        };
+    };
+    listTags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Tags in use */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagUse"][];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+        };
+    };
+    setTagColor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagColor"];
+            };
+        };
+        responses: {
+            /** @description The tag (normalised) and its colour */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagColor"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             422: components["responses"]["InputInvalid"];
         };
     };
