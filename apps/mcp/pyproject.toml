@@ -36,6 +36,7 @@ select = ["E", "F", "I", "B", "UP", "ASYNC"]
 dev = [
     "pytest>=9.2.0",
     "pytest-asyncio>=1.5.0",
+    "pyyaml>=6.0.4",
     "respx>=0.23.1",
     "ruff>=0.17.6",
 ]
