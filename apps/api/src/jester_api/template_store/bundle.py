@@ -11,9 +11,10 @@ import io
 import json
 import stat
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
+from ..tags import TagError, normalize_tags
 from .errors import StoreError
 from .limits import (
     ASSET_FILE,
@@ -41,6 +42,7 @@ class Bundle:
     name: str
     files: dict[str, str]
     assets: dict[str, bytes]
+    tags: list[str] = field(default_factory=list)
 
 
 def write_zip(manifest: dict[str, Any], files: dict[str, str], assets: dict[str, bytes]) -> bytes:
@@ -117,6 +119,10 @@ def _manifest(raw: bytes) -> dict[str, Any]:
         )
     ):
         raise _invalid(f"{MANIFEST} assets must be a list of {{name, sha256}}")
+    try:
+        manifest["tags"] = normalize_tags(manifest.get("tags"))  # optional: zips from before v1.11 have none
+    except TagError as exc:
+        raise _invalid(f"{MANIFEST} tags: {exc.message}") from None
     return manifest
 
 
@@ -183,4 +189,4 @@ def read_zip(data: bytes) -> Bundle:
             if hashlib.sha256(raw).hexdigest() != asset_sha[name]:
                 raise _invalid(f"{name} does not match its sha256 in {MANIFEST}")
             assets[name] = raw
-    return Bundle(manifest["id"], manifest["name"].strip(), files, assets)
+    return Bundle(manifest["id"], manifest["name"].strip(), files, assets, manifest["tags"])

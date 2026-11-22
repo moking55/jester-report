@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal
 
@@ -14,6 +14,7 @@ from psycopg_pool import AsyncConnectionPool
 
 from ..report_definition.loader import content_sha256
 from ..report_definition.problems import AssetInfo
+from ..tags import TagError, normalize_tags
 from .assets import detect
 from .blobs import BlobStore
 from .bundle import FORMAT_VERSION, read_zip, write_zip
@@ -59,7 +60,10 @@ class TemplateSummary:
     updated_at: datetime
     archived_at: datetime | None = None
     archived_by: str | None = None
-    page: dict[str, Any] | None = None  # the draft's sheet: size, orientation, layout (rollWidthMm for a roll)
+    page: dict[str, Any] | None = (
+        None  # the draft's sheet: size, orientation, layout (rollWidthMm for a roll)
+    )
+    tags: list[str] = field(default_factory=list)  # catalog metadata, not part of the report (v1.11)
 
 
 @dataclass(frozen=True)
@@ -291,6 +295,7 @@ class TemplateStore:
             "formatVersion": FORMAT_VERSION,
             "id": template_id,
             "name": summary.name,
+            "tags": summary.tags,
             "source": source,
             "exportedAt": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "files": sorted(f.name for f in files),
@@ -322,7 +327,8 @@ class TemplateStore:
                     raise StoreError("NOT_FOUND", "template not found")
                 try:
                     await conn.execute(
-                        "INSERT INTO templates (id, name) VALUES (%s, %s)", (template_id, bundle.name)
+                        "INSERT INTO templates (id, name, tags) VALUES (%s, %s, %s)",
+                        (template_id, bundle.name, bundle.tags),
                     )
                 except errors.UniqueViolation:
                     raise StoreError("CONFLICT", "a template with this id already exists") from None
@@ -381,7 +387,10 @@ class TemplateStore:
             if found is None:
                 raise StoreError("NOT_FOUND", "template not found" if ref == "draft" else "version not found")
             try:
-                await conn.execute("INSERT INTO templates (id, name) VALUES (%s, %s)", (new_id, new_name))
+                await conn.execute(
+                    "INSERT INTO templates (id, name, tags) SELECT %s, %s, tags FROM templates WHERE id = %s",
+                    (new_id, new_name, source_id),
+                )
             except errors.UniqueViolation:
                 raise StoreError("CONFLICT", "a template with this id already exists") from None
             await conn.execute(
@@ -399,8 +408,11 @@ class TemplateStore:
             )
         return await self.get(new_id)
 
-    async def list(self, include_archived: bool = False) -> list[TemplateSummary]:
-        found = await self._summaries(None)
+    async def list(
+        self, include_archived: bool = False, tags: list[str] | None = None
+    ) -> list[TemplateSummary]:
+        """Templates carrying every tag in `tags` (exact match); no tags = all."""
+        found = await self._summaries(None, tags)
         return found if include_archived else [t for t in found if t.archived_at is None]
 
     async def get(self, template_id: str) -> TemplateSummary:
@@ -409,15 +421,20 @@ class TemplateStore:
             raise StoreError("NOT_FOUND", "template not found")
         return found[0]
 
-    async def _summaries(self, template_id: str | None) -> list[TemplateSummary]:
+    async def _summaries(
+        self, template_id: str | None, tags: list[str] | None = None
+    ) -> list[TemplateSummary]:
         where, args = ("WHERE t.id = %s", (template_id,)) if template_id else ("", ())
+        if tags:
+            where, args = (where + " AND" if where else "WHERE") + " t.tags @> %s", (*args, tags)
         async with self._db.connection() as conn:
             rows = await self._all(
                 conn,
                 "SELECT t.id, t.name, t.published_version, t.updated_at, t.archived_at, t.archived_by, "
                 "d.revision, pv.sha256, "
                 "(SELECT max(version) FROM versions v WHERE v.template_id = t.id), "
-                "(SELECT content FROM draft_files f WHERE f.template_id = t.id AND f.name = 'report.json') "
+                "(SELECT content FROM draft_files f WHERE f.template_id = t.id AND f.name = 'report.json'), "
+                "t.tags "
                 "FROM templates t JOIN drafts d ON d.template_id = t.id "
                 "LEFT JOIN versions pv ON pv.template_id = t.id AND pv.version = t.published_version "
                 f"{where} ORDER BY t.id",
@@ -426,7 +443,7 @@ class TemplateStore:
             out = []
             for row in rows:
                 tid, name, published, updated_at, archived_at, archived_by = row[:6]
-                revision, published_sha, latest, report_json = row[6:]
+                revision, published_sha, latest, report_json, tags = row[6:]
                 changed = published_sha is None or await self._hashes(conn, tid) != published_sha
                 out.append(
                     TemplateSummary(
@@ -441,6 +458,7 @@ class TemplateStore:
                         archived_at,
                         archived_by,
                         _page(report_json),
+                        tags,
                     )
                 )
         return out
@@ -452,6 +470,21 @@ class TemplateStore:
             await conn.execute(
                 "UPDATE templates SET name = %s, updated_at = now() WHERE id = %s", (name, template_id)
             )
+        return await self.get(template_id)
+
+    async def set_tags(self, template_id: str, tags: list[str]) -> TemplateSummary:
+        """Replace the whole tag set. Tags are catalog metadata, not the report: no draft revision, no
+        `updated_at`, no status change, and an archived template can still be tagged."""
+        try:
+            checked = normalize_tags(tags)
+        except TagError as exc:
+            raise StoreError("INPUT_INVALID", exc.message) from None
+        async with self._db.connection() as conn:
+            row = await self._one(
+                conn, "UPDATE templates SET tags = %s WHERE id = %s RETURNING 1", (checked, template_id)
+            )
+        if row is None:
+            raise StoreError("NOT_FOUND", "template not found")
         return await self.get(template_id)
 
     async def set_archived(self, template_id: str, archived: bool, by: str) -> TemplateSummary:

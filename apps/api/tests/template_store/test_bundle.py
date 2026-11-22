@@ -205,3 +205,18 @@ def test_asset_sha256_must_match_the_manifest():
     entries = good_entries()
     entries[3] = ("logo.png", PNG + b"x")
     assert code_of(raw_zip(entries)) == "INPUT_INVALID"
+
+
+def test_manifest_tags_are_read_and_normalised():
+    m = manifest(tags=[" vip ", "ไตรมาส  4", "vip"])
+    assert read_zip(raw_zip(good_entries(m))).tags == ["vip", "ไตรมาส 4"]
+
+
+def test_a_zip_without_tags_is_an_older_zip_and_imports_with_none():
+    assert "tags" not in manifest()
+    assert read_zip(raw_zip(good_entries())).tags == []
+
+
+@pytest.mark.parametrize("bad", ["vip", [3], ["a,b"], [f"t{i}" for i in range(11)]])
+def test_bad_manifest_tags_are_input_invalid(bad):
+    assert code_of(raw_zip(good_entries(manifest(tags=bad)))) == "INPUT_INVALID"
