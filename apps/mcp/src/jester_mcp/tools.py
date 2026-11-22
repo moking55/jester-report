@@ -13,10 +13,11 @@ import httpx
 from mcp.server.auth.middleware.auth_context import get_access_token
 from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError
-from mcp.types import ToolAnnotations
+from mcp.types import ImageContent, TextContent, ToolAnnotations
 
 from .api import Api, ApiProblem, NotAllowed, SessionExpired, path
 from .oauth import Provider
+from .preview import pdf_pages_png
 
 log = logging.getLogger("jester_mcp.tools")
 READ = ToolAnnotations(readOnlyHint=True, openWorldHint=False)
@@ -156,6 +157,39 @@ def register(server: MCPServer, caller: Caller, studio_url: str) -> None:
             json=_data_body(params, data, sample_file),
         )
         return response.json()
+
+    @server.tool(annotations=READ, structured_output=False)
+    async def preview_draft(
+        template_id: str,
+        params: dict[str, Any] | None = None,
+        data: Any = None,
+        sample_file: str | None = None,
+    ) -> list[TextContent | ImageContent]:
+        """Render the draft to PDF and return images of its first pages (up to 5). Compare them with the
+        source document and fix differences. Without `data` it uses `sample_file` (default sample.json)."""
+        response = await caller.call(
+            "preview_draft",
+            "POST",
+            _template(template_id, "draft", "preview"),
+            json=_data_body(params, data, sample_file),
+        )
+        try:
+            images, pages = pdf_pages_png(response.content)
+        except ValueError as e:
+            raise ToolError(f"the preview is not a readable PDF: {e}") from e
+        summary = {
+            "pages": pages,
+            "shown": len(images),
+            "runId": response.headers.get("Jester-Run-Id"),
+            "studioUrl": studio(template_id),
+        }
+        return [
+            TextContent(type="text", text=json.dumps(summary)),
+            *(
+                ImageContent(type="image", data=base64.b64encode(png).decode(), mime_type="image/png")
+                for png in images
+            ),
+        ]
 
 
 def _register_write(server: MCPServer, caller: Caller, studio) -> None:

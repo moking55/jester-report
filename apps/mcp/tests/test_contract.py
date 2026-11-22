@@ -30,6 +30,7 @@ TOOLS = {
     "list_versions",
     "validate_draft",
     "prepare_draft",
+    "preview_draft",
     "create_template",
     "duplicate_template",
     "put_draft_file",
