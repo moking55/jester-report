@@ -87,7 +87,7 @@
 
 ## Phase 4: deploy และปล่อย
 
-- [ ] **T11 Docker + compose** (M)
+- [x] **T11 Docker + compose** (M)
   - Acceptance: `apps/mcp/Dockerfile` (Python 3.12-slim, `uv sync --frozen`, user ไม่ใช่ root, copy guide ตอน build); service `mcp` ใน `infra/compose.yaml` + volume `mcp-data` + พอร์ตให้ proxy (`JESTER_MCP_PORT`); ตัวแปรใหม่ใน `infra/.env.example`; `infra/README.md` บอกการตั้ง subdomain และ header IP ของ proxy
   - Verify: `docker build` ผ่าน; `docker compose up` บนเครื่องทดสอบแล้ว `/healthz` ok
   - Files: `apps/mcp/Dockerfile`, `apps/mcp/.dockerignore`, `infra/compose.yaml`, `infra/.env.example`, `infra/README.md`
@@ -96,6 +96,9 @@
   - Acceptance: `test_live.py` (`live_stack`) บน stack rc: OAuth → create → put → validate → preview → ประวัติใน Studio แสดงชื่อผู้ใช้จริง → ลบผู้ใช้แล้ว call ถัดไป 401; **ด้วยมือใน claude.ai:** แนบ PDF ใบเสนอราคาแล้วได้ draft ที่ validate ผ่านและ preview ตรงต้นฉบับ; pytest ทั้งชุดของ api ผ่านบนเครื่องทดสอบ
   - Verify: `pytest -m live_stack` ของ `apps/mcp`, `pytest` ทั้งชุดของ api, บันทึกผลรันท้ายไฟล์นี้
   - Files: `apps/mcp/tests/test_live.py`
+
+ผล T11–T12 (23 พ.ย. 2026, เครื่องทดสอบ): image `jester/mcp:1.13.0-rc` build ผ่าน (skill เข้าทาง named build context `skill`), container healthy, uid 10001, guide 3 ไฟล์อยู่ใน image, SQLite เขียนลง `/data`; `docker compose config --services` ไม่มี mcp ถ้าไม่เปิด profile; flow ทั้งสองชุดผ่านกับ container; `test_live.py` ผ่าน (OAuth → create → put → 412 → validate → preview → run แสดงชื่อผู้ใช้จริง → ลบผู้ใช้แล้ว tool ถัดไปให้ reconnect และ `/mcp` 401); pytest ทั้งชุดของ api: ผลเดิมจาก Checkpoint A (781 passed) — ไม่มีไฟล์ใน `apps/api` เปลี่ยนหลังจากนั้น
+- [ ] T12 ส่วนที่เหลือ: เพิ่ม connector ใน claude.ai จริงผ่าน proxy แล้วแนบ PDF ใบเสนอราคา (รอผู้ใช้ตั้ง DNS + route)
 
 - [ ] **T13 ปล่อย** (ผู้ใช้อนุมัติก่อนทุกขั้น)
   - [ ] อนุมัติ → bump 1.13.0 (`apps/api/pyproject.toml` + `uv.lock`, `apps/mcp/pyproject.toml` + `uv.lock`, `apps/studio/package.json`/lock, `infra/compose.yaml`), commit `chore: release 1.13.0`, tag `v1.13.0`, push `master` + tag, deploy `~/jester-stack` (migration 0010 วิ่งตอน api ขึ้น), ลบ stack rc
