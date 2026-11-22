@@ -29,28 +29,30 @@
 
 ## Phase 2: mcp — โครงและ OAuth (เสี่ยงสุด ทำก่อน)
 
-- [ ] **T3 โครง `apps/mcp` + client ของ api** (M)
+- [x] **T3 โครง `apps/mcp` + client ของ api** (M)
   - Acceptance: uv project (`mcp`, `httpx`, `uvicorn`; dev: `pytest`, `pytest-asyncio`, `respx`, `ruff`) pin เวอร์ชัน; `settings.py` อ่าน env ตาม spec ขาดค่าแล้วบอกชื่อตัวแปร (ไม่พิมพ์ค่า); `api.py` เรียกได้เฉพาะ operation ใน allow-list (path นอก list → exception ก่อนส่ง request), problem+json → error ที่มี `code`/`detail`/`problems`; `GET /healthz` เรียก `/v1/health`; log JSON ไม่มีความลับ
   - Verify: `pytest tests/test_api.py` (allow-list ทั้งผ่านและปฏิเสธ, map 404/412/422)
   - Files: `apps/mcp/pyproject.toml`, `src/jester_mcp/settings.py`, `src/jester_mcp/api.py`, `src/jester_mcp/app.py`, `tests/test_api.py`
 
-- [ ] **T4 OAuth provider บน SQLite** (M)
+- [x] **T4 OAuth provider บน SQLite** (M)
   - Acceptance: provider ตาม interface ของ SDK; ตาราง client (DCR) และ token (`sha256(jmc_…)` → Jester session, username, expires); code ในหน่วยความจำ 5 นาที ใช้ครั้งเดียว; redirect URI นอก `JESTER_MCP_REDIRECT_ALLOW` → 400; PKCE verifier ผิด → ล้ม; metadata ที่ `/.well-known/*` ชี้ `JESTER_MCP_PUBLIC_URL`
   - Verify: `pytest tests/test_oauth.py`
   - Files: `src/jester_mcp/oauth.py`, `src/jester_mcp/app.py`, `tests/test_oauth.py`
 
-- [ ] **T5 หน้า login + `whoami` ครบวง** (M)
+- [x] **T5 หน้า login + `whoami` ครบวง** (M)
   - Acceptance: `/authorize` แสดงฟอร์มภาษาไทย (CSRF token, ไม่มี JS); ส่ง `POST /v1/auth/login` ด้วย `lifetime: long` + studio key + `X-Jester-Client-IP` จาก header ที่ตั้งใน env (ไม่ตั้ง → ไม่ส่ง IP); รหัสผิด → หน้าเดิมพร้อมข้อความ ไม่ออก code; 429 → ข้อความให้รอ; สำเร็จ → redirect พร้อม code; tool `whoami` คืนชื่อผู้ใช้จริง
   - Verify: `pytest tests/test_login.py`; ด้วยมือ: MCP Inspector ต่อ dev server กับ stack rc ผ่าน tunnel แล้ว `whoami` ตอบชื่อ
   - Files: `src/jester_mcp/login.py`, `src/jester_mcp/tools.py`, `src/jester_mcp/app.py`, `tests/test_login.py`
 
-- [ ] **T6 token หมดอายุและถูกเพิกถอน** (S)
+- [x] **T6 token หมดอายุและถูกเพิกถอน** (S)
   - Acceptance: `/mcp` ไม่มี/ผิด bearer → 401 + `WWW-Authenticate`; api ตอบ 401 → ลบแถว token แล้ว MCP ตอบ 401 (claude.ai พาไป login ใหม่); access token ใช้กับ api ตรงไม่ได้
   - Verify: `pytest tests/test_oauth.py tests/test_tools.py`
   - Files: `src/jester_mcp/oauth.py`, `src/jester_mcp/api.py`, `tests/test_tools.py`
 
 ### Checkpoint B: OAuth จริง
-- [ ] `pytest` ของ `apps/mcp` ผ่าน, `ruff` สะอาด
+- [x] `pytest` ของ `apps/mcp` ผ่าน (40), `ruff` สะอาด
+- [x] flow จริงกับ api rc 1.13.0-rc บนเครื่องทดสอบ (23 พ.ย. 2026, script แทน Inspector): healthz → register (callback นอก allow-list 400) → authorize → หน้า login → รหัสผิด 401 → login 303 → token `jmc_` (expires_in 90 วัน) → `/mcp` ไม่มี bearer 401 → initialize → tools/list → `whoami` = `mcp-tester`; DB: session ของ MCP `long_lived = t` อายุ 30.00 วัน; log ของ mcp ไม่มี token/รหัสผ่าน
+- หมายเหตุ T6: 401 จาก api ทำให้ call นั้นเป็น tool error และลบ token; **request ถัดไป** ได้ 401 (MCP เปลี่ยน status ของ call ที่กำลังทำไม่ได้)
 - [ ] ผู้ใช้ตั้ง DNS `mcp.<โดเมนทีม>` + route ใน proxy มาที่เครื่องทดสอบ แล้ว **เพิ่ม connector ใน claude.ai จริง** login ได้และ `whoami` ตอบชื่อ — ไม่ผ่านเพราะ SDK → หยุดคุยกับผู้ใช้ก่อนทำต่อ
 - [ ] ทบทวนกับผู้ใช้
 
