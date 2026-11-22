@@ -4,7 +4,7 @@
 | --- | --- |
 | [gotenberg/](gotenberg/README.md) | `jester/gotenberg` image (Gotenberg 9.4.1 + TH Sarabun New) and its hardened run flags |
 | [compose.dev.yaml](compose.dev.yaml) | PostgreSQL + RustFS for development and the `db` / `storage` tests |
-| [compose.yaml](compose.yaml) | The server: studio + api + PostgreSQL + RustFS + Gotenberg |
+| [compose.yaml](compose.yaml) | The server: studio + api + PostgreSQL + RustFS + Gotenberg (+ mcp, optional) |
 | [backup.sh](backup.sh), [restore.sh](restore.sh) | Back up a running server; restore into a new one (see below) |
 
 ## Run the server
@@ -26,6 +26,26 @@ Without it every Studio login reaches the api from Studio's own address, so fail
 team: anyone can lock a username out for 15 minutes from any machine. Leave it `0` when Studio is reachable
 without the proxy, or anyone could fake the header. `infra/.env` holds real secrets and is
 git-ignored. The contract is served at `/v1/openapi.yaml`.
+
+## MCP connector (claude.ai, optional)
+
+The `mcp` service (profile `mcp`, [SPEC-mcp.md](../SPEC-mcp.md)) lets people build report drafts from claude.ai with
+their own Jester account. It can create and edit drafts, validate and preview them; it cannot publish, manage users
+or API keys, or render for other systems.
+
+1. Give it its own public HTTPS host on your reverse proxy, e.g. `https://mcp.example.com` → `mcp:8100`
+   (`JESTER_MCP_PORT`). It must be reachable from the internet: claude.ai calls it from Anthropic's servers.
+   A host of its own, not a path under Studio, because OAuth metadata lives at `/.well-known/` of the host.
+2. In `infra/.env`: `COMPOSE_PROFILES=mcp`, `JESTER_MCP_PUBLIC_URL` (that host), `JESTER_STUDIO_PUBLIC_URL`
+   (links people open to publish), and `JESTER_MCP_CLIENT_IP_HEADER` = the header your proxy puts the browser IP in
+   (its last entry is used, as with `JESTER_TRUST_PROXY`). Without it every connector login counts from one address.
+3. `docker compose -f infra/compose.yaml up -d --build`, then `curl https://mcp.example.com/healthz`.
+4. In claude.ai: Settings → Connectors → Add custom connector → `https://mcp.example.com/mcp`. Each person signs in
+   with their Jester username and password on the connector's own page.
+
+Each sign-in creates a long Jester session (30 days idle, at most 90) that stays in the `mcp-data` volume; claude.ai
+only gets a token for this service. Deleting a user or setting their password ends it at once. Back the volume up
+or not as you like (losing it only means everyone signs in again), but protect it like the database.
 
 ## Backup and restore
 

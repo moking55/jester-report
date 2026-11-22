@@ -2,7 +2,7 @@
 #   cp infra/.env.example infra/.env   # then put real secrets in infra/.env
 #   docker compose -f infra/compose.yaml up -d --build
 #   docker compose -f infra/compose.yaml logs api     # the first-run setup token is printed here
-# Only the studio and api ports are published. Put your reverse proxy (TLS) in front of them.
+# Only the studio and api ports (and mcp, with --profile mcp) are published. Put your reverse proxy (TLS) in front of them.
 name: jester
 
 services:
@@ -38,6 +38,29 @@ services:
       postgres: { condition: service_healthy }
       rustfs: { condition: service_healthy }
       gotenberg: { condition: service_started }
+    restart: unless-stopped
+
+  # optional (v1.13): MCP connector for claude.ai. Start with `--profile mcp` or COMPOSE_PROFILES=mcp in infra/.env.
+  # Needs its own public HTTPS host (e.g. mcp.example.com) on your reverse proxy; see infra/README.md "MCP connector".
+  mcp:
+    profiles: [mcp]
+    build:
+      context: ../apps/mcp
+      additional_contexts:
+        skill: ../.claude/skills/to-jester
+    image: jester/mcp:1.12.0
+    environment:
+      JESTER_API_URL: http://api:8000
+      JESTER_MCP_PUBLIC_URL: ${JESTER_MCP_PUBLIC_URL:-}
+      JESTER_STUDIO_PUBLIC_URL: ${JESTER_STUDIO_PUBLIC_URL:-}
+      JESTER_STUDIO_KEY: ${JESTER_STUDIO_KEY:?set JESTER_STUDIO_KEY in infra/.env}
+      JESTER_MCP_CLIENT_IP_HEADER: ${JESTER_MCP_CLIENT_IP_HEADER:-}
+      JESTER_MCP_REDIRECT_ALLOW: ${JESTER_MCP_REDIRECT_ALLOW:-}
+      JESTER_MCP_DB: /data/mcp.sqlite3
+    volumes: [mcp-data:/data]
+    ports: ["${JESTER_MCP_PORT:-8100}:8100"]
+    depends_on:
+      api: { condition: service_started }
     restart: unless-stopped
 
   postgres:
@@ -83,3 +106,4 @@ services:
 volumes:
   postgres-data:
   rustfs-data:
+  mcp-data:  # OAuth clients and the Jester sessions behind connector tokens: protect like the database
