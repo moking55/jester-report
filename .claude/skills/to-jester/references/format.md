@@ -8,6 +8,7 @@
 3. ภาษา expression (computed / totals)
 4. data.schema.json และ sample.json
 5. template.html — สิ่งที่ template ใช้ได้
+5ก. เขียนให้ Document Designer เปิดแก้ได้ (บล็อก) และแบบอิสระ
 6. fmt.* (ตัวจัดรูปแบบ)
 7. header.html / footer.html
 8. asset
@@ -27,7 +28,7 @@
 | `header.html`, `footer.html` | ไม่ | หัว/ท้ายกระดาษทุกหน้า |
 
 ชื่อไฟล์ข้อความ: `^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$` และห้ามชื่อ `index.html`
-ชื่อ asset: `^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$` (ไม่รับ gif)
+ชื่อ asset: `^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|gif|svg|webp|avif|bmp|ttf|otf)$`
 ขนาด: ไฟล์ข้อความ ≤ 1 MB, asset ≤ 5 MB, ไฟล์ข้อความ ≤ 50, asset ≤ 50, รวมทั้ง draft ≤ 20 MB
 id ของรายงาน: `^[a-z0-9][a-z0-9-]{1,62}$`
 
@@ -60,14 +61,31 @@ id ของรายงาน: `^[a-z0-9][a-z0-9-]{1,62}$`
 | `schemaVersion` | `1` เท่านั้น |
 | `name` | 1–200 ตัวอักษร |
 | `expressionMode` | `basic` (ค่าเริ่มต้น) หรือ `advanced` (เปิด `if`, `abs`, การเปรียบเทียบ) |
-| `page` | `size` = `A4` เท่านั้น; `orientation` = `portrait`/`landscape`; margin 0–50 mm |
+| `page` | ดู "กระดาษ" ใต้ตาราง |
 | `fonts.body` | อย่างน้อย 1 family; ต้องมีใน engine (TH Sarabun New) หรือเป็น asset ฟอนต์ที่ประกาศ family นั้น |
 | `fonts.headerFooter` | เฉพาะฟอนต์ใน engine (TH Sarabun New) |
 | `parameters.<name>` | ชื่อ `^[A-Za-z_][A-Za-z0-9_]*$`; `type` = `string`/`integer`/`decimal`/`date`/`boolean`/`enum`; `required`, `default` (ห้ามใช้คู่กัน), `values` (เฉพาะ enum), `maxLength`, `title` (1–80), `description` (1–300) |
 | `data` | `schema` = ชื่อไฟล์ schema, `samples` = รายชื่อไฟล์ตัวอย่าง (≥ 1) |
-| `lists.<name>` | `path` JSON Pointer ไปยัง array ใน data (ขึ้นต้น `/`); `id` field ที่ไม่ซ้ำในแถว; `sort` รายชื่อ field; `computed` field ใหม่ต่อแถว (ห้ามชื่อซ้ำ field ใน schema); `groupBy {key, totals}`; `totals`; `lists` ซ้อนได้ 1 ระดับ (path สัมพัทธ์กับแถวแม่) |
+| `lists.<name>` | `path` JSON Pointer ไปยัง array ใน data (ขึ้นต้น `/`); `id` field ที่ไม่ซ้ำในแถว; `sort` รายชื่อ field; `computed` field ใหม่ต่อแถว (ห้ามชื่อซ้ำ field ใน schema); `groupBy {key, totals}`; `totals`; `lists` ซ้อนได้ลึก 3 ชั้น list → ลูก → หลาน (path สัมพัทธ์กับแถวแม่; `totals` ของลูก/หลานเป็นยอดต่อแถวแม่ คำนวณจากหลานขึ้นไป) |
 | `totals` | ชื่อ → expression ระดับรายงาน อ้างชื่อ total อื่นได้แต่ห้ามวงวน |
 | field อื่น | ไม่รับ (เขียน key ที่ไม่มีในตาราง = error) |
+
+### กระดาษ (`page`)
+
+| field | ค่า | กฎ |
+| --- | --- | --- |
+| `size` | `A3` `A4` `A5` `A6` `B5` `Letter` `Legal` `DL` `custom` `roll` | ค่าเริ่ม `A4` |
+| `orientation` | `portrait` / `landscape` | `roll` ต้องไม่ระบุหรือเป็น `portrait` |
+| `widthMm`, `heightMm` | ตัวเลข | ต้องมีเมื่อ `custom` เท่านั้น: กว้าง 25–1000, สูง 25–2000 |
+| `rollWidthMm` | `58` / `80` | ต้องมีเมื่อ `roll` เท่านั้น |
+| `layout` | `flow` (ค่าเริ่ม) / `free` | `free` ใช้กับ `roll` ไม่ได้ |
+| `marginsMm` | `{top, bottom, left, right}` 0–50 | `free` ไม่ใช้ (พิกัดนับจากขอบกระดาษ); `roll` ค่าเริ่ม 3/3/2/2 |
+
+- ขนาด mm (แนวตั้ง): A3 297×420 · A4 210×297 · A5 148×210 · A6 105×148 · B5 176×250 · Letter 215.9×279.4 · Legal 215.9×355.6 · DL 110×220
+- หักขอบแล้วต้องเหลือเนื้อหาอย่างน้อย 20 mm ทั้งกว้างและสูง ไม่งั้น `PAGE_INVALID`
+- เลือกตามต้นฉบับ: เอกสารทั่วไป A4; ใบเสร็จจากเครื่อง POS / slip เครื่องพิมพ์ความร้อน → `roll` (58 หรือ 80 ตามความกว้างกระดาษ,
+  PDF ยาวเท่าเนื้อหาหน้าเดียว); แบบฟอร์มพิมพ์ทับ (เช็ค ซองจดหมาย DL ฟอร์มราชการที่ต้องลงช่องตรงตำแหน่ง) → `layout: "free"` ดูข้อ 5ก
+- `roll` และ `free` ไม่มี header/footer (ไฟล์ที่ใส่มาถูกข้ามพร้อม warning `HEADER_FOOTER_IGNORED`) — อย่าใส่
 
 กลุ่ม: `"sort": ["region", "id"], "groupBy": { "key": "region", "totals": { "subtotal": "sum(amount)" } }` (groupBy.key ต้องเป็นตัวแรกของ sort)
 master-detail: `"orders": { "path": "/orders", "id": "orderId", "totals": { "total": "sum(details.amount)" },
@@ -127,6 +145,48 @@ advanced: if(cond, expr, expr) | abs(expr); cond ใช้ < <= > >= == != and o
 - Jinja ทำงานใน sandbox + autoescape: ห้ามพยายามใส่ HTML จาก data; macro (`{% macro %}`) และ `{% set %}` ใช้ได้
 - ห้ามใส่ `<script>` (engine ปิด JS อยู่แล้ว) และห้ามอ้าง URL ภายนอก
 
+## 5ก. เขียนให้ Document Designer เปิดแก้ได้ (บล็อก) และแบบอิสระ
+
+Studio มี **Document Designer** (ปุ่มบนหัว code editor) ที่อ่าน `template.html` เป็นบล็อกให้ลากวางแก้ได้โดยไม่ต้องเขียน HTML
+HTML ที่ไม่ตรงรูปแบบข้างล่างยังใช้ได้ แต่ขึ้นเป็นก้อน "Custom Code" ที่แก้ได้แค่ในกล่อง code — เขียนให้ตรงบล็อกให้มากที่สุด
+เพื่อให้ผู้ใช้ปรับหน้าต่อเองได้ starter ทุกตัวใน repo เขียนแบบนี้ (ดูข้อ 11)
+
+| บล็อก | HTML |
+| --- | --- |
+| ข้อความ | `<p>`, `<h1>`–`<h3>`, `<div>` ที่มีแต่ข้อความ, `<b>`/`<i>`/`<br>` และ `{{ expr }}`; `{% if c %}ข้อความ{% endif %}` กลางข้อความได้ |
+| ค่าช่องข้อมูล | `<div>{{ expr }}</div>` (expression เดียว) |
+| รูป / โลโก้ | `<img src="logo.png">` |
+| แถวแบ่งคอลัมน์ | `<div data-jd="row" style="display:flex; gap:6mm">` ที่มี `<div data-jd="col" style="flex:1">` 2–4 ตัว (flex ใส่ใน `style` หรือ class ใน report.css แบบ starter ก็ได้); คอลัมน์ใส่บล็อกอื่นได้ |
+| ตารางรายการ | `<table>` + `<thead>` หนึ่งแถว + `<tbody>{% for v in lists.X %}<tr>…</tr>{% else %}<tr>…</tr>{% endfor %}` ตามด้วยแถวรวมได้ |
+| สรุปยอด | `<table data-jd="summary">` แถวละ `<tr><td>ป้าย</td><td>{{ expr }}</td></tr>` |
+| QR / PromptPay / บาร์โค้ด | `<div>{{ fmt.qr(...) }}</div>` / `fmt.promptpay` / `fmt.barcode` |
+| เส้นคั่น | `<hr>` |
+| ช่องว่าง | `<div data-jd="space" style="height:6mm"></div>` |
+| ขึ้นหน้าใหม่ | `<div data-jd="page-break" style="break-after:page"></div>` |
+| เงื่อนไข | `{% if c %}…{% elif c2 %}…{% else %}…{% endif %}` ครอบบล็อกทั้งก้อน |
+| วนซ้ำ | `{% for v in lists.X %}…{% else %}…{% endfor %}` ครอบบล็อกทั้งก้อน (list ลูกของตัวแปร loop ได้ เช่น `order.details`) |
+| ตั้งค่าตัวแปร | `{% set name = expr %}` บรรทัดเดียว |
+
+- สไตล์ที่ designer แก้ได้เขียนใน `style=` : `font-size` (pt), `font-weight`, `text-align`, `color`, `margin-top`/`margin-bottom` (mm),
+  `width`, `border` ของตาราง — สไตล์ส่วนรวมที่เหลือ (ฟอนต์ ขนาดพื้นฐาน เส้นตาราง) ไว้ใน `report.css` ได้ตามเดิม
+- `data-jd` ไม่มีผลต่อ PDF; `<link rel="stylesheet" href="report.css">` ไว้บรรทัดแรก
+- `{% macro %}`, ตารางแบ่งกลุ่ม (loop ซ้อนของ `groups`), `{% set %}` หลายบรรทัด = Custom Code (ใช้ได้ แค่แก้ในกล่อง code)
+
+**แบบอิสระ (`page.layout = "free"`)** — หน้าเดียว วางกล่องตามพิกัด mm จากขอบกระดาษ เหมาะกับแบบฟอร์มที่ต้องพิมพ์ลงช่องตรงตำแหน่ง:
+
+```html
+<div data-jd="page" style="position: relative; width: 210mm; height: 148mm">
+  <img data-jd="guide" src="form-scan.png" alt="" style="position: absolute; left: 0mm; top: 0mm; width: 210mm; height: 148mm; opacity: 0.3">
+  <div data-jd="box" style="position: absolute; left: 32mm; top: 18.5mm; width: 60mm; height: 6mm">
+    {{ data.payee }}
+  </div>
+</div>
+```
+
+- ขนาด `data-jd="page"` = กระดาษหลังหมุนแนว (ตัวอย่าง: A5 แนวนอน 210×148); ของที่ล้นถูกตัด
+- `data-jd="guide"` = รูปสแกนต้นฉบับไว้เทียบตำแหน่งใน designer **ไม่ถูกพิมพ์เสมอ** — ถ้าต้นทางเป็นสแกนแบบฟอร์ม ใส่ไว้ช่วยผู้ใช้จัดต่อ
+- ข้อมูลที่ยาวไม่แน่นอน (ตารางหลายแถว) ไม่เหมาะกับแบบอิสระ ใช้ `flow`
+
 ## 6. fmt.* (ตัวจัดรูปแบบ)
 
 | ฟังก์ชัน | ผล |
@@ -149,6 +209,8 @@ advanced: if(cond, expr, expr) | abs(expr); cond ใช้ < <= > >= == != and o
 - ขนาดตัวอักษรเล็ก (12px) เพราะ Chromium ย่อ header/footer
 - เลขหน้า: `<span class="pageNumber"></span>/<span class="totalPages"></span>`
 - ใช้ `params`/`data`/`fmt` ได้เหมือน template
+- รูปใน header/footer: `<img src="logo.png">` ได้ (Jester ฝังเป็น data URI ให้) แต่ไฟล์รูปต้อง ≤ 1 MB (`HEADER_IMAGE_TOO_LARGE`)
+- ไม่ใช้กับ `page.size = "roll"` หรือ `page.layout = "free"` (ถูกข้าม)
 
 ```html
 <style>body { font-family: "TH Sarabun New"; font-size: 12px; padding: 0 15mm; box-sizing: border-box; width: 100%; }
@@ -184,9 +246,14 @@ zip แบบแบน (ไม่มีโฟลเดอร์ย่อย) ท
   "source": { "kind": "draft", "revision": 1 },
   "exportedAt": "2026-11-18T10:00:00Z",
   "files": ["data.schema.json", "report.css", "report.json", "sample.json", "template.html"],
-  "assets": [{ "name": "logo.png", "sha256": "<sha256 hex ของไบต์ไฟล์>" }]
+  "assets": [{ "name": "logo.png", "sha256": "<sha256 hex ของไบต์ไฟล์>" }],
+  "tags": ["ขาย", "ใบเสร็จ"]
 }
 ```
+
+`tags` ไม่บังคับ: ป้ายจัดกลุ่มรายงานใน catalog ของ Studio (ไม่ใช่ส่วนของรายงาน) ใช้เฉพาะตอน import เป็นรายงานใหม่ —
+import ทับรายงานเดิม tag เดิมอยู่เหมือนเดิม กติกา: ≤ 10 ตัว, ตัวละ 1–30 ตัวอักษร, ไม่มี `,` และอักขระควบคุม,
+ตัดช่องว่างหัวท้าย/ยุบช่องว่างซ้ำ, ตัวซ้ำถูกรวม, เทียบตรงตัว (`VIP` ≠ `vip`)
 
 entry ใน zip ต้องตรงกับ `files` + `assets` พอดี ไม่มีเกิน ไม่มีขาด; zip ≤ 25 MB; ไฟล์ข้อความเป็น UTF-8
 ใช้ `scripts/jester_pack.py` ทำ zip แทนการเขียนเอง — sha256 และรายชื่อไฟล์ตรงเสมอ
@@ -195,4 +262,5 @@ entry ใน zip ต้องตรงกับ `files` + `assets` พอดี 
 
 starter ใน repo เป็นตัวอย่างที่ผ่านการตรวจแล้ว: `apps/api/src/jester_api/template_store/starters/`
 (`quotation` ใบเสนอราคา, `tax-invoice` ใบกำกับภาษีเต็มรูปพร้อม QR/barcode, `sales-grouped` รายงานแบ่งกลุ่ม,
-`purchase-order` master-detail) — ถ้าเอกสารต้นทางคล้ายตัวไหน เปิดตัวนั้นดูเป็นแบบ
+`purchase-order` master-detail, `blank` ว่าง) — ถ้าเอกสารต้นทางคล้ายตัวไหน เปิดตัวนั้นดูเป็นแบบ
+ทุกตัวเขียนเป็นบล็อกของ Document Designer (ข้อ 5ก) และเป็น A4 แบบ `flow`; ใบเสร็จม้วนกับแบบอิสระไม่มี starter ใช้ข้อ 2 และ 5ก

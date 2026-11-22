@@ -2,6 +2,7 @@
 """Check a Jester report folder and pack it as a zip that Jester Studio imports ("นำเข้า (.zip)").
 
     python jester_pack.py <folder> --id <template-id> [--name "ชื่อรายงาน"] [--out <file.zip>] [--params '{"k": "v"}']
+                          [--tags "ขาย,ใบเสร็จ"]
 
 Always: the checks the import does (names, sizes, required files, JSON that parses, samples that parse).
 When the Jester api package is importable (run from apps/api with `uv run python …`, or set JESTER_API_SRC to
@@ -19,13 +20,14 @@ import os
 import re
 import stat
 import sys
+import unicodedata
 import zipfile
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
 
 TEXT_FILE = re.compile(r"^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$")
-ASSET_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|svg|webp|avif|bmp|ttf|otf)$")
+ASSET_FILE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(png|jpe?g|gif|svg|webp|avif|bmp|ttf|otf)$")
 TEMPLATE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{1,62}$")
 MAX_TEXT, MAX_ASSET, MAX_DRAFT, MAX_FILES = 1 << 20, 5 << 20, 20 << 20, 50
 ENGINE_FONTS = frozenset({"TH Sarabun New"})
@@ -55,7 +57,7 @@ def basic_checks(folder: Path) -> tuple[dict[str, str], dict[str, bytes], list[s
         elif path.name == "index.html":
             problems.append("index.html is reserved (the binder makes it from template.html): rename it")
         else:
-            problems.append(f"{path.name}: not a report file (.html .json .css) or asset (png jpg svg webp avif bmp ttf otf)")
+            problems.append(f"{path.name}: not a report file (.html .json .css) or asset (png jpg gif svg webp avif bmp ttf otf)")
     if len(files) > MAX_FILES or len(assets) > MAX_FILES:
         problems.append(f"at most {MAX_FILES} text files and {MAX_FILES} assets")
     if sum(len(v.encode()) for v in files.values()) + sum(len(v) for v in assets.values()) > MAX_DRAFT:
@@ -127,7 +129,24 @@ def jester_checks(files: dict[str, str], assets: dict[str, bytes], params: dict 
     return out
 
 
-def pack(files: dict[str, str], assets: dict[str, bytes], template_id: str, name: str) -> bytes:
+def check_tags(text: str) -> tuple[list[str], str | None]:
+    """--tags "a,b" -> the list Jester keeps (its own normalize_tags when importable), or the reason it is refused."""
+    raw = [t for t in text.split(",") if t.strip()]
+    try:
+        from jester_api.tags import TagError, normalize_tags
+    except ImportError:  # Jester's rules: trim, collapse spaces, NFC, 1-30 characters, no control characters, at most 10
+        tags = list(dict.fromkeys(unicodedata.normalize("NFC", " ".join(t.split())) for t in raw))
+        bad = next((t for t in tags if len(t) > 30 or any(unicodedata.category(c) == "Cc" for c in t)), None)
+        if bad is not None:
+            return [], f"--tags {bad!r}: 1-30 characters, no control characters"
+        return (tags, None) if len(tags) <= 10 else ([], "--tags: at most 10 tags")
+    try:
+        return normalize_tags(raw), None
+    except TagError as exc:
+        return [], f"--tags: {exc.message}"
+
+
+def pack(files: dict[str, str], assets: dict[str, bytes], template_id: str, name: str, tags: list[str]) -> bytes:
     manifest = {
         "formatVersion": 1,
         "id": template_id,
@@ -137,6 +156,8 @@ def pack(files: dict[str, str], assets: dict[str, bytes], template_id: str, name
         "files": sorted(files),
         "assets": [{"name": n, "sha256": hashlib.sha256(assets[n]).hexdigest()} for n in sorted(assets)],
     }
+    if tags:
+        manifest["tags"] = tags
     entries = {"jester.json": json.dumps(manifest, ensure_ascii=False, indent=2).encode()}
     entries |= {n: t.encode() for n, t in files.items()} | assets
     out = io.BytesIO()
@@ -155,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--id", required=True, help="template id, e.g. receipt (a-z 0-9 -, 2-63 characters)")
     parser.add_argument("--name", help="report name; default: report.json name")
     parser.add_argument("--out", type=Path, help="zip path; default: <folder>/../<id>.zip")
+    parser.add_argument("--tags", default="", help='catalog tags, comma separated, e.g. "ขาย,ใบเสร็จ" (at most 10)')
     parser.add_argument("--params", help="JSON object of parameters for the trial bind; default: sample values")
     args = parser.parse_args(argv)
 
@@ -172,14 +194,17 @@ def main(argv: list[str] | None = None) -> int:
             problems += [p for p in checked if not p.startswith("WARNING") and "] WARNING" not in p]
             for warning in (p for p in checked if p not in problems):
                 print(warning)
+    tags, tag_problem = check_tags(args.tags)  # after jester_checks: JESTER_API_SRC is on sys.path by then
+    if tag_problem:
+        problems.append(tag_problem)
     if problems:
         print("\n".join(problems))
         print(f"\n{len(problems)} problem(s): nothing written")
         return 1
     report_name = args.name or json.loads(files["report.json"]).get("name") or args.id
     out = args.out or args.folder.resolve().parent / f"{args.id}.zip"
-    out.write_bytes(pack(files, assets, args.id, report_name))
-    print(f"ok: {out} ({len(files)} files, {len(assets)} assets)")
+    out.write_bytes(pack(files, assets, args.id, report_name, tags))
+    print(f"ok: {out} ({len(files)} files, {len(assets)} assets{', tags: ' + ', '.join(tags) if tags else ''})")
     return 0
 
 
