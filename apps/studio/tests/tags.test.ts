@@ -5,6 +5,7 @@ import {
   addTag,
   chipStyle,
   colorMap,
+  colorsOf,
   colorOf,
   hasAllTags,
   normalizeTag,
@@ -105,5 +106,11 @@ describe("sameTags", () => {
     expect(sameTags(["a", "b"], ["b", "a"])).toBe(false);
     expect(sameTags(["a"], ["a", "b"])).toBe(false);
     expect(sameTags([], [])).toBe(true);
+  });
+});
+
+describe("colorsOf", () => {
+  it("keeps only the colours of the given tags", () => {
+    expect(colorsOf(["vip", "new"], { vip: "red", q4: "teal" })).toEqual({ vip: "red" });
   });
 });

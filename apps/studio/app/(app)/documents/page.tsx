@@ -5,7 +5,7 @@ import { TagEditor } from "@/components/TagEditor";
 import { api } from "@/lib/api";
 import { isRunId, issuer, paramTitles, paramsLine } from "@/lib/documents";
 import { isTemplateId } from "@/lib/result";
-import { colorMap, tagsFromQuery } from "@/lib/tags";
+import { colorMap, colorsOf, tagsFromQuery } from "@/lib/tags";
 import type { components } from "@/lib/types.gen";
 
 import styles from "../history/history.module.css";
@@ -144,7 +144,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
                 <a href={`/documents/${doc.runId}`} download>
                   ดาวน์โหลด
                 </a>
-                <TagEditor kind="document" id={doc.runId} name={doc.filename} tags={doc.tags} label="แก้ tag" className={own.edit} />
+                <TagEditor kind="document" id={doc.runId} name={doc.filename} tags={doc.tags} colors={colorsOf(doc.tags, colors)} label="แก้ tag" className={own.edit} />
               </span>
             </div>
           ))}

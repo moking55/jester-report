@@ -23,16 +23,18 @@ type Props = {
   /** What the dialog names in its title: the template's name, or the document's file name. */
   name: string;
   tags: string[];
+  /** The colours the page already knows for these tags, so the chips do not start gray. */
+  colors?: Record<string, string>;
   label?: string;
   className?: string;
 };
 
 /** A button that opens the tag dialog of one template or issued document: add, remove, colour, save. */
-export function TagEditor({ kind, id, name, tags, label = "แก้ tag…", className }: Props) {
+export function TagEditor({ kind, id, name, tags, colors: known = {}, label = "แก้ tag…", className }: Props) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [value, setValue] = useState(tags);
   const [typed, setTyped] = useState("");
-  const [colors, setColors] = useState<Record<string, string>>({});
+  const [colors, setColors] = useState<Record<string, string>>(known);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [shown, setShown] = useState(false); // the form exists only while the dialog is open: a catalog has many rows
@@ -41,10 +43,11 @@ export function TagEditor({ kind, id, name, tags, label = "แก้ tag…", cl
     setValue(tags);
     setTyped("");
     setError(null);
+    setColors((c) => ({ ...known, ...c }));
     setShown(true);
     dialog.current?.showModal();
     // the colours of the tags already in use; a tag nobody has coloured is gray
-    void listTagUse().then((uses) => setColors(colorMap(uses)));
+    void listTagUse().then((uses) => setColors((c) => ({ ...c, ...colorMap(uses) })));
   }
 
   async function changeColor(tag: string, color: TagColor) {
@@ -80,7 +83,8 @@ export function TagEditor({ kind, id, name, tags, label = "แก้ tag…", cl
         className={styles.dialog}
         aria-label={`แก้ tag ของ ${name}`}
         style={{ width: "min(520px, calc(100vw - 32px))" }}
-        onClose={() => setShown(false)}
+        // the close event is queued: after a quick close and reopen it arrives while the dialog is open again
+        onClose={() => setShown(Boolean(dialog.current?.open))}
       >
         {shown && (
           <form

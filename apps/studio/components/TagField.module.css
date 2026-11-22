@@ -20,7 +20,7 @@
   outline-offset: 0;
 }
 
-.box input {
+.field .box input {
   flex: 1 1 8em;
   min-width: 6em;
   border: 0;

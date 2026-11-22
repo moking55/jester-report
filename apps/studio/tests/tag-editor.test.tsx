@@ -200,3 +200,24 @@ describe("TagEditor", () => {
     expect(within(dialog()).getByRole("button", { name: "ลบ tag vip", hidden: true })).toBeTruthy();
   });
 });
+
+describe("TagEditor colours", () => {
+  it("the chips start with the colours the page knows, before /v1/tags answers", () => {
+    actions.listTagUse.mockReturnValue(new Promise(() => {})); // never answers
+    render(<TagEditor kind="template" id="quote" name="Q" tags={["vip"]} colors={{ vip: "red" }} />);
+    fireEvent.click(screen.getByRole("button", { name: "แก้ tag…" }));
+    const chip = screen.getByRole("button", { name: "สีของ vip", hidden: true }).parentElement as HTMLElement;
+    expect(chip.style.getPropertyValue("--tag-base")).toBe("#c0392b");
+  });
+});
+
+describe("TagEditor close event", () => {
+  it("a close event that arrives after a quick reopen does not empty the open dialog", () => {
+    render(<TagEditor kind="template" id="quote" name="Q" tags={["vip"]} />);
+    fireEvent.click(screen.getByRole("button", { name: "แก้ tag…" }));
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    fireEvent(dialog, new Event("close")); // the late event of an earlier close; the dialog is open again
+    expect(dialog.hasAttribute("open")).toBe(true);
+    expect(within(dialog).getByRole("button", { name: "บันทึก", hidden: true })).toBeTruthy();
+  });
+});

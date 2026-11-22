@@ -14,11 +14,13 @@ export function TemplateMenu({
   back,
   name,
   tags,
+  colors,
 }: {
   templateId: string;
   archived: boolean;
   name?: string; // shown in the tag dialog's title
   tags?: string[]; // the template's tags: given, the menu offers "แก้ tag…"
+  colors?: Record<string, string>; // their colours, for the tag dialog
   back: string; // the page to show again after archive/unarchive
 }) {
   return (
@@ -28,7 +30,7 @@ export function TemplateMenu({
         <a href={`/export/${templateId}`} download>
           Export draft (.zip)
         </a>
-        {tags && <TagEditor kind="template" id={templateId} name={name ?? templateId} tags={tags} />}
+        {tags && <TagEditor kind="template" id={templateId} name={name ?? templateId} tags={tags} colors={colors} />}
         <DuplicateDialog templateId={templateId} />
         <form action={setArchived.bind(null, templateId, !archived, back)}>
           <button type="submit">{archived ? "เลิก archive" : "Archive"}</button>

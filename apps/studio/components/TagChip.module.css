@@ -22,39 +22,42 @@
   padding: 0 0.6em;
 }
 
-/* the name or the × as a button: no button chrome of its own */
-button.name,
-.remove {
+/* the name or the × as a button: no button chrome of its own. `.chip` in front so a page's own
+   `.page button` / `.form input` rules (one class + element) cannot put a box inside the chip */
+.chip button.name,
+.chip button.remove {
   all: unset;
   box-sizing: border-box;
   cursor: pointer;
   border-radius: 999px;
 }
 
-button.name {
+.chip button.name {
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 0.6em;
 }
 
-button.name:hover,
-.remove:hover {
+.chip button.name:hover,
+.chip button.remove:hover {
   background: color-mix(in srgb, var(--tag-base) 18%, transparent);
 }
 
-button.name:focus-visible,
-.remove:focus-visible {
+.chip button.name:focus-visible,
+.chip button.remove:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 1px;
 }
 
-.remove {
+.chip button.remove {
   padding: 0 0.45em 0 0.1em;
   font-size: 1.1em;
 }
 
-.picked {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tag-base) 55%, transparent);
+/* an outline, not a shadow: classic's glass chip sets its own box-shadow */
+.chip.picked {
+  outline: 2px solid color-mix(in srgb, var(--tag-base) 60%, transparent);
+  outline-offset: 1px;
 }
 
 /* classic: a glass chip, the same colour with a highlight and a darker lower half */

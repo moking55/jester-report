@@ -49,6 +49,10 @@ export const colorOf = (value: unknown): TagColor => (isTagColor(value) ? value 
 export const chipStyle = (color: unknown): CSSProperties =>
   ({ "--tag-base": COLOR_BASE[colorOf(color)] }) as CSSProperties;
 
+/** Only these tags' colours: what one row's dialog needs (not the whole page's map, once per row). */
+export const colorsOf = (tags: readonly string[], colors: Record<string, string>): Record<string, string> =>
+  Object.fromEntries(tags.filter((t) => t in colors).map((t) => [t, colors[t]]));
+
 /** Name -> colour for the chips of a page, from GET /v1/tags. */
 export function colorMap(uses: { tag: string; color: string }[]): Record<string, TagColor> {
   return Object.fromEntries(uses.map((u) => [u.tag, colorOf(u.color)]));

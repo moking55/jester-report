@@ -369,13 +369,13 @@ a.documents:hover {
   font-size: 0.85em;
 }
 
-.tagToggle {
+.tagBar button.tagToggle {
   all: unset;
   cursor: pointer;
   border-radius: 999px;
 }
 
-.tagToggle:focus-visible {
+.tagBar button.tagToggle:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -384,7 +384,7 @@ a.documents:hover {
   box-shadow: 0 0 0 2px var(--color-primary);
 }
 
-.tagClear {
+.tagBar button.tagClear {
   all: unset;
   cursor: pointer;
   color: var(--color-primary);
@@ -392,6 +392,6 @@ a.documents:hover {
   text-decoration: underline;
 }
 
-.tagClear:focus-visible {
+.tagBar button.tagClear:focus-visible {
   outline: 2px solid var(--color-primary);
 }

@@ -11,7 +11,7 @@ import { api } from "@/lib/api";
 import { when } from "@/lib/format";
 import { sizeLabel } from "@/lib/paper";
 import { VIEW_COOKIE } from "@/lib/session";
-import { colorMap, hasAllTags, tagsFromQuery } from "@/lib/tags";
+import { colorMap, colorsOf, hasAllTags, tagsFromQuery } from "@/lib/tags";
 import type { components } from "@/lib/types.gen";
 
 import styles from "./catalog.module.css";
@@ -217,6 +217,7 @@ function Table({
                 back={back}
                 name={t.name}
                 tags={t.tags}
+                colors={colorsOf(t.tags, colors)}
               />
             </td>
           </tr>
@@ -278,6 +279,7 @@ function Cards({
               back={back}
               name={t.name}
               tags={t.tags}
+              colors={colorsOf(t.tags, colors)}
             />
           </div>
         </article>
