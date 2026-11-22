@@ -30,6 +30,7 @@ class RenderBody(views.Body):
     params: dict[str, Any] | None = None
     data: Any
     filename: Annotated[str, Field(pattern=FILENAME)] | None = None
+    tags: list[str] | None = None  # None: the document starts with a copy of the template's tags
 
 
 class PreviewBody(views.Body):
@@ -89,6 +90,7 @@ async def render(request: Request, caller: RenderCaller) -> Response:
         caller,
         (request.headers.get("X-Request-Id") or "")[:128] or None,
         body.filename,
+        body.tags,
     )
     return pdf_response(outcome)
 

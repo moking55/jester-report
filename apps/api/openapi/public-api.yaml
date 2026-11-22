@@ -33,6 +33,7 @@ tags:
   - name: runs
   - name: documents
   - name: themes
+  - name: tags
   - name: system
 
 security:
@@ -1096,13 +1097,14 @@ paths:
       operationId: listDocuments
       summary: Documents successful renders of published versions produced, newest first (Studio sessions only)
       description: |
-        `q` matches any text in the params or data the caller sent, case-insensitively; `%` and `_` are
+        `q` matches any text in the params, the data or the tags, case-insensitively; `%` and `_` are
         ordinary characters. Documents are deleted with their run (see /v1/runs/retention).
       parameters:
         - { name: templateId, in: query, schema: { $ref: '#/components/schemas/TemplateId' } }
         - { name: q, in: query, schema: { type: string, minLength: 1, maxLength: 100 } }
         - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
         - { name: before, in: query, description: Cursor from the previous page, schema: { type: string } }
+        - $ref: '#/components/parameters/TagFilter'
       responses:
         '200':
           description: Documents, newest first
@@ -1115,6 +1117,31 @@ paths:
                   items: { type: array, items: { $ref: '#/components/schemas/DocumentSummary' } }
                   next: { type: [string, 'null'] }
         '401': { $ref: '#/components/responses/Unauthorized' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/documents/{runId}/tags:
+    parameters:
+      - { name: runId, in: path, required: true, schema: { type: string } }
+    put:
+      tags: [documents]
+      operationId: setDocumentTags
+      summary: Replace the tags of an issued document (Studio sessions only)
+      description: |
+        Same rules as `setTemplateTags`. The PDF and everything else stay as issued. API keys can give
+        tags when they render but cannot change them afterwards.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TagList' }
+      responses:
+        '200':
+          description: The tags after normalising
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
   /v1/documents/{runId}:
@@ -1212,6 +1239,46 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/InputInvalid' }
+
+  /v1/tags:
+    get:
+      tags: [tags]
+      operationId: listTags
+      summary: Tags in use on templates or documents, with colour and counts (Studio sessions only)
+      description: |
+        Busiest first (templates + documents), then by name; at most 500. Colour belongs to the tag name,
+        so it is the same everywhere. A tag nobody has set a colour for is `gray`.
+      responses:
+        '200':
+          description: Tags in use
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/TagUse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /v1/tag-colors:
+    put:
+      tags: [tags]
+      operationId: setTagColor
+      summary: Set the colour of a tag name (Studio sessions only)
+      description: |
+        The colour applies to every template and document carrying that tag. `gray` removes the colour
+        (gray is the default). A tag nobody carries yet can be coloured; the colour is kept for when it is used.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TagColor' }
+      responses:
+        '200':
+          description: The tag (normalised) and its colour
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TagColor' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/InputInvalid' }
 
   /v1/themes/default:
@@ -1541,6 +1608,13 @@ components:
           description: |
             Download name for `Content-Disposition`; defaults to `<templateId>-v<version>.pdf`.
             No slashes, quotes or control characters (incl. line breaks), so a bad name is a 422 instead of a broken header.
+        tags:
+          allOf:
+            - $ref: '#/components/schemas/TagNames'
+          description: |
+            Tags of the issued document (same rules as `setTemplateTags`; a bad tag is a 422 before anything
+            is rendered). Left out, the document starts with a copy of the template's tags at that moment;
+            `[]` means no tags. Later changes to the template's tags do not reach documents already issued.
 
     Session:
       type: object
@@ -1627,6 +1701,24 @@ components:
       description: Tag names in the order they were given
       maxItems: 10
       items: { type: string, minLength: 1, maxLength: 30 }
+    TagColorName:
+      type: string
+      enum: [gray, red, orange, yellow, green, teal, blue, purple, pink]
+    TagColor:
+      type: object
+      required: [tag, color]
+      additionalProperties: false
+      properties:
+        tag: { type: string, minLength: 1, maxLength: 30 }
+        color: { $ref: '#/components/schemas/TagColorName' }
+    TagUse:
+      type: object
+      required: [tag, color, templates, documents]
+      properties:
+        tag: { type: string }
+        color: { $ref: '#/components/schemas/TagColorName' }
+        templates: { type: integer, minimum: 0, description: Templates carrying the tag }
+        documents: { type: integer, minimum: 0, description: Issued documents carrying the tag }
     TagList:
       type: object
       required: [tags]
@@ -1738,7 +1830,7 @@ components:
 
     DocumentSummary:
       type: object
-      required: [runId, createdAt, templateId, version, caller, filename, pages, params]
+      required: [runId, createdAt, templateId, version, caller, filename, pages, params, tags]
       properties:
         runId: { type: string }
         createdAt: { type: string, format: date-time }
@@ -1754,6 +1846,7 @@ components:
         filename: { type: string }
         pages: { type: [integer, 'null'] }
         params: { type: object, description: The params the caller sent (decimals as decimal strings) }
+        tags: { $ref: '#/components/schemas/TagNames' }
 
     RunRetention:
       type: object

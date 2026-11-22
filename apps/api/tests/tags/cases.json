@@ -1,0 +1,21 @@
+{
+  "_": "Shared by apps/api/tests/tags/test_normalize.py and apps/studio/tests/tags.test.ts: both sides must give these answers.",
+  "ok": [
+    { "input": [], "output": [] },
+    { "input": ["  ลูกค้า-ก ", "ไตรมาส   4", "VIP"], "output": ["ลูกค้า-ก", "ไตรมาส 4", "VIP"] },
+    { "input": ["VIP", "vip"], "output": ["VIP", "vip"] },
+    { "input": ["a", " a ", "b", "a  "], "output": ["a", "b"] },
+    { "input": ["é"], "output": ["é"] },
+    { "input": ["tab\tand\nnewline"], "output": ["tab and newline"] },
+    { "input": ["😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"], "output": ["😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"] }
+  ],
+  "bad": [
+    { "input": ["a,b"], "tag": "a,b" },
+    { "input": ["   "], "tag": "   " },
+    { "input": [""], "tag": "" },
+    { "input": ["a\u0000b"], "tag": "a\u0000b" },
+    { "input": ["a\u007fb"], "tag": "a\u007fb" },
+    { "input": ["😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"], "tag": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀" },
+    { "input": ["t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9", "t10"], "tag": null }
+  ]
+}

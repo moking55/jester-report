@@ -87,6 +87,7 @@ def document(d: DocumentSummary) -> dict[str, Any]:
         "filename": d.filename,
         "pages": d.pages,
         "params": d.params,
+        "tags": d.tags,
     }
 
 

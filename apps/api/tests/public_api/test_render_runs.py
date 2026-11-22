@@ -223,3 +223,60 @@ async def test_documents_list_search_and_download(api, admin, published):
         assert (await api.get(f"/v1/documents?q={bad}", headers=admin)).status_code == 422
     for path in ("/v1/documents", f"/v1/documents/{run_id}"):
         assert (await api.get(path, headers=published)).status_code == 401  # API keys cannot read documents
+
+
+async def issue(api, headers, **extra):
+    body = {"template": {"id": "quote", "version": "published"}, "params": PARAMS, **extra}
+    rendered = await api.post(
+        "/v1/render", headers={**headers, "Content-Type": "application/json"},
+        content=json.dumps(body, ensure_ascii=False)[:-1] + ', "data": ' + DATA_JSON + "}",
+    )  # fmt: skip
+    return rendered
+
+
+async def test_document_tags_over_http(api, admin, published):
+    await api.put("/v1/templates/quote/tags", headers=admin, json={"tags": ["vip"]})
+    copied = await issue(api, published)
+    own = await issue(api, published, tags=[" ลูกค้า-ก ", "q4"])
+    empty = await issue(api, published, tags=[])
+    assert [r.status_code for r in (copied, own, empty)] == [200, 200, 200]
+    items = (await api.get("/v1/documents", headers=admin)).json()["items"]
+    by_id = {d["runId"]: d for d in items}
+    for item in items:
+        assert_fits("DocumentSummary", item)
+    assert by_id[copied.headers["Jester-Run-Id"]]["tags"] == ["vip"]
+    assert by_id[own.headers["Jester-Run-Id"]]["tags"] == ["ลูกค้า-ก", "q4"]
+    assert by_id[empty.headers["Jester-Run-Id"]]["tags"] == []
+
+    async def ids(query):
+        return {d["runId"] for d in (await api.get(f"/v1/documents?{query}", headers=admin)).json()["items"]}
+
+    assert await ids("tag=vip") == {copied.headers["Jester-Run-Id"]}
+    assert await ids("tag=ลูกค้า-ก&tag=q4") == {own.headers["Jester-Run-Id"]}
+    assert await ids("tag=ลูกค้า-ก&tag=vip") == set()
+    assert await ids("q=q4") == {own.headers["Jester-Run-Id"]}
+
+
+async def test_bad_tags_when_rendering_are_422_and_leave_nothing(api, admin, published):
+    for bad in (["a,b"], ["x" * 31], [f"t{i}" for i in range(11)], "vip", [3]):
+        r = await issue(api, published, tags=bad)
+        assert (r.status_code, r.json()["code"]) == (422, "INPUT_INVALID")
+    assert (await api.get("/v1/runs", headers=admin)).json()["items"] == []
+    assert (await api.get("/v1/documents", headers=admin)).json()["items"] == []
+
+
+async def test_set_document_tags_is_for_studio_sessions_only(api, admin, published):
+    run_id = (await issue(api, published, tags=["old"])).headers["Jester-Run-Id"]
+    url = f"/v1/documents/{run_id}/tags"
+    put = await api.put(url, headers=admin, json={"tags": [" new ", "ไทย", "new"]})
+    assert (put.status_code, put.json()) == (200, {"tags": ["new", "ไทย"]})
+    assert (await api.get("/v1/documents", headers=admin)).json()["items"][0]["tags"] == ["new", "ไทย"]
+    assert (
+        await api.get(f"/v1/documents/{run_id}", headers=admin)
+    ).status_code == 200  # the PDF is untouched
+    bad = await api.put(url, headers=admin, json={"tags": ["a,b"]})
+    assert (bad.status_code, bad.json()["code"]) == (422, "INPUT_INVALID") and "a,b" in bad.json()["detail"]
+    assert (await api.put(url, headers=admin, json={"tags": "x"})).status_code == 422
+    assert (await api.put("/v1/documents/nope/tags", headers=admin, json={"tags": []})).status_code == 404
+    assert (await api.put(url, json={"tags": []})).status_code == 401
+    assert (await api.put(url, headers=published, json={"tags": []})).status_code == 401  # API key

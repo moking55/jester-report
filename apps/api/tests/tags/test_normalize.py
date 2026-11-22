@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from jester_api.tags import COLORS, TagError, normalize_tags
@@ -56,3 +59,18 @@ def test_non_strings_are_rejected():
 
 def test_palette():
     assert COLORS == ("gray", "red", "orange", "yellow", "green", "teal", "blue", "purple", "pink")
+
+
+CASES = json.loads((Path(__file__).parent / "cases.json").read_text(encoding="utf-8"))
+
+
+@pytest.mark.parametrize("case", CASES["ok"])
+def test_shared_cases_ok(case):
+    assert normalize_tags(case["input"]) == case["output"]
+
+
+@pytest.mark.parametrize("case", CASES["bad"])
+def test_shared_cases_bad(case):
+    with pytest.raises(TagError) as err:
+        normalize_tags(case["input"])
+    assert err.value.tag == case["tag"]

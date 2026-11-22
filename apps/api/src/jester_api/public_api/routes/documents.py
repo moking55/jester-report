@@ -22,8 +22,9 @@ async def list_documents(
     q: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     before: str | None = None,
+    tag: Annotated[list[str] | None, Query()] = None,
 ) -> dict:
-    items, next_cursor = await services(request).render.list_documents(templateId, q, limit, before)
+    items, next_cursor = await services(request).render.list_documents(templateId, q, limit, before, tag)
     return {"items": [views.document(d) for d in items], "next": next_cursor}
 
 
@@ -33,3 +34,13 @@ async def get_document(request: Request, caller: SessionCaller, runId: str) -> R
     return Response(
         pdf, media_type="application/pdf", headers={"Content-Disposition": content_disposition(filename)}
     )
+
+
+class TagList(views.Body):
+    tags: list[str]
+
+
+@router.put("/v1/documents/{runId}/tags")
+async def set_document_tags(request: Request, caller: SessionCaller, runId: str, body: TagList) -> dict:  # noqa: N803
+    # shortcut: the new set replaces the old one, so two people editing at once means the last save wins
+    return {"tags": await services(request).render.set_document_tags(runId, body.tags)}

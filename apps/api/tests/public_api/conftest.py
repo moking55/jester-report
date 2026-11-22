@@ -7,6 +7,7 @@ from jester_api.engine_client import EngineClient
 from jester_api.public_api import Settings, create_app
 from jester_api.public_api.state import Services
 from jester_api.render_service import RenderService, RenderSettings
+from jester_api.tags import Tags
 from jester_api.template_store import MemoryBlobStore, TemplateStore
 from jester_api.themes import Themes
 
@@ -48,7 +49,7 @@ async def api(pool, engine_route):
     async with EngineClient(ENGINE) as engine:
         store = TemplateStore(pool, MemoryBlobStore())
         render = RenderService(store, engine, pool, RenderSettings(bind_timeout_s=30))
-        app = create_app(settings, Services(Auth(pool), store, render, Themes(pool)))
+        app = create_app(settings, Services(Auth(pool), store, render, Themes(pool), Tags(pool)))
         transport = httpx.ASGITransport(app=app, client=("198.51.100.20", 5555))
         async with httpx.AsyncClient(transport=transport, base_url="http://api") as client:
             yield client

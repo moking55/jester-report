@@ -98,6 +98,7 @@ async def build_services(settings: Settings) -> Services:
     from ..engine_client import EngineClient
     from ..render_service import RenderService, RenderSettings
     from ..render_service.document_files import S3DocumentFiles
+    from ..tags import Tags
     from ..template_store import S3BlobStore, TemplateStore
     from ..themes import Themes
 
@@ -128,7 +129,7 @@ async def build_services(settings: Settings) -> Services:
             token,
             banner,
         )
-    return Services(auth, store, render, Themes(pool), closers=(engine, pool))
+    return Services(auth, store, render, Themes(pool), Tags(pool), closers=(engine, pool))
 
 
 def create_app(settings: Settings | None = None, services: Services | None = None) -> FastAPI:

@@ -13,6 +13,7 @@ from starlette.exceptions import HTTPException
 from ..auth import AuthError
 from ..render_service import RenderError
 from ..report_definition.problems import Problem
+from ..tags import TagError
 from ..template_store import StoreError
 from ..themes import ThemeError
 
@@ -86,6 +87,10 @@ def install(app: FastAPI) -> None:
     async def _store(_: Request, exc: StoreError) -> JSONResponse:
         code = "TEMPLATE_ARCHIVED" if exc.code == "ARCHIVED" else exc.code
         return problem_response(code, STATUS[code], exc.message)
+
+    @app.exception_handler(TagError)
+    async def _tag(_: Request, exc: TagError) -> JSONResponse:
+        return problem_response("INPUT_INVALID", 422, exc.message)
 
     @app.exception_handler(AuthError)
     async def _auth(_: Request, exc: AuthError) -> JSONResponse:
