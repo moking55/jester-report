@@ -401,3 +401,22 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
   - `free`: `<div data-jd="page" …>` เปล่าขนาดตามกระดาษ, ไม่มี header/footer
 - starter อื่น + `page` = `INPUT_INVALID` (starter เป็น A4 แบบคงที่เสมอ)
 - starter ทุกตัว PDF เหมือนเดิม (test เทียบ PDF ของ v1.7 ยังผ่าน)
+
+---
+
+# v1.11: tag ของรายงาน
+
+สถานะ: **อนุมัติ 22 พ.ย. 2026** · ที่มา: [docs/ideas/tags-v1-11.md](docs/ideas/tags-v1-11.md) · plan: [tasks/v1.11/plan.md](tasks/v1.11/plan.md)
+
+- migration `0009_tags.sql`: `templates.tags text[] NOT NULL DEFAULT '{}'` + GIN index (รายงานเดิมเป็นชุดว่าง)
+- tag เป็น metadata ของ catalog **ไม่ใช่ส่วนของรายงาน**: `set_tags(id, tags)` แทนทั้งชุดและเขียนเฉพาะ `templates.tags` —
+  ไม่เปลี่ยน draft revision, `draftChangedSincePublish`, `updated_at` ของ draft, version และ hash; รายงานที่ archive แล้วแก้ได้
+- กติกา tag อยู่ใน module `tags` (ดู [CAPABILITY_MAP.md](CAPABILITY_MAP.md) v1.11); `template-store` เรียกเฉพาะ `normalize_tags`
+- `TemplateSummary.tags`; `list(tags=[…])` กรองต้องมี **ทุก** tag (`tags @> ARRAY[…]`)
+- `duplicate` คัดลอก tag; `export_zip` ใส่ `manifest.tags`; `import_zip` อ่านได้ทั้ง zip ใหม่และเก่า (ไม่มีฟิลด์ = ว่าง); `formatVersion` เท่าเดิม
+
+## Testing Strategy v1.11
+
+- `set_tags` ไม่เปลี่ยน draft revision/สถานะ/`updated_at`; archive แล้วแก้ได้; กรองหลาย tag (AND); duplicate พา tag; export→import คง tag; zip เก่าไม่มี tag นำเข้าได้
+
+---

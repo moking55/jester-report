@@ -275,3 +275,28 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 - ไม่มี endpoint ใหม่อื่น; ขนาดกระดาษเปลี่ยนทีหลังด้วย `putDraftFile` ของ `report.json` ตามเดิม
 - contract test + OpenAPI อัปเดต (`PageSpec` schema)
 - `TemplateSummary.page` (รายการรายงาน, `GET /v1/templates`) บอกกระดาษจริงของ draft: `size`, `orientation`, `layout`, และ `rollWidthMm` เมื่อเป็นม้วน (เดิมเป็น `A4` เสมอ) — เพิ่ม field เท่านั้น; การ์ดในแคตตาล็อกแสดงตามนี้
+
+---
+
+# v1.11: tag และสี
+
+สถานะ: **อนุมัติ 22 พ.ย. 2026** · ที่มา: [docs/ideas/tags-v1-11.md](docs/ideas/tags-v1-11.md)
+
+| operation | request | response |
+| --- | --- | --- |
+| `PUT /v1/templates/{id}/tags` `setTemplateTags` | `{tags: string[]}` (Studio session) | `200 {tags}`; tag ผิด → `422` บอกว่า tag ไหน; ไม่มี id → `404`; API key → `403` |
+| `PUT /v1/documents/{runId}/tags` `setDocumentTags` | `{tags: string[]}` (Studio session เท่านั้น) | `200 {tags}`; `runId` ไม่มี → `404`; API key → `403` |
+| `GET /v1/tags` `listTags` | — | `200 [{tag, color, templates, documents}]` เรียงตามจำนวนใช้รวม แล้วชื่อ |
+| `PUT /v1/tag-colors` `setTagColor` | `{tag, color}` | `200 {tag, color}`; `color` นอกชุด → `422`; `gray` = ลบแถวสี; tag ที่ไม่มีใครใช้ก็ตั้งสีได้ (Studio session เท่านั้น) |
+
+- `Template` และ `DocumentSummary` เพิ่ม `tags: string[]` (required); `GET /v1/templates` และ `GET /v1/documents` รับ `?tag=` ซ้ำได้ (ต้องมีทุก tag);
+  `q` ของเอกสารค้น tag ด้วย
+- `POST /v1/render` รับ `tags?: string[]` (API key ได้) — ไม่ส่ง = สำเนา tag ของรายงาน; tag ผิด → `422` ก่อน render
+- ชุดสี: `gray red orange yellow green teal blue purple pink`
+- `apps/api/openapi/public-api.yaml` ปรับพร้อมกัน; Studio สร้าง `lib/types.gen.ts` ด้วย `npm run gen:api`
+
+## Testing Strategy v1.11
+
+- contract test ผ่านกับ operation ใหม่; กรองหลาย tag; PUT แทนทั้งชุด; API key แก้ tag ไม่ได้ (403); สีนอกชุด 422; `gray` ลบแถว; `/v1/tags` นับถูก
+
+---

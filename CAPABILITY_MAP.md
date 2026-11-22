@@ -191,3 +191,20 @@ Build order: L1 → L2, L3, L4, L5 (คู่ขนานได้) → L6 · �
 ปล่อยเป็น `v1.10.0` · spec: หัวข้อ v1.10 ใน [SPEC-studio.md](SPEC-studio.md)
 
 **ไม่ทำ:** PWA offline/push · rowspan · เลือกหลายเซลล์ · รวมช่องในตารางรายการ · ข้อเสนอ UX อื่น (ผู้ใช้ตัดสิน 20 พ.ย. 2026)
+
+## v1.11: tag และสี (อนุมัติ 22 พ.ย. 2026)
+
+เป้า: ติด tag (ข้อความสั้น มีสีหนึ่งใน 9 สี) ให้รายงานและเอกสารที่ออก แก้ได้ กรองได้ใน catalog และหน้าเอกสารที่ออก
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| T1 module `tags` ใหม่ (กติกา, สี, นับการใช้) + migration `0009` | `tags` | — |
+| T2–T3 tag ของรายงาน (store, route, duplicate, zip) | `template-store`, `public-api` | T1 |
+| T4–T5 tag ของเอกสารที่ออก (สำเนาตอนออก, กรอง, แก้) | `render-service`, `public-api` | T1 |
+| T6 `GET /v1/tags`, `PUT /v1/tag-colors` | `tags`, `public-api` | T1 |
+| T7–T11 Studio: ชิป, dialog, catalog, หน้าเอกสาร, ฟอร์มออกเอกสาร, contrast | `studio` | T3, T5, T6 |
+
+module `tags` เล็กและไม่ขึ้นกับใคร: `template-store` และ `render-service` เรียกเฉพาะ `normalize_tags`; `public-api` ขึ้นกับ `tags`
+ปล่อยเป็น `v1.11.0` · spec: [docs/ideas/tags-v1-11.md](docs/ideas/tags-v1-11.md) และหัวข้อ v1.11 ของ SPEC-template-store/render-service/public-api/studio
+
+**ไม่ทำ:** เปลี่ยนชื่อ/ลบ tag ทั้งระบบ · bulk edit · tag ใน PDF · สี hex เอง · ให้ API key แก้ tag ย้อนหลัง

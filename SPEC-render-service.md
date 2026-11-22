@@ -330,3 +330,22 @@ params/data ที่เก็บคือค่าที่ผู้เรี�
 ## Open Questions v1.5
 
 ไม่มี — ที่เก็บ (rustfs) และใครเห็น (ทุกคน) ผู้ใช้ตัดสินแล้ว 19 พ.ย. 2026
+
+---
+
+# v1.11: tag ของเอกสารที่ออก
+
+สถานะ: **อนุมัติ 22 พ.ย. 2026** · ที่มา: [docs/ideas/tags-v1-11.md](docs/ideas/tags-v1-11.md)
+
+- migration `0009_tags.sql`: `documents.tags text[] NOT NULL DEFAULT '{}'` + GIN index
+- `render(..., tags=None)`: ตรวจ tag ด้วย `normalize_tags` **ก่อนเริ่มทำงาน** (ผิด → 422 ไม่มีแถว run และไม่มี object ค้าง);
+  ไม่ส่ง = **สำเนา** tag ของรายงานตอนนั้น; `Runs.record` เขียน `tags` ในทรานแซกชันเดียวกับแถว `documents`
+- เอกสารที่ออกแล้วไม่ผูกกับรายงาน: แก้ tag รายงานทีหลังไม่เปลี่ยนเอกสารเก่า
+- `list_documents(tags=[…])` กรองต้องมีทุก tag; `q` ค้นใน tag ด้วย; `set_document_tags(run_id, tags)` แทนทั้งชุด (ไม่มี run → `NOT_FOUND`)
+- preview และ render ที่ล้มเหลวไม่มี tag (ไม่มีเอกสาร)
+
+## Testing Strategy v1.11
+
+- ไม่ส่ง tags → ได้สำเนา tag รายงาน; ส่ง tags → ใช้ตามที่ส่ง; tag ผิดกติกา → 422 และไม่มีแถว/ไฟล์; แก้รายงานทีหลังไม่เปลี่ยนเอกสารเก่า; กรอง/ค้นด้วย tag
+
+---
