@@ -46,7 +46,9 @@ def _running(
     left, right = side_mm
     style = (
         f'<style>body {{ font-family: "{ENGINE_FONT}"; font-size: 12px; padding: 0 {right:g}mm 0 {left:g}mm; '
-        "box-sizing: border-box; width: 100%; }</style>"
+        "box-sizing: border-box; width: 100%; }\n"
+        # Chromium's header/footer box does not stretch blocks: without this a right-aligned line prints left
+        "p, h1, h2, h3 { width: 100%; }</style>"
     )
     return style + "\n" + "\n".join(content) + "\n"
 
