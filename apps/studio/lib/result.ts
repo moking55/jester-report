@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { ApiProblem } from "./api";
 import { clearSession } from "./session";
+import { isTemplateId } from "./template-id";
 import type { Result } from "./workspace";
 
 /** For Server Actions: api errors come back as values (never thrown to the client); 401 ends the session. */
@@ -20,7 +21,6 @@ export async function attempt<T>(call: () => Promise<T>): Promise<Result<T>> {
   }
 }
 
-const TEMPLATE_ID = /^[a-z0-9][a-z0-9-]{1,62}$/;
 const FILE_NAME = /^(?!index\.html$)[A-Za-z0-9][A-Za-z0-9._-]{0,99}\.(html|json|css)$/;
 
 /** Route Handlers that change data: Server Actions check the origin themselves, handlers do not. */
@@ -35,7 +35,7 @@ export function sameOrigin(request: Request): boolean {
   }
 }
 
-export const isTemplateId = (id: string) => TEMPLATE_ID.test(id);
+export { isTemplateId };
 
 /** Path segments from the browser, checked against the contract before they go into a URL. */
 export function draftPath(templateId: string, fileName?: string): string {

@@ -1,5 +1,5 @@
 // v1.15: a Word file has no manifest, so the import dialog suggests an id and a name from the file name.
-import { isTemplateId } from "@/lib/result";
+import { isTemplateId } from "@/lib/template-id";
 
 /** The file name without .docx, spaces tidied: the report's suggested name. */
 export const nameFromFile = (fileName: string) =>
