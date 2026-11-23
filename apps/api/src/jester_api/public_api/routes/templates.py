@@ -114,9 +114,12 @@ async def import_template(
     caller: SessionCaller,
     file: UploadFile,
     templateId: Annotated[str | None, Form()] = None,  # noqa: N803
+    unarchive: Annotated[Literal["true", "false"], Form()] = "false",
 ) -> JSONResponse:
     revision = expected_revision(request) if request.headers.get("If-Match") is not None else None
-    result = await services(request).store.import_zip(await file.read(), revision, caller.name, templateId)
+    result = await services(request).store.import_zip(
+        await file.read(), revision, caller.name, templateId, unarchive=unarchive == "true"
+    )
     body = {
         "template": views.template(result.summary),
         "revision": result.revision,

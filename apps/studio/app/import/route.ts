@@ -1,6 +1,7 @@
 // Template zip upload. A Route Handler, not a Server Action: actions cap the body at 1 MB and a zip may be
 // 25 MB. `overwrite=1` replaces the draft of `templateId`; Studio reads its current revision here, so the
-// user is not asked for one.
+// user is not asked for one. `unarchive=1` (with overwrite, after the user confirmed) also takes an archived
+// template out of the archive (v1.14.1).
 import { api, apiRaw, ApiProblem } from "@/lib/api";
 import { isTemplateId, sameOrigin } from "@/lib/result";
 import type { components } from "@/lib/types.gen";
@@ -16,12 +17,15 @@ export async function POST(request: Request) {
   const file = form.get("file");
   const templateId = String(form.get("templateId") ?? "");
   const overwrite = form.get("overwrite") === "1";
+  const unarchive = form.get("unarchive") === "1";
   if (!(file instanceof File)) return problem(422, "INPUT_INVALID", "choose a .zip file");
   if (templateId && !isTemplateId(templateId)) return problem(422, "INPUT_INVALID", "invalid template id");
   if (overwrite && !templateId) return problem(422, "INPUT_INVALID", "overwrite needs the template id");
+  if (unarchive && !overwrite) return problem(422, "INPUT_INVALID", "unarchive goes with overwrite");
   const upload = new FormData();
   upload.set("file", file, file.name);
   if (templateId) upload.set("templateId", templateId);
+  if (unarchive) upload.set("unarchive", "true");
   try {
     const ifMatch = overwrite
       ? (await api<TemplateSummary>(`/v1/templates/${templateId}`)).draftRevision

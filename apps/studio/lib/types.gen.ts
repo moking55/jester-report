@@ -323,6 +323,9 @@ export interface paths {
          *     `templateId` when sent, else the manifest's. A new id creates the template (201). An existing id
          *     needs `If-Match` with its current draft revision and replaces the whole draft (200); the name,
          *     versions and published alias stay. The result is always a draft: validate and publish it as usual.
+         *     An archived template answers `409 TEMPLATE_ARCHIVED` and nothing changes; after the user confirms,
+         *     send the same request with `unarchive=true` (and `If-Match`): the draft is replaced and the template
+         *     leaves the archive in the same step (v1.14.1).
          *     The body may be up to 26 MB (zip at most 25 MB).
          */
         post: operations["importTemplate"];
@@ -2601,6 +2604,12 @@ export interface operations {
                     /** Format: binary */
                     file: string;
                     templateId?: components["schemas"]["TemplateId"];
+                    /**
+                     * @description `true` replaces the draft of an archived template and unarchives it; ignored otherwise
+                     * @default false
+                     * @enum {string}
+                     */
+                    unarchive?: "true" | "false";
                 };
             };
         };

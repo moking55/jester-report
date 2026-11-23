@@ -98,6 +98,20 @@ test("export, import, duplicate, archive and set a password", async ({ page, req
   await expect(page.getByRole("button", { name: "Preview", exact: true })).toBeEnabled();
   expect((await render()).status()).toBe(422); // past the archive check: now it is the missing data
 
+  // 4b. (v1.14.1) a zip over an archived report: the dialog asks, then replaces the draft and brings it back
+  await page.goto("/");
+  await menu(page, ID).click();
+  await page.getByRole("button", { name: "Archive" }).click();
+  await expect(row(page, ID)).toHaveCount(0);
+  const archivedImport = await importZip(page, zip, ID);
+  await expect(archivedImport.getByText(/ถูก archive อยู่/)).toBeVisible();
+  await archivedImport.getByRole("button", { name: "ทับและเลิก archive" }).click();
+  await expect(page).toHaveURL(new RegExp(`/templates/${ID}$`), { timeout: 30_000 });
+  await expect(page.getByText(/ถูก archive แล้ว อ่านได้อย่างเดียว/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Preview", exact: true })).toBeEnabled();
+  await page.goto("/");
+  await expect(row(page, ID)).toBeVisible(); // back in the catalog without the archive toggle
+
   // 5. (v1.2 B1) a key limited to another report: 403 for this one, and the table shows the limits
   await page.goto("/settings?tab=keys");
   await page.getByLabel("ชื่อ (เช่น ระบบที่จะใช้)").fill("e2e-copy-only");

@@ -9,7 +9,9 @@ import { readManifest, type ZipManifest } from "@/lib/zip";
 
 import styles from "./RenderDialog.module.css";
 
-type Step = "pick" | "ask"; // ask: the id exists, replace its draft or pick another id
+// ask: the id exists, replace its draft or pick another id; archived: the same, but the report is in the archive
+// and replacing it brings it back (v1.14.1)
+type Step = "pick" | "ask" | "archived";
 
 /** "นำเข้า (.zip)": a template zip from exportTemplate becomes a new report or replaces a draft. */
 export function ImportDialog({ className }: { className?: string }) {
@@ -33,7 +35,7 @@ export function ImportDialog({ className }: { className?: string }) {
     if (chosen && !found) setError("ไฟล์นี้ไม่ใช่ zip ที่ export จาก Jester");
   }
 
-  async function send(overwrite: boolean) {
+  async function send(overwrite: boolean, unarchive = false) {
     if (!file) return;
     setBusy(true);
     setError(null);
@@ -41,6 +43,7 @@ export function ImportDialog({ className }: { className?: string }) {
     form.set("file", file, file.name);
     form.set("templateId", id);
     if (overwrite) form.set("overwrite", "1");
+    if (unarchive) form.set("unarchive", "1");
     try {
       const response = await fetch("/import", { method: "POST", body: form });
       if (response.status === 401) return router.push("/login");
@@ -51,6 +54,7 @@ export function ImportDialog({ className }: { className?: string }) {
       }
       const problem = body as Problem;
       if (response.status === 409 && problem.code === "CONFLICT" && !overwrite) return setStep("ask");
+      if (response.status === 409 && problem.code === "TEMPLATE_ARCHIVED" && !unarchive) return setStep("archived");
       setError(problemMessage(problem));
     } catch {
       setError("ส่งไฟล์ไม่สำเร็จ กรุณาลองใหม่");
@@ -102,7 +106,29 @@ export function ImportDialog({ className }: { className?: string }) {
               autoComplete="off"
             />
           </label>
-          {step === "ask" ? (
+          {step === "archived" ? (
+            <div role="alert">
+              <p>
+                รายงาน id <code>{id}</code> ถูก archive อยู่ จะทับ draft ของรายงานที่ archive ด้วยไฟล์นี้และเอากลับออกจาก archive
+                หรือนำเข้าเป็น id ใหม่? (version ที่ publish แล้วไม่เปลี่ยน)
+              </p>
+              <div className={styles.buttons}>
+                <button type="button" className={styles.primary} disabled={busy} onClick={() => send(true, true)}>
+                  {busy ? "กำลังนำเข้า…" : "ทับและเลิก archive"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("pick");
+                    idInput.current?.focus();
+                    idInput.current?.select();
+                  }}
+                >
+                  ใช้ id ใหม่
+                </button>
+              </div>
+            </div>
+          ) : step === "ask" ? (
             <div role="alert">
               <p>
                 มีรายงาน id <code>{id}</code> อยู่แล้ว จะทับ draft ของรายงานนั้นด้วยไฟล์นี้ หรือนำเข้าเป็น id ใหม่?

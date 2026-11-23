@@ -309,9 +309,19 @@ class TemplateStore:
         return ZipExport(data, filename)
 
     async def import_zip(
-        self, data: bytes, expected_revision: int | None, by: str, template_id: str | None = None
+        self,
+        data: bytes,
+        expected_revision: int | None,
+        by: str,
+        template_id: str | None = None,
+        *,
+        unarchive: bool = False,
     ) -> ImportResult:
-        """A new template from the zip, or the zip replaces the whole draft of an existing one."""
+        """A new template from the zip, or the zip replaces the whole draft of an existing one.
+
+        An archived template refuses (ARCHIVED) unless `unarchive` is set: the caller asks the user first, and
+        the import then replaces the draft and brings the template back from the archive in one transaction.
+        """
         bundle = read_zip(data)  # every check of the safety table, before anything is written
         template_id = template_id or bundle.id
         _check(TEMPLATE_ID, template_id, "template")
@@ -338,13 +348,18 @@ class TemplateStore:
                 )
                 revision, created = 1, True
             else:
-                if row[0] is not None:
+                if row[0] is not None and not unarchive:
                     raise StoreError("ARCHIVED", "the template is archived; unarchive it to change it")
                 if expected_revision is None:
                     raise StoreError(
                         "CONFLICT", "this template exists; send its draft revision to replace the draft"
                     )
                 revision, created = await self._bump(conn, template_id, expected_revision, by), False
+                if row[0] is not None:  # the user confirmed replacing the archived template
+                    await conn.execute(
+                        "UPDATE templates SET archived_at = NULL, archived_by = NULL WHERE id = %s",
+                        (template_id,),
+                    )
                 await conn.execute("DELETE FROM draft_files WHERE template_id = %s", (template_id,))
                 await conn.execute("DELETE FROM draft_assets WHERE template_id = %s", (template_id,))
                 await conn.execute(

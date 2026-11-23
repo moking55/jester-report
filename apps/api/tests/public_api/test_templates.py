@@ -168,6 +168,33 @@ async def test_export_and_import_over_http(api, admin):
     assert junk.status_code == 422
 
 
+async def test_import_over_an_archived_template_asks_first_then_replaces_and_unarchives(api, admin):
+    await api.post("/v1/templates", headers=admin, json={"id": "t1", "name": "T", "starter": "blank"})
+    zip_file = {"file": ("t1.zip", (await api.get("/v1/templates/t1/export", headers=admin)).content)}
+    archived = await api.put("/v1/templates/t1/archived", headers=admin, json={"archived": True})
+    assert archived.status_code == 200
+    first = await api.post("/v1/templates/import", headers={**admin, "If-Match": '"1"'}, files=zip_file)
+    assert (first.status_code, first.json()["code"]) == (409, "TEMPLATE_ARCHIVED")
+    assert (await api.get("/v1/templates/t1", headers=admin)).json()["archivedAt"] is not None
+    for value in ("yes", "maybe"):
+        bad = await api.post(
+            "/v1/templates/import",
+            headers={**admin, "If-Match": '"1"'},
+            files=zip_file,
+            data={"unarchive": value},
+        )
+        assert bad.status_code == 422
+    replaced = await api.post(
+        "/v1/templates/import",
+        headers={**admin, "If-Match": '"1"'},
+        files=zip_file,
+        data={"unarchive": "true"},
+    )
+    assert replaced.status_code == 200 and replaced.json()["created"] is False
+    assert replaced.json()["template"]["archivedAt"] is None
+    assert (await api.get("/v1/templates/t1", headers=admin)).json()["archivedAt"] is None
+
+
 async def test_import_body_limit_is_26_mb_on_that_route_only(api, admin):
     big = {"file": ("big.zip", b"PK" + b"\0" * (25 * 1024 * 1024 + 512 * 1024), "application/zip")}
     over_store = await api.post("/v1/templates/import", headers=admin, files=big)

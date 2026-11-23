@@ -145,6 +145,36 @@ async def test_import_over_an_existing_draft_needs_its_revision(store):
     assert (await store.export_zip("tt", "draft")).filename == "tt-draft-r3.zip"
 
 
+async def test_import_over_an_archived_template_needs_the_flag_and_unarchives_it(store):
+    await published(store, "tt")
+    zip_v1 = (await store.export_zip("tt", 1)).data
+    await store.put_file("tt", "extra.css", "p {}", 1, "alice")  # revision 2
+    await store.set_archived("tt", True, "bob")
+    # without the flag nothing changes: the caller has to ask the user first
+    assert await code_of(store.import_zip(zip_v1, 2, "bob")) == "ARCHIVED"
+    assert (await store.get("tt")).archived_at is not None
+    assert "extra.css" in [f.name for f in (await store.get_draft("tt")).files]
+    # the flag still needs the current revision, and an unknown id is still not found
+    assert await code_of(store.import_zip(zip_v1, None, "bob", unarchive=True)) == "CONFLICT"
+    assert await code_of(store.import_zip(zip_v1, 1, "bob", unarchive=True)) == "REVISION_CONFLICT"
+    assert (await store.get("tt")).archived_at is not None  # a refused import does not unarchive
+    result = await store.import_zip(zip_v1, 2, "bob", unarchive=True)
+    assert (result.created, result.revision) == (False, 3)
+    kept = await store.get("tt")
+    assert kept.archived_at is None and kept.archived_by is None  # back in the catalog
+    assert kept.published_version == 1 and [v.version for v in await store.list_versions("tt")] == [1]
+    assert "extra.css" not in [f.name for f in (await store.get_draft("tt")).files]
+    await store.put_file("tt", "again.css", "p {}", 3, "alice")  # writable again
+
+
+async def test_the_unarchive_flag_changes_nothing_for_a_template_that_is_not_archived(store):
+    await published(store, "tt")
+    zip_v1 = (await store.export_zip("tt", 1)).data
+    assert (await store.import_zip(zip_v1, 1, "bob", unarchive=True)).revision == 2
+    new = await store.import_zip(zip_v1, None, "bob", template_id="tt-new", unarchive=True)
+    assert new.created and (await store.get("tt-new")).archived_at is None
+
+
 async def test_bad_zip_writes_nothing(store):
     assert await code_of(store.import_zip(b"not a zip", None, "bob")) == "INPUT_INVALID"
     assert await store.list(include_archived=True) == []
@@ -177,7 +207,11 @@ async def test_create_with_a_page_writes_report_json_and_a_matching_template(sto
     )
     assert "header.html" not in files
     pages = {t.id: t.page for t in await store.list()}
-    assert pages["form"] == {"size": "A5", "orientation": "landscape", "layout": "free"}  # what the catalog shows
+    assert pages["form"] == {
+        "size": "A5",
+        "orientation": "landscape",
+        "layout": "free",
+    }  # what the catalog shows
     assert pages["rec"] == {"size": "roll", "orientation": "portrait", "layout": "flow", "rollWidthMm": 80}
 
     await store.create("a5", "A5", "blank", "alice", {"size": "A5"})
