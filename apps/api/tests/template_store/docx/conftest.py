@@ -84,9 +84,7 @@ def docx(
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
         for name, content in files.items():  # a fixed date: the same parts give the same bytes
-            zf.writestr(
-                zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0)),
-                content.encode() if isinstance(content, str) else content,
-                zipfile.ZIP_DEFLATED,
-            )
+            info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+            info.create_system = 0  # ZipInfo records the OS that writes it (Windows 0, Linux 3): pin it
+            zf.writestr(info, content.encode() if isinstance(content, str) else content, zipfile.ZIP_DEFLATED)
     return out.getvalue()

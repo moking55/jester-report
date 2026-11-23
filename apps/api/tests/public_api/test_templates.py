@@ -161,6 +161,7 @@ async def test_export_and_import_over_http(api, admin):
         "template": None,
         "revision": 2,
         "created": False,
+        "warnings": [],  # v1.15: always there, empty for a zip
     }
     bad_version = await api.get("/v1/templates/quote/export?version=v1", headers=admin)
     assert bad_version.status_code == 422
