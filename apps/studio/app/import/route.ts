@@ -18,7 +18,7 @@ export async function POST(request: Request) {
   const templateId = String(form.get("templateId") ?? "");
   const overwrite = form.get("overwrite") === "1";
   const unarchive = form.get("unarchive") === "1";
-  if (!(file instanceof File)) return problem(422, "INPUT_INVALID", "choose a .zip file");
+  if (!(file instanceof File)) return problem(422, "INPUT_INVALID", "choose a .zip or .docx file");
   if (templateId && !isTemplateId(templateId)) return problem(422, "INPUT_INVALID", "invalid template id");
   if (overwrite && !templateId) return problem(422, "INPUT_INVALID", "overwrite needs the template id");
   if (unarchive && !overwrite) return problem(422, "INPUT_INVALID", "unarchive goes with overwrite");
@@ -26,6 +26,8 @@ export async function POST(request: Request) {
   upload.set("file", file, file.name);
   if (templateId) upload.set("templateId", templateId);
   if (unarchive) upload.set("unarchive", "true");
+  const name = String(form.get("name") ?? "").trim();
+  if (name) upload.set("name", name); // v1.15: a Word file's report name
   try {
     const ifMatch = overwrite
       ? (await api<TemplateSummary>(`/v1/templates/${templateId}`)).draftRevision

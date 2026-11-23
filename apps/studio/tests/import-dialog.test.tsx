@@ -24,7 +24,7 @@ describe("ImportDialog", () => {
     HTMLDialogElement.prototype.showModal ??= vi.fn();
     HTMLDialogElement.prototype.close ??= vi.fn();
     render(<ImportDialog />);
-    fireEvent.change(screen.getByLabelText("ไฟล์ zip ที่ export จาก Jester"), {
+    fireEvent.change(screen.getByLabelText(/ไฟล์ zip ที่ export จาก Jester/), {
       target: { files: [new File(["PK"], "quote.zip")] },
     });
     await screen.findByText(/รายงานในไฟล์:/);

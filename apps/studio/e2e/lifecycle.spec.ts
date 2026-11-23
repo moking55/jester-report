@@ -14,7 +14,7 @@ const row = (page: Page, id: string) => page.locator(`a[href="/templates/${id}"]
 
 async function importZip(page: Page, zip: Buffer, id: string) {
   await page.goto("/");
-  await page.getByRole("button", { name: "นำเข้า (.zip)" }).click();
+  await page.getByRole("button", { name: "นำเข้า (.zip / .docx)" }).click();
   const dialog = page.getByRole("dialog", { name: "นำเข้ารายงาน" });
   await dialog.getByLabel("ไฟล์ zip ที่ export จาก Jester").setInputFiles({
     name: "report.zip",

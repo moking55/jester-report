@@ -160,7 +160,7 @@ test("tag a report and its documents, colour them, filter by them", async ({ pag
   await page.getByRole("link", { name: "Export draft (.zip)" }).first().click();
   const zip = await readFile(await (await download).path());
   await page.goto("/");
-  await page.getByRole("button", { name: "นำเข้า (.zip)" }).click();
+  await page.getByRole("button", { name: "นำเข้า (.zip / .docx)" }).click();
   const importDialog = page.getByRole("dialog", { name: "นำเข้ารายงาน" });
   await importDialog.getByLabel("ไฟล์ zip ที่ export จาก Jester").setInputFiles({ name: "report.zip", mimeType: "application/zip", buffer: zip });
   await expect(importDialog.getByText("รายงานในไฟล์:")).toBeVisible();
