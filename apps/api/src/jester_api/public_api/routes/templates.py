@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import Field
 
 from ...render_service import RenderError
+from ...template_store.docx.package import looks_like_docx
 from .. import views
 from ..problems import ApiError
 from ..security import Revision, SessionCaller, expected_revision
@@ -115,15 +116,27 @@ async def import_template(
     file: UploadFile,
     templateId: Annotated[str | None, Form()] = None,  # noqa: N803
     unarchive: Annotated[Literal["true", "false"], Form()] = "false",
+    name: Annotated[str | None, Form(max_length=120)] = None,  # v1.15: a Word file's report name
 ) -> JSONResponse:
-    revision = expected_revision(request) if request.headers.get("If-Match") is not None else None
-    result = await services(request).store.import_zip(
-        await file.read(), revision, caller.name, templateId, unarchive=unarchive == "true"
-    )
+    data = await file.read()
+    store = services(request).store
+    if looks_like_docx(data):  # v1.15: told apart by what is inside, not by the file name
+        if not templateId:
+            raise ApiError("INPUT_INVALID", "a Word file needs templateId (it has no manifest)", 422)
+        if request.headers.get("If-Match") is not None or unarchive == "true":
+            raise ApiError("INPUT_INVALID", "นำเข้า Word ได้เฉพาะเป็นรายงานใหม่", 422)
+        title = name or (file.filename or "").rsplit("/", 1)[-1].removesuffix(".docx").removesuffix(".DOCX")
+        result = await store.import_docx(data, templateId, title, caller.name)
+    else:
+        revision = expected_revision(request) if request.headers.get("If-Match") is not None else None
+        result = await store.import_zip(
+            data, revision, caller.name, templateId, unarchive=unarchive == "true"
+        )
     body = {
         "template": views.template(result.summary),
         "revision": result.revision,
         "created": result.created,
+        "warnings": views.problems(result.warnings),
     }
     return JSONResponse(body, status_code=201 if result.created else 200)
 

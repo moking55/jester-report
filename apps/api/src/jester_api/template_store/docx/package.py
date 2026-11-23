@@ -66,6 +66,18 @@ class Package:
         return out
 
 
+def looks_like_docx(data: bytes) -> bool:
+    """A Word file rather than a template zip: word/document.xml and no jester.json, or an OLE file."""
+    if data.startswith(OLE_MAGIC):
+        return True  # an encrypted .docx or an old .doc: open_docx explains it
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            names = set(zf.namelist())
+    except zipfile.BadZipFile:
+        return False
+    return "word/document.xml" in names and "jester.json" not in names
+
+
 def open_docx(data: bytes) -> Package:
     if len(data) > MAX_DOCX_BYTES:
         raise StoreError("PAYLOAD_TOO_LARGE", f"a Word file is at most {MAX_DOCX_BYTES // (1024 * 1024)} MB")

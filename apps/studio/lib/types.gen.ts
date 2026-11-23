@@ -318,7 +318,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create a template from a zip, or replace an existing draft with it
+         * Create a template from a zip or a Word form, or replace an existing draft with a zip
          * @description The zip is what `exportTemplate` returns: a flat zip with a `jester.json` manifest. The id is
          *     `templateId` when sent, else the manifest's. A new id creates the template (201). An existing id
          *     needs `If-Match` with its current draft revision and replaces the whole draft (200); the name,
@@ -326,7 +326,14 @@ export interface paths {
          *     An archived template answers `409 TEMPLATE_ARCHIVED` and nothing changes; after the user confirms,
          *     send the same request with `unarchive=true` (and `If-Match`): the draft is replaced and the template
          *     leaves the archive in the same step (v1.14.1).
-         *     The body may be up to 26 MB (zip at most 25 MB).
+         *
+         *     A Word file (.docx, v1.15; told apart by its content: `word/document.xml` and no `jester.json`) makes
+         *     a new template only: `templateId` is required, `name` is the report name (default: the file name),
+         *     `If-Match` or `unarchive=true` is `422`, and an existing id, archived or not, is `409 CONFLICT`. The
+         *     draft gets the paper, headings, paragraphs, ruled tables, pictures and header/footer the Document
+         *     Designer can edit; what could not come over (text boxes, floating pictures, other fonts…) is listed
+         *     in `warnings`. A zip always answers `warnings: []`.
+         *     The body may be up to 26 MB (zip or Word file at most 25 MB).
          */
         post: operations["importTemplate"];
         delete?: never;
@@ -1193,6 +1200,8 @@ export interface components {
             revision: number;
             /** @description true: a new template; false: an existing draft was replaced */
             created: boolean;
+            /** @description What a Word file could not bring into the draft (v1.15); always empty for a zip */
+            warnings: components["schemas"]["ValidationProblem"][];
         };
         TextFile: {
             name: components["schemas"]["TextFileName"];
@@ -2610,6 +2619,8 @@ export interface operations {
                      * @enum {string}
                      */
                     unarchive?: "true" | "false";
+                    /** @description Word file only (v1.15): the report name; default the file name without .docx */
+                    name?: string;
                 };
             };
         };
@@ -2649,7 +2660,8 @@ export interface operations {
                      *         ]
                      *       },
                      *       "revision": 15,
-                     *       "created": false
+                     *       "created": false,
+                     *       "warnings": []
                      *     }
                      */
                     "application/json": components["schemas"]["ImportResult"];
@@ -2684,7 +2696,14 @@ export interface operations {
                      *         ]
                      *       },
                      *       "revision": 1,
-                     *       "created": true
+                     *       "created": true,
+                     *       "warnings": [
+                     *         {
+                     *           "severity": "warning",
+                     *           "code": "DOCX_FLOATING_IMAGE",
+                     *           "message": "ย่อหน้าที่ 3: รูปที่วางลอย (ไม่ได้อยู่ในบรรทัด) ข้ามไป"
+                     *         }
+                     *       ]
                      *     }
                      */
                     "application/json": components["schemas"]["ImportResult"];
