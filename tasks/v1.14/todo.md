@@ -6,7 +6,7 @@
 
 ## Phase 1: api
 
-- [ ] **T1 `prepare(..., blank=True)`** (M)
+- [x] **T1 `prepare(..., blank=True)`** (M)
   - Acceptance: parameter บังคับที่ขาดเป็น `None`; error `required`/`minItems` ของ schema ไม่นับ (ชนิด/format ยังนับ); `VALUE_MISSING` และ aggregate ของ list ว่างให้ `None` โดยไม่มี problem และส่งต่อถึงยอดที่พึ่ง; key ของ sort/groupBy ที่ขาดไม่ error เรียงท้าย; `meta.blank` ตั้งเสมอ (`True`/`False`)
   - Verify: `pytest tests/data_prep` (test ใหม่ตาม Testing Strategy v1.14 + test เดิมไม่แก้)
   - Files: `data_prep/prepare.py`, `data_prep/params.py`, `data_prep/lists.py`, `data_prep/evaluate.py`, `tests/data_prep/test_blank.py`
