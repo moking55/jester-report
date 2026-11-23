@@ -84,6 +84,13 @@ class Styles:
         return (before if before is not None else self.default_spacing[0],
                 after if after is not None else self.default_spacing[1])  # fmt: skip
 
+    def alignment(self, sid: str | None) -> str | None:
+        for style in self._chain(sid):
+            jc = val(style.find(f"{w('pPr')}/{w('jc')}"))
+            if jc:
+                return jc
+        return None
+
     def heading(self, sid: str | None) -> int | None:
         if not sid:
             return None
@@ -284,7 +291,7 @@ def paragraph(ctx: Ctx, p: Element) -> list[str]:
     )
     style.append(f"margin-top: {css_mm(twips_mm(before, Decimal(0)))}")
     style.append(f"margin-bottom: {css_mm(twips_mm(after, Decimal(0)))}")
-    jc = val(ppr.find(w("jc"))) if ppr is not None else None
+    jc = (val(ppr.find(w("jc"))) if ppr is not None else None) or ctx.styles.alignment(sid)
     align = {
         "center": "center",
         "right": "right",

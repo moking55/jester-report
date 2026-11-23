@@ -42,11 +42,11 @@ def test_landscape_letter_custom_and_clamped_margins():
 def test_headings_and_alignment():
     styles = (
         '<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/></w:style>'
-        '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/></w:style>'
+        '<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/>'
+        '<w:pPr><w:jc w:val="center"/></w:pPr></w:style>'  # centred by its style, as Word's Title is
     )
     html, _, _ = convert(
-        p("หัวข้อ", '<w:pStyle w:val="Heading1"/>')
-        + p("ชื่อเรื่อง", '<w:pStyle w:val="Title"/><w:jc w:val="center"/>'),
+        p("หัวข้อ", '<w:pStyle w:val="Heading1"/>') + p("ชื่อเรื่อง", '<w:pStyle w:val="Title"/>'),
         styles=styles,
     )
     assert html.splitlines() == [

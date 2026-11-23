@@ -83,6 +83,10 @@ def docx(
     files.update(parts or {})
     out = io.BytesIO()
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as zf:
-        for name, content in files.items():
-            zf.writestr(name, content.encode() if isinstance(content, str) else content)
+        for name, content in files.items():  # a fixed date: the same parts give the same bytes
+            zf.writestr(
+                zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0)),
+                content.encode() if isinstance(content, str) else content,
+                zipfile.ZIP_DEFLATED,
+            )
     return out.getvalue()

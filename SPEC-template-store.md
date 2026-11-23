@@ -451,7 +451,7 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 - `report.json`: `name` = ชื่อที่ผู้ใช้ตั้ง หรือชื่อไฟล์ไม่รวม `.docx`; `page` จาก section แรก; ไม่มี parameter, computed, totals
 - `data.schema.json` = `{"type": "object", "properties": {}}`, `sample.json` = `{}`
 - `template.html` จาก body; `header.html`/`footer.html` จาก header/footer ปกติของ section แรก (ถ้ามี)
-- `report.css` = ค่าตั้งต้นของ starter `blank`
+- `report.css` = `body { font-family: "TH Sarabun New"; font-size: 16pt; }` แบบบรรทัดแรกของ starter อื่น (starter `blank` ไม่มี `report.css`)
 - asset: รูปที่อ้างใน body/header/footer
 
 ## การแปลง
