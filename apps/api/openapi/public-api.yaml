@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Jester Report Server API
-  version: 1.14.1
+  version: 1.15.0
   description: |
     The contract of the Jester api. The api itself serves it at `GET /v1/openapi.yaml`, and Studio's
     types and these docs are generated from it.

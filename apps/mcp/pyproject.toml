@@ -1,6 +1,6 @@
 [project]
 name = "jester-mcp"
-version = "1.14.1"
+version = "1.15.0"
 description = "Jester MCP connector for report authoring in claude.ai"
 requires-python = ">=3.11"
 dependencies = [
