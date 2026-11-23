@@ -469,7 +469,7 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 | ตาราง (`w:tbl`) | ตารางคงที่แบบที่ Designer สร้าง (`<table data-jd="grid" style="width: 100%; border-collapse: collapse">`); ความกว้างคอลัมน์จาก `w:tblGrid` เป็น `width: N%` บนเซลล์แถวแรก (แบบที่แผง "ขนาดตาราง" ของ Designer อ่าน/เขียน); เส้นจาก `w:tblBorders`/`w:tcBorders`: มีเส้น = `border: 1px solid #000` บนเซลล์ (แบบปุ่มเส้นกรอบของ Designer) ไม่มี = ไม่มีเส้น; ทุกเซลล์ `padding: 1mm 2mm`; สีพื้นเซลล์ (`w:shd w:fill`) เป็น `background-color`; จัดแนวของย่อหน้าแรกในเซลล์เป็น `text-align` ของเซลล์; `gridSpan` เป็น `colspan`; `vMerge` เป็น `rowspan` (Designer อ่านเป็น Custom Code แต่ render ถูก); แถวหัว (`w:tblHeader`) เป็น `<th>`; หลายย่อหน้าในช่องต่อด้วย `<br>` |
 | รูป inline (`w:drawing` / `a:blip`) png/jpg/gif | asset + `<img>` กว้างตาม `wp:extent` เป็น mm; ชื่อ asset จาก `word/media` ปรับให้ตรงกติกาชื่อ; รูปเกิน 5 MB (กติกา asset) ข้าม + warning |
 | header/footer | ข้อความและรูปเข้า `header.html`/`footer.html`; รูปเกิน 1 MB (กติกา header) ข้าม + warning; ฟิลด์ `PAGE`/`NUMPAGES` เป็น `<span class="pageNumber">`/`<span class="totalPages">` |
-| ฟอนต์ | TH Sarabun New ทั้งหมด; ขนาดตัวอักษรตาม `report.css` ไม่ตามต้นฉบับ (ดู Open Questions) |
+| ฟอนต์ | TH Sarabun New ทั้งหมด; ขนาดตัวอักษรตาม `report.css` ไม่ตามต้นฉบับ (ผู้ใช้ตัดสิน 24 พ.ย. 2026) ยกเว้นหัวข้อที่ได้ขนาดของ `<h1>`–`<h3>` |
 | track changes / comment | ใช้ข้อความหลังยอมรับการแก้ (`w:ins` เก็บ, `w:del` ทิ้ง); comment ทิ้ง |
 
 **ข้ามแล้วบอกใน `warnings`** (code + ข้อความไทย + ย่อหน้าที่เท่าไร): text box, รูปทรง, WordArt, รูปลอย (anchor), รูป EMF/WMF/TIFF, รูปจาก URL, footnote/endnote, ตารางซ้อน (เก็บแค่ข้อความ), section ที่ 2 ขึ้นไปที่กระดาษต่างจากแรก, ฟอนต์อื่นนอกจาก TH Sarabun New (เตือนครั้งเดียวพร้อมชื่อฟอนต์)
@@ -498,5 +498,5 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 
 ## Open Questions v1.15
 
-1. **ขนาดตัวอักษร:** แผนคือไม่ตามต้นฉบับ (ใช้ของ `report.css` ยกเว้นหัวข้อ) เพราะ Designer ปรับเองได้และไฟล์สะอาดกว่า — หรืออยากให้ตามขนาดใน Word (`font-size` ทุกย่อหน้า)?
+1. ~~ขนาดตัวอักษร~~ ปิดแล้ว (24 พ.ย. 2026): ไม่ตาม Word ใช้ขนาดของ `report.css` แล้วปรับใน Designer
 2. **แบบฟอร์มจริงสำหรับทดสอบ:** มีไฟล์ Word แบบฟอร์มจริงของหน่วยงาน 1–3 ไฟล์ (ลบข้อมูลส่วนบุคคลแล้ว) ให้ใช้วัดผลไหม? ถ้าไม่มี จะทำตัวอย่างเองใน LibreOffice ซึ่งอาจไม่ครอบคลุมสิ่งที่ Word ของหน่วยงานใช้จริง
