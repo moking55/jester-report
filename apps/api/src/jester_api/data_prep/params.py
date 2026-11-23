@@ -39,7 +39,9 @@ def _coerce(spec: Parameter, value: Any) -> tuple[Any, str | None]:
     return (value, None) if value in (spec.values or []) else (None, "is not one of the allowed values")
 
 
-def check_params(report: ReportJson, params: Mapping[str, Any]) -> tuple[dict[str, Any], list[Problem]]:
+def check_params(
+    report: ReportJson, params: Mapping[str, Any], blank: bool = False
+) -> tuple[dict[str, Any], list[Problem]]:
     problems: list[Problem] = []
     out: dict[str, Any] = {}
     for name in params:
@@ -52,9 +54,9 @@ def check_params(report: ReportJson, params: Mapping[str, Any]) -> tuple[dict[st
     for name, spec in report.parameters.items():
         where = pointer(("params", name))
         if name not in params or params[name] is None:
-            if spec.required:
+            if spec.required and not blank:  # v1.14: a blank form leaves required params empty
                 problems.append(error("PARAM_REQUIRED", f"parameter {name!r} is required", pointer=where))
-            elif spec.default is not None:
+            if spec.default is not None:
                 out[name] = _coerce(spec, spec.default)[0]
             else:
                 out[name] = None

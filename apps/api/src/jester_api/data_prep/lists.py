@@ -90,12 +90,15 @@ def fill_missing(value: Any, schema: Any) -> Any:
 @dataclass
 class _Builder:
     definition: ReportDefinition
+    blank: bool = False  # v1.14: a value missing on a blank form is blank, not a problem
     problems: list[Problem] = field(default_factory=list)
 
     def _calc(self, node_ptr: str, env: Env, data_ptr: str) -> Decimal | None:
         try:
             return evaluate(self.definition.expressions.nodes[node_ptr], env)
         except CalcError as exc:
+            if self.blank and exc.code == "VALUE_MISSING":
+                return None
             name = node_ptr.rsplit("/", 1)[-1]
             self.problems.append(error(exc.code, f"{name}: {exc.message}", pointer=data_ptr))
             return None
@@ -119,9 +122,10 @@ class _Builder:
             row = fill_missing(convert_numbers(raw, types), item_schema)
             ident = row.get(spec.id)
             if ident is None:
-                self.problems.append(
-                    error("VALUE_MISSING", f"{spec.id!r} has no value", pointer=f"{row_ptr}/{spec.id}")
-                )
+                if not self.blank:  # a row on a blank form may have no id yet
+                    self.problems.append(
+                        error("VALUE_MISSING", f"{spec.id!r} has no value", pointer=f"{row_ptr}/{spec.id}")
+                    )
             elif ident in seen:
                 self.problems.append(
                     error(
@@ -130,7 +134,7 @@ class _Builder:
                 )
             else:
                 seen[ident] = f"{row_ptr}/{spec.id}"
-            self._eval_set(f"{def_ptr}/computed", Env(row), row, row_ptr)
+            self._eval_set(f"{def_ptr}/computed", Env(row, blank=self.blank), row, row_ptr)
             children: dict[str, list[Row]] = {}
             for child_name, child in spec.lists.items():
                 view = self.build(f"{key}.{child_name}", child, raw, f"{def_ptr}/lists/{child_name}", row_ptr)
@@ -138,7 +142,7 @@ class _Builder:
                 children[child_name] = view.rows
             # a failed field or child list already has its problem; totals over it would only repeat it
             if len(self.problems) == row_start:
-                self._eval_set(f"{def_ptr}/totals", Env(row, children), row, row_ptr)
+                self._eval_set(f"{def_ptr}/totals", Env(row, children, self.blank), row, row_ptr)
             rows.append(row)
         rows = self._sort(spec, rows, data_ptr)
         clean = len(self.problems) == list_start
@@ -151,6 +155,13 @@ class _Builder:
             fields = [spec.groupBy.key]
         if not fields:
             return rows
+        if self.blank:  # a key left empty on a blank form sorts last, in the order it came
+            return sorted(
+                rows,
+                key=lambda r: tuple(
+                    (r.get(f) is None, _sort_key(r.get(f) if r.get(f) is not None else "")) for f in fields
+                ),
+            )
         missing = [(i, f) for i, r in enumerate(rows) for f in fields if r.get(f) is None]
         for i, f in missing:
             self.problems.append(
@@ -168,7 +179,9 @@ class _Builder:
                 groups.append(Group(row.get(spec.groupBy.key), [], {}))
             groups[-1].rows.append(row)
         for g in groups if calc else ():
-            self._eval_set(f"{def_ptr}/groupBy/totals", Env(g.totals, {"": g.rows}), g.totals, list_ptr)
+            self._eval_set(
+                f"{def_ptr}/groupBy/totals", Env(g.totals, {"": g.rows}, self.blank), g.totals, list_ptr
+            )
         return groups
 
 
@@ -186,8 +199,10 @@ def _resolve(parent: Any, path: str) -> Any:
     return cur
 
 
-def build_lists(definition: ReportDefinition, data: Any) -> tuple[dict[str, ListView], list[Problem]]:
-    builder = _Builder(definition)
+def build_lists(
+    definition: ReportDefinition, data: Any, blank: bool = False
+) -> tuple[dict[str, ListView], list[Problem]]:
+    builder = _Builder(definition, blank)
     views = {
         name: builder.build(name, spec, data, pointer(("lists", name)), "/data")
         for name, spec in definition.report.lists.items()

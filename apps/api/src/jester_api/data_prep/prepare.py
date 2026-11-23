@@ -30,7 +30,7 @@ class Prepared:
     params: dict[str, Any]
     data: Any  # caller's data, copied, with declared-but-missing properties filled in
     lists: dict[str, ListView]
-    totals: dict[str, Decimal]
+    totals: dict[str, Decimal | None]  # None: blank on a blank form (v1.14)
     meta: Mapping[str, Any]
     fmt: SimpleNamespace
 
@@ -90,7 +90,11 @@ def _floats(value: Any, parts: tuple[Any, ...]) -> list[Problem]:
     return []
 
 
-def _check_data(definition: ReportDefinition, data: Any) -> list[Problem]:
+# v1.14: what a blank form may leave out; a value that is there is still checked
+BLANK_SKIPS = frozenset({"required", "minItems"})
+
+
+def _check_data(definition: ReportDefinition, data: Any, blank: bool = False) -> list[Problem]:
     validator = Draft202012Validator(definition.data.schema, format_checker=FORMATS)
     return [
         error(
@@ -99,20 +103,26 @@ def _check_data(definition: ReportDefinition, data: Any) -> list[Problem]:
             pointer=pointer(("data", *e.absolute_path)),
         )
         for e in sorted(validator.iter_errors(data), key=lambda e: list(map(str, e.absolute_path)))
+        if not (blank and e.validator in BLANK_SKIPS)
     ]
 
 
-def _report_totals(definition: ReportDefinition, data: Any, lists: dict[str, ListView]) -> tuple[dict, list]:
+def _report_totals(
+    definition: ReportDefinition, data: Any, lists: dict[str, ListView], blank: bool = False
+) -> tuple[dict, list]:
     names = convert_numbers(data, field_types(definition.data.schema)) if isinstance(data, Mapping) else {}
-    env = Env(names, {name: view.rows for name, view in lists.items()})
-    totals: dict[str, Decimal] = {}
+    env = Env(names, {name: view.rows for name, view in lists.items()}, blank)
+    totals: dict[str, Decimal | None] = {}
     problems: list[Problem] = []
     for name in definition.expressions.order.get("/totals", []):
         try:
             totals[name] = names[name] = evaluate(definition.expressions.nodes[f"/totals/{name}"], env)
         except CalcError as exc:
-            problems.append(error(exc.code, f"{name}: {exc.message}", pointer="/data"))
             names[name] = None
+            if blank and exc.code == "VALUE_MISSING":
+                totals[name] = None  # blank on the form; totals that use it are blank too
+                continue
+            problems.append(error(exc.code, f"{name}: {exc.message}", pointer="/data"))
     return totals, problems
 
 
@@ -124,20 +134,27 @@ def _capped(problems: list[Problem]) -> list[Problem]:
 
 
 def prepare(
-    definition: ReportDefinition, params: Mapping[str, Any], data: Any, meta: Mapping[str, Any]
+    definition: ReportDefinition,
+    params: Mapping[str, Any],
+    data: Any,
+    meta: Mapping[str, Any],
+    *,
+    blank: bool = False,
 ) -> PrepareResult:
-    checked_params, problems = check_params(definition.report, params)
+    """blank=True: a blank form for handwriting (SPEC-data-prep.md v1.14); what was sent is still checked."""
+    checked_params, problems = check_params(definition.report, params, blank)
     floats = _floats(data, ("data",))
-    problems += floats or _check_data(definition, data)
+    problems += floats or _check_data(definition, data, blank)
     if has_errors(problems):
         return PrepareResult(None, _capped(problems))
-    lists, list_problems = build_lists(definition, data)
+    lists, list_problems = build_lists(definition, data, blank)
     problems += list_problems
     if has_errors(problems):  # report totals over failed rows would only repeat those problems
         return PrepareResult(None, _capped(problems))
-    totals, total_problems = _report_totals(definition, data, lists)
+    totals, total_problems = _report_totals(definition, data, lists, blank)
     problems += total_problems
     if has_errors(problems):
         return PrepareResult(None, _capped(problems))
     view_data = fill_missing(data, definition.data.schema)
-    return PrepareResult(Prepared(checked_params, view_data, lists, totals, dict(meta), FMT), problems)
+    view_meta = {**meta, "blank": blank}  # always there: templates read meta.blank under StrictUndefined
+    return PrepareResult(Prepared(checked_params, view_data, lists, totals, view_meta, FMT), problems)

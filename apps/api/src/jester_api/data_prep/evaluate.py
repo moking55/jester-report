@@ -22,6 +22,7 @@ class CalcError(Exception):
 class Env:
     names: Mapping[str, Any]  # plain names: row fields, computed, totals
     lists: Mapping[str, Sequence[Mapping[str, Any]]] = field(default_factory=dict)  # "" = group rows
+    blank: bool = False  # v1.14 blank form: an aggregate of no rows is missing (blank on paper), not 0
 
 
 def _number(value: Any, name: str) -> Decimal:
@@ -41,6 +42,8 @@ def _lookup(env: Env, name: str) -> Decimal:
 def _aggregate(func: str, ref: Ref, env: Env) -> Decimal:
     *owner, fld = ref.parts
     rows = env.lists.get(".".join(owner), ())
+    if env.blank and not rows:
+        raise CalcError("VALUE_MISSING", f"{func}() of no rows on a blank form")
     values = [_number(row.get(fld), f"{'.'.join(ref.parts)} (row {i})") for i, row in enumerate(rows)]
     if func == "sum":
         return sum(values, Decimal(0))
@@ -84,6 +87,8 @@ def _eval(node: Node | Cond, env: Env) -> Decimal | bool:
         case Call("if", (cond, then, other)):
             return _eval(then, env) if _eval(cond, env) else _eval(other, env)
         case Call("count", ()):
+            if env.blank and not env.lists.get("", ()):
+                raise CalcError("VALUE_MISSING", "count() of no rows on a blank form")
             return Decimal(len(env.lists.get("", ())))
         case Call(func, (Ref() as ref,)):
             return _aggregate(func, ref, env)
