@@ -355,8 +355,8 @@ class TemplateStore:
                         "CONFLICT", "this template exists; send its draft revision to replace the draft"
                     )
                 if row[0] is not None:
-                    # the user confirmed replacing the archived template. _bump refuses an archived one, so this
-                    # comes first; a wrong revision below rolls it back with the rest of the transaction
+                    # the user confirmed replacing the archived template. _bump refuses an archived one, so
+                    # this comes first; a wrong revision below rolls it back with the whole transaction
                     await conn.execute(
                         "UPDATE templates SET archived_at = NULL, archived_by = NULL WHERE id = %s",
                         (template_id,),
