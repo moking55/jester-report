@@ -354,12 +354,14 @@ class TemplateStore:
                     raise StoreError(
                         "CONFLICT", "this template exists; send its draft revision to replace the draft"
                     )
-                revision, created = await self._bump(conn, template_id, expected_revision, by), False
-                if row[0] is not None:  # the user confirmed replacing the archived template
+                if row[0] is not None:
+                    # the user confirmed replacing the archived template. _bump refuses an archived one, so this
+                    # comes first; a wrong revision below rolls it back with the rest of the transaction
                     await conn.execute(
                         "UPDATE templates SET archived_at = NULL, archived_by = NULL WHERE id = %s",
                         (template_id,),
                     )
+                revision, created = await self._bump(conn, template_id, expected_revision, by), False
                 await conn.execute("DELETE FROM draft_files WHERE template_id = %s", (template_id,))
                 await conn.execute("DELETE FROM draft_assets WHERE template_id = %s", (template_id,))
                 await conn.execute(
