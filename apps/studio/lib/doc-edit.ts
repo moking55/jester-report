@@ -616,18 +616,18 @@ export function setBlankRows(src: string, block: Block, count: number): Result<E
   const patches: Patch[] = [];
   if (count === 0) {
     if (!d.blankRows) return ok({ src, at: { start: block.start, end: block.end } });
-    patches.push({ ...removal(src, d.blankRows.range), text: "" });
+    const gone = removal(src, d.blankRows.range);
+    if (src[gone.start - 1] === "\r" && src[gone.start] === "\n") gone.start -= 1; // a CRLF file: take the whole line break
+    patches.push({ ...gone, text: "" });
     if (d.emptyGuard) patches.push({ ...d.emptyGuard.range, text: src.slice(d.emptyGuard.row.start, d.emptyGuard.row.end) });
   } else if (d.blankRows) {
     patches.push({ ...d.blankRows.countAt, text: String(count) });
   } else {
     const indent = indentAt(src, d.loopRange.start);
+    const nl = src.includes("\r\n") ? "\r\n" : "\n"; // keep a CRLF file CRLF
     // one empty cell per loop cell, keeping its attributes so borders and widths match
     const cells = d.cells.map((c) => `${src.slice(c.range.start, c.inner.start)}&nbsp;</td>`).join("");
-    const text = `
-${indent}{% if meta.blank %}{% for _ in range(${count} - ${d.loop.iterable}|length) %}
-${indent}<tr data-jd="blank">${cells}</tr>
-${indent}{% endfor %}{% endif %}`;
+    const text = `${nl}${indent}{% if meta.blank %}{% for _ in range(${count} - ${d.loop.iterable}|length) %}${nl}${indent}<tr data-jd="blank">${cells}</tr>${nl}${indent}{% endfor %}{% endif %}`;
     patches.push({ start: d.loopRange.end, end: d.loopRange.end, text });
     if (d.emptyRow && !d.emptyGuard) {
       // the "no items" row would sit above the empty rows of a blank form: only a normal form shows it

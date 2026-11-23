@@ -48,6 +48,9 @@
       <td class="n">{{ fmt.money(item.unitPrice) }}</td><td class="n">{{ fmt.money(item.amount) }}</td>
     </tr>
   {% endfor %}
+  {% if meta.blank %}{% for _ in range(10 - lists.items|length) %}
+  <tr data-jd="blank"><td class="c">&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td class="n">&nbsp;</td><td>&nbsp;</td><td class="n">&nbsp;</td><td class="n">&nbsp;</td></tr>
+  {% endfor %}{% endif %}
   </tbody>
 </table>
 

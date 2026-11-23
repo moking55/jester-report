@@ -55,8 +55,11 @@ describe("blank rows of a list table", () => {
   });
 
   it("a table without an else row or footer, and one with a detail row", () => {
-    const plain = starter("quotation");
+    const plain = set(starter("quotation"), 0); // the starter itself ships with 10 (v1.14)
     expect(set(set(plain, 10), 0)).toBe(plain);
+    const crlf = plain.replace(/\r?\n/g, "\r\n");
+    expect(set(set(crlf, 10), 0)).toBe(crlf);
+    expect(set(crlf, 10)).not.toMatch(/[^\r]\n/); // still CRLF throughout
     const detailed = WITH_ELSE.replace(
       "<td>{{ r.b }}</td></tr>\n",
       '<td>{{ r.b }}</td></tr>\n    <tr data-jd="detail"><td colspan="2"></td></tr>\n',
@@ -104,11 +107,12 @@ describe("blank rows of a list table", () => {
   });
 
   const withTable = readdirSync(STARTERS).filter((n) => allBlocks(readBlocks(starter(n))).some((b) => b.kind === "table"));
-  it.each(withTable)("%s: setting blank rows and back to 0 leaves the starter as it was", (name) => {
+  it.each(withTable)("%s: ships with 10 blank rows, and 0 then 10 gives the starter back", (name) => {
     const src = starter(name);
-    const kinds = allBlocks(readBlocks(src)).map((b) => b.kind);
-    const ten = set(src, 10);
-    expect(allBlocks(readBlocks(ten)).map((b) => b.kind)).toEqual(kinds); // nothing became Custom Code
-    expect(set(ten, 0)).toBe(src);
+    expect(detail(src).blankRows?.count).toBe(10);
+    const without = set(src, 0);
+    expect(without).not.toContain("meta.blank");
+    expect(allBlocks(readBlocks(without)).map((b) => b.kind)).toEqual(allBlocks(readBlocks(src)).map((b) => b.kind));
+    expect(set(without, 10)).toBe(src);
   });
 });

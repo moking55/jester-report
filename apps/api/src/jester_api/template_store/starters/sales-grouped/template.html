@@ -11,8 +11,11 @@
     {% endfor %}
     <tr><td colspan="3">รวม {{ group.key }} ({{ group.totals.rows }} รายการ)</td><td class="n">{{ fmt.money(group.totals.subtotal) }}</td></tr>
   {% else %}
-    <tr><td colspan="4">ไม่มีข้อมูลในช่วงเวลาที่เลือก</td></tr>
+    {% if not meta.blank %}<tr><td colspan="4">ไม่มีข้อมูลในช่วงเวลาที่เลือก</td></tr>{% endif %}
   {% endfor %}
+  {% if meta.blank %}{% for _ in range(10 - lists.records|length) %}
+  <tr data-jd="blank"><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td class="n">&nbsp;</td></tr>
+  {% endfor %}{% endif %}
     <tr><td colspan="3">รวมทั้งสิ้น</td><td class="n">{{ fmt.money(totals.grand) }}</td></tr>
   </tbody>
 </table>

@@ -9,6 +9,9 @@
     <tr><td>{{ item.id }}</td><td>{{ item.description }}</td><td class="n">{{ item.qty }}</td>
         <td class="n">{{ fmt.money(item.unitPrice) }}</td><td class="n">{{ fmt.money(item.amount) }}</td></tr>
   {% endfor %}
+  {% if meta.blank %}{% for _ in range(10 - lists.items|length) %}
+  <tr data-jd="blank"><td>&nbsp;</td><td>&nbsp;</td><td class="n">&nbsp;</td><td class="n">&nbsp;</td><td class="n">&nbsp;</td></tr>
+  {% endfor %}{% endif %}
     <tr><td colspan="4">รวม</td><td class="n">{{ fmt.money(totals.subtotal) }}</td></tr>
     <tr><td colspan="4">ภาษีมูลค่าเพิ่ม 7%</td><td class="n">{{ fmt.money(totals.vat) }}</td></tr>
     <tr><td colspan="4">ยอดสุทธิ</td><td class="n">{{ fmt.money(totals.grand) }}</td></tr>

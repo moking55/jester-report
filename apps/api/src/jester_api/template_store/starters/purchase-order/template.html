@@ -7,8 +7,11 @@
   {% for d in order.details %}
     <tr><td>{{ d.detailId }}</td><td>{{ d.description }}</td><td class="n">{{ fmt.money(d.amount) }}</td></tr>
   {% else %}
-    <tr><td colspan="3">ไม่มีรายการ</td></tr>
+    {% if not meta.blank %}<tr><td colspan="3">ไม่มีรายการ</td></tr>{% endif %}
   {% endfor %}
+  {% if meta.blank %}{% for _ in range(10 - order.details|length) %}
+  <tr data-jd="blank"><td>&nbsp;</td><td>&nbsp;</td><td class="n">&nbsp;</td></tr>
+  {% endfor %}{% endif %}
     <tr><td colspan="2">รวม {{ order.orderId }}</td><td class="n">{{ fmt.money(order.total) }}</td></tr>
   </tbody>
 </table>
