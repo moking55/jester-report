@@ -54,18 +54,19 @@
   - Verify: `npx vitest run tests/form.test.ts tests/render.test.ts` + lint/typecheck
   - Files: `components/IssueForm.tsx`, `lib/form.ts`, `lib/render.ts`, `app/issue/[id]/route.ts`, tests
 
-- [ ] **T8 "ดูแบบฟอร์มเปล่า" ใน Preview** (S)
+- [x] **T8 "ดูแบบฟอร์มเปล่า" ใน Preview** (S)
   - Acceptance: Designer และ workspace มีตัวเลือกนี้ข้างปุ่ม Preview; ส่ง `data={}` + `allowEmpty=true` ไป `/preview/<id>`; ตั้ง 15 บรรทัดแล้วเห็น 15 โดยไม่ publish
   - Verify: vitest ของ route/ปุ่ม + lint/typecheck
   - Files: `app/preview/[id]/route.ts`, `components/Workspace.tsx`, `components/designer/Workbench.tsx`
 
-- [ ] **T9 E2E และ live** (S)
+- [x] **T9 E2E และ live** (S)
   - Acceptance: E2E ใหม่ `blank-form.spec.ts` (Success Criteria 1, 2, 4 ของ SPEC-studio v1.14); E2E เดิมผ่าน; ลองกด Ctrl+Shift+Space ใน editor บน stack rc ด้วย (ค้างจาก `ee17d58`)
   - Verify: `npx playwright test` บน stack rc
-  - Files: `e2e/blank-form.spec.ts`
+  - Files: `e2e/issue-blank.spec.ts` (ชื่อนี้เพื่อให้รันหลัง checkpoint-a ที่สร้างผู้ใช้ E2E)
+  - ผล (23 พ.ย. 2026, stack rc `1.14.0-rc`): E2E ทั้งชุด 16 ตัวผ่าน (15 เดิม + ตัวใหม่ที่รันซ้ำหลังเปลี่ยนชื่อ); Ctrl+Shift+Space ใน editor ลองใน browser จริงแล้ว `td{padding:1mm;color:red}` กลายเป็น 4 บรรทัดที่จัดรูปแบบ
 
 ### Checkpoint C: ครบ
-- [ ] Success Criteria v1.14 ครบทุกข้อ; pytest/vitest/E2E ผ่าน
+- [x] Success Criteria v1.14 ครบทุกข้อ; pytest 819 passed (เครื่องทดสอบ), vitest 581 passed, E2E 16 ตัวผ่าน
 - [ ] ผู้ใช้ลองบน stack rc แล้วอนุมัติปล่อย
 
 - [ ] **T10 release 1.14.0** (S): เลข version (api, studio, compose), commit `chore: release 1.14.0`, tag `v1.14.0`, push + deploy หลังผู้ใช้อนุมัติ, backup ก่อน deploy
