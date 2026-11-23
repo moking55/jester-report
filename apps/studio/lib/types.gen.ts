@@ -1373,6 +1373,7 @@ export interface components {
         Health: {
             /** @enum {string} */
             status: "up" | "degraded" | "down";
+            /** @description Release of this API (e.g. 1.14.0); Studio shows it in its footer. Left out when the package metadata is not installed (a source checkout). */
             version?: string;
             components: {
                 /** @enum {string} */
@@ -4638,6 +4639,7 @@ export interface operations {
                     /**
                      * @example {
                      *       "status": "up",
+                     *       "version": "1.14.0",
                      *       "components": {
                      *         "database": "up",
                      *         "objectStorage": "up",

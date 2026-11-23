@@ -32,3 +32,11 @@
   color: var(--color-textMuted);
   margin: 0 0 calc(var(--sp) * 3);
 }
+
+.version {
+  display: block;
+  margin-top: calc(var(--sp) * 3);
+  text-align: center;
+  color: var(--color-textMuted);
+  font-size: 0.8em;
+}

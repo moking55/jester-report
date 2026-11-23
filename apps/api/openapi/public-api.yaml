@@ -2312,6 +2312,7 @@ paths:
             application/json:
               example:
                 status: up
+                version: 1.14.0
                 components:
                   database: up
                   objectStorage: up
@@ -3021,7 +3022,7 @@ components:
       required: [status, components]
       properties:
         status: { type: string, enum: [up, degraded, down] }
-        version: { type: string }
+        version: { type: string, description: 'Release of this API (e.g. 1.14.0); Studio shows it in its footer. Left out when the package metadata is not installed (a source checkout).' }
         components:
           type: object
           properties:

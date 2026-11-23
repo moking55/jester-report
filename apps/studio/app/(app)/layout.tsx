@@ -2,26 +2,16 @@ import type { ReactNode } from "react";
 
 import { NavLinks } from "@/components/NavLinks";
 import { ThemePicker } from "@/components/ThemePicker";
-import { publicApi } from "@/lib/api";
+import { VersionTag } from "@/components/VersionTag";
 import { logout } from "@/lib/actions/auth";
 import { activeTheme, requireUser } from "@/lib/current";
-import type { components } from "@/lib/types.gen";
+import { apiHealth } from "@/lib/version";
 
 import styles from "./shell.module.css";
 
-type Health = components["schemas"]["Health"];
-
-async function health(): Promise<Health | null> {
-  try {
-    return await publicApi<Health>("/v1/health");
-  } catch {
-    return null;
-  }
-}
-
 export default async function AppLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
-  const [{ theme, themes }, status] = await Promise.all([activeTheme(), health()]);
+  const [{ theme, themes }, status] = await Promise.all([activeTheme(), apiHealth()]);
   const engine = status?.components.engine;
   return (
     <div className={styles.window}>
@@ -45,6 +35,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       </header>
       <main className={styles.body}>{children}</main>
       <footer className={styles.status}>
+        <VersionTag api={status?.version} />
         <span>
           Engine {engine?.version ?? "?"} ·{" "}
           {engine?.status === "up" ? (

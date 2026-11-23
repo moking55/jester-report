@@ -1,4 +1,5 @@
 import logging
+import re
 import uuid
 from dataclasses import dataclass
 
@@ -72,6 +73,8 @@ async def test_health_and_contract_file():
             "status": "up",
             "version": "9.4.1",
         }
+        # the api's own release, shown in Studio's footer
+        assert re.fullmatch(r"\d+\.\d+\.\d+", h.json()["version"])
         spec = await c.get("/v1/openapi.yaml")
         assert spec.status_code == 200 and spec.text.startswith("openapi: 3.1.0")
         for generated in ("/docs", "/redoc", "/openapi.json"):

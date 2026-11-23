@@ -1,13 +1,16 @@
 import { redirect } from "next/navigation";
 
 import { AuthForm } from "@/components/AuthForm";
+import { VersionTag } from "@/components/VersionTag";
 import { login } from "@/lib/actions/auth";
 import { setupRequired } from "@/lib/current";
+import { apiHealth } from "@/lib/version";
 
 import styles from "../auth.module.css";
 
 export default async function LoginPage() {
   if (await setupRequired()) redirect("/setup");
+  const status = await apiHealth();
   return (
     <main className={styles.page}>
       <section className={styles.card}>
@@ -23,6 +26,7 @@ export default async function LoginPage() {
             { name: "password", label: "รหัสผ่าน", type: "password", autoComplete: "current-password" },
           ]}
         />
+        <VersionTag api={status?.version} className={styles.version} />
       </section>
     </main>
   );
