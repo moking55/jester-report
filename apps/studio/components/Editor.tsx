@@ -57,7 +57,7 @@ async function format(view: EditorView, name: string) {
   try {
     formatted = await formatFile(name, before.toString());
   } catch {
-    return; // prettier cannot parse it (broken JSON, Jinja inside a tag): leave the file as it is
+    return; // prettier cannot parse it (broken JSON or HTML): leave the file as it is
   }
   // typed into or switched file meanwhile: drop the result rather than overwrite newer text
   if (view.state.doc !== before || formatted === before.toString()) return;

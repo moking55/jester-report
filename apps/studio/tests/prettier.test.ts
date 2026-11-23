@@ -36,6 +36,14 @@ describe("formatFile", () => {
     expect(await formatFile("report.css", "td{padding:1mm;color:red}")).toBe("td {\n  padding: 1mm;\n  color: red;\n}\n");
   });
 
+  it("Jinja inside a tag comes back exactly; only spacing between attributes may change", async () => {
+    const src = '<table><tr><td {% if x %}class="a"{% endif %} style="width: {{ w }}mm">{{ v }}</td></tr></table>\n';
+    const out = await formatFile("template.html", src);
+    expect(jinja(out)).toEqual(jinja(src));
+    expect(out).toContain('<td {% if x %}class="a" {% endif %} style="width: {{ w }}mm">{{ v }}</td>');
+    expect(await formatFile("template.html", out)).toBe(out);
+  });
+
   it("leaves a file alone that already holds the placeholder word", async () => {
     await expect(formatFile("template.html", "<p>jinja0x {{ a }}</p>")).rejects.toThrow();
   });
