@@ -70,3 +70,7 @@
 - [x] ผู้ใช้ลองบน stack rc แล้วอนุมัติปล่อย (23 พ.ย. 2026)
 
 - [x] **T10 release 1.14.0** (S) — ปล่อยแล้ว 23 พ.ย. 2026: tag `v1.14.0` บน `685799e` (หลัง release commit `9c00230` มีแก้เส้นประ, เงื่อนไขตัวเลขกัน None, แสดง version), push `09dd206..685799e` + tag, backup `jester-backup-20261123-100319`, deploy stack หลัก (api/studio `1.14.0`, health up, 4 รายงานอยู่ครบ), ปิด stack rc + tunnel 3002/8002 · ก่อนปล่อยรัน pytest เต็มชุดบนเครื่องทดสอบ 821 passed / 3 skipped และ E2E สดบน rc 16 ตัวผ่าน · ทำก่อนหน้า: commit `chore: release 1.14.0` (`9c00230`) + แก้เส้นประใต้บรรทัดเปล่า (`3f25166`, เจอตอนลองบน stack rc: ตารางที่ไม่มีเส้นกรอบพิมพ์บรรทัดเปล่าเป็นที่ว่าง) · รออนุมัติ: tag, push, deploy — เลข version (api, studio, compose), commit `chore: release 1.14.0`, tag `v1.14.0`, push + deploy หลังผู้ใช้อนุมัติ, backup ก่อน deploy
+
+## v1.14.1 (แก้ข้อบกพร่อง)
+
+- [x] นำเข้า zip ไปที่รายงานที่ archive อยู่: dialog ถามยืนยัน แล้วทับ draft และเลิก archive (api `unarchive`, Studio ขั้นยืนยัน, spec ใน v1.14.1 ของ template-store/public-api/studio) · ปล่อยแล้ว 23 พ.ย. 2026: tag `v1.14.1` บน `88badc9`, backup `jester-backup-20261123-103625`, deploy stack หลัก (api/studio `1.14.1`, health up, 4 รายงานอยู่ครบ) · ก่อนปล่อย: pytest 824 passed บนเครื่องทดสอบ, vitest 592 passed, E2E สด 16 ตัวผ่าน
