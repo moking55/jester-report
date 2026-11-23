@@ -477,7 +477,9 @@ export function buildTest(field: string, op: string, value: string): string {
   if (op === "empty") return `not ${field}`;
   const v = value.trim();
   const literal = /^-?\d+(\.\d+)?$/.test(v) || /^(true|false|none)$/i.test(v) ? v.toLowerCase() : JSON.stringify(v);
-  return `${field} ${op} ${literal}`;
+  // v1.14: on a blank form a total can be None, and None > 1000 stops the whole render with a TypeError
+  const guard = ["<", "<=", ">", ">="].includes(op) ? `${field} is not none and ` : "";
+  return `${guard}${field} ${op} ${literal}`;
 }
 
 function ConditionModal({ fields, onPick, onClose }: { fields: Suggestion[]; onPick: (test: string) => void; onClose: () => void }) {

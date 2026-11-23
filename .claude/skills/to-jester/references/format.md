@@ -119,7 +119,12 @@ advanced: if(cond, expr, expr) | abs(expr); cond ใช้ < <= > >= == != and o
 
 ## 5. template.html — สิ่งที่ template ใช้ได้
 
-ตัวแปรระดับบนสุดมีแค่: `params`, `data`, `lists`, `totals`, `fmt`, `meta` (`meta.templateId`, `meta.version`, `meta.renderedAt`)
+ตัวแปรระดับบนสุดมีแค่: `params`, `data`, `lists`, `totals`, `fmt`, `meta` (`meta.templateId`, `meta.version`, `meta.renderedAt`, `meta.blank`)
+
+**ฟอร์มเปล่า (v1.14):** ผู้ใช้ออกรายงานเป็นฟอร์มเปล่าสำหรับเขียนมือได้ทุกตัว (`meta.blank` เป็น `true`) ตอนนั้นค่าที่ไม่ได้กรอก รวมทั้ง
+`totals`/`computed` ที่คำนวณไม่ได้ จะเป็น `None` — `{{ }}` และ `fmt.*` พิมพ์ว่างให้เอง แต่การเปรียบเทียบตัวเลขต้องกันไว้:
+`{% if totals.discount is not none and totals.discount > 0 %}` (เขียน `totals.discount > 0` ตรง ๆ ฟอร์มเปล่าจะ error ทั้งใบ)
+ตารางรายการที่เป็นบล็อก Designer ได้บรรทัดเปล่าให้เขียนจากช่อง "บรรทัดเปล่าในฟอร์มเปล่า" ไม่ต้องเขียนเอง
 
 ```html
 <link rel="stylesheet" href="report.css">

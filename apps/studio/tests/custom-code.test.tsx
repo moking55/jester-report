@@ -44,7 +44,8 @@ describe("CustomCodeModal", () => {
 
 describe("buildTest", () => {
   it.each([
-    ["data.total", ">", "1000", "data.total > 1000"],
+    ["data.total", ">", "1000", "data.total is not none and data.total > 1000"], // v1.14: None on a blank form
+    ["totals.grand", "<=", "0", "totals.grand is not none and totals.grand <= 0"],
     ["data.status", "==", "paid", 'data.status == "paid"'],
     ["data.note", "has", "", "data.note"],
     ["data.note", "empty", "", "not data.note"],
