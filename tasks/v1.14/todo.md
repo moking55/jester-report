@@ -11,23 +11,23 @@
   - Verify: `pytest tests/data_prep` (test ใหม่ตาม Testing Strategy v1.14 + test เดิมไม่แก้)
   - Files: `data_prep/prepare.py`, `data_prep/params.py`, `data_prep/lists.py`, `data_prep/evaluate.py`, `tests/data_prep/test_blank.py`
 
-- [ ] **T2 `fmt` ของโหมดเปล่า** (S)
+- [x] **T2 `fmt` ของโหมดเปล่า** (S)
   - Acceptance: `fmt.qr(None)`, `fmt.promptpay(None)`, `fmt.barcode("")` คืนค่าว่างเมื่อ `blank`; โหมดปกติ error เหมือนเดิม; bind starter ทั้ง 5 ด้วย `data={}` แบบเปล่าไม่มี error และ HTML ไม่มี `None`/`0.00`
   - Verify: `pytest tests/data_prep tests/binder`
   - Files: `data_prep/prepare.py`, `data_prep/codes.py`, `tests/data_prep/test_blank.py`, `tests/binder/test_blank_bind.py`
 
-- [ ] **T3 `allowEmpty` บน `/v1/render`, `draft/preview`, `draft/prepared`** (M)
+- [x] **T3 `allowEmpty` บน `/v1/render`, `draft/preview`, `draft/prepared`** (M)
   - Acceptance: query param boolean (ค่าอื่น → 422); ส่งถึง `prepare(blank=...)`; quota/allow-list/run history/การเก็บเอกสารเหมือนเดิม; `public-api.yaml` มี param + description + example; `npm run gen:api` แล้ว `tsc` ผ่าน
   - Verify: `pytest tests/public_api tests/render_service`
   - Files: `public_api/routes/render.py`, `render_service/service.py`, `openapi/public-api.yaml`, `tests/public_api/test_render_blank.py`, `apps/studio/lib/types.gen.ts`
 
 ### Checkpoint A: api
-- [ ] pytest เต็มชุดของ api บนเครื่องทดสอบผ่าน; ruff ของไฟล์ที่แตะสะอาด
+- [x] pytest เต็มชุดของ api บนเครื่องทดสอบผ่าน: 805 passed / 3 skipped (live_stack) ใน 106 วินาที (23 พ.ย. 2026); ruff ของไฟล์ที่แตะสะอาด; Studio `gen:api` + `tsc` ผ่าน
 - [ ] curl `?allowEmpty=true` กับ starter `quotation` บน stack rc ได้ PDF ที่ช่องว่างและไม่มี `0.00`
 
 ## Phase 2: Designer และ starter
 
-- [ ] **T4 `doc-blocks`: บรรทัดเปล่าของบล็อกตารางรายการ** (M)
+- [x] **T4 `doc-blocks`: บรรทัดเปล่าของบล็อกตารางรายการ** (M)
   - Acceptance: อ่านรูปแบบใน plan เป็นส่วนของบล็อก `table` (`blankRows: N`); ตั้ง N เขียนทั้งสองส่วน (แถวเปล่า + ตัวห่อแถว "ไม่มีรายการ"); 0 → N → 0 ได้ไฟล์เดิมทุกตัวอักษร; เพิ่ม/ลบ/สลับคอลัมน์ปรับแถวเปล่าตาม; ตารางที่มี detail row ใช้ได้; รูปอื่นที่คล้ายแต่ไม่ตรงเป็น Custom Code
   - Verify: `npx vitest run tests/doc-blocks.test.ts tests/doc-edit.test.ts`
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `tests/doc-blocks.test.ts`, `tests/doc-edit.test.ts`
