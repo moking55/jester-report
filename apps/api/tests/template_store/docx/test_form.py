@@ -25,9 +25,7 @@ def test_the_committed_docx_is_what_the_generator_makes():
 def test_it_converts_to_the_golden_template_without_warnings():
     bundle, warnings = convert()
     assert warnings == []
-    golden = (FIXTURES / "form.template.html").read_text(encoding="utf-8").replace("
-", "
-")  # autocrlf
+    golden = (FIXTURES / "form.template.html").read_bytes().decode().replace("\r\n", "\n")  # git autocrlf
     assert bundle.files["template.html"] == golden
     assert sorted(bundle.files) == [
         "data.schema.json",
