@@ -422,3 +422,68 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 ---
 
 - นำเข้า zip **ทับ** รายงานที่มีอยู่: tag ของรายงานนั้นอยู่เหมือนเดิม (tag ไม่ใช่ส่วนของ draft); `manifest.tags` ใช้เฉพาะตอนนำเข้าเป็นรายงานใหม่
+
+---
+
+# v1.15: นำเข้าแบบฟอร์ม Word (.docx)
+
+สถานะ: **รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.15 (ผู้ใช้ตัดสิน 23 พ.ย. 2026: สร้างรายงานใหม่จาก .docx ไม่ใช้ AI; เอกสารต้นทางเป็นแบบฟอร์มที่มีตารางตีเส้น)
+
+## Objective
+
+`read_docx(data, template_id, name) -> (Bundle, warnings)` แปลง .docx เป็นชุดไฟล์ของ draft ใหม่ที่ **Designer เปิดแก้ได้** (บล็อกตามรูปแบบ v1.7/v1.8) แล้ว `import_docx` เขียนลง store ด้วยขั้นตอนเดียวกับ `import_zip` (asset ก่อน แล้ว transaction เดียว)
+
+**สำเร็จเมื่อ:** แบบฟอร์มตัวอย่างที่มีโลโก้ หัวข้อ ข้อความมีเส้นประให้เขียน และตารางตีเส้นที่มีช่องรวม นำเข้าแล้ว Preview PDF หน้าตาใกล้ต้นฉบับ (ตำแหน่ง ความกว้างตาราง เส้น) และทุกส่วนเป็นบล็อกที่ Designer รู้จัก ยกเว้นตารางที่มีช่องรวมแนวตั้ง (Custom Code ที่ยัง render ถูก)
+
+## สิ่งที่สร้าง
+
+- `report.json`: `name` = ชื่อที่ผู้ใช้ตั้ง หรือชื่อไฟล์ไม่รวม `.docx`; `page` จาก section แรก; ไม่มี parameter, computed, totals
+- `data.schema.json` = `{"type": "object", "properties": {}}`, `sample.json` = `{}`
+- `template.html` จาก body; `header.html`/`footer.html` จาก header/footer ปกติของ section แรก (ถ้ามี)
+- `report.css` = ค่าตั้งต้นของ starter `blank`
+- asset: รูปที่อ้างใน body/header/footer
+
+## การแปลง
+
+| Word | Jester |
+| --- | --- |
+| ขนาดกระดาษ/ขอบ (`w:pgSz`, `w:pgMar`) | `page.size` ถ้าตรงขนาดมาตรฐาน (±1 mm) ไม่งั้น `custom` + `widthMm`/`heightMm`; `orientation`; `marginsMm`; layout `flow` |
+| ย่อหน้า style Heading 1–3 / Title | `<h1>`–`<h3>` (Title เป็น `h1`) |
+| ย่อหน้าอื่น | `<p>`; จัดแนว (`w:jc`) เป็น `text-align` ใน `style` |
+| run ตัวหนา/เอียง/ขีดเส้นใต้, ขึ้นบรรทัด (`w:br`), tab | `<b>`/`<i>`/`<u>`, `<br>`, เว้นวรรค; เส้นประ/จุดไข่ปลาสำหรับเขียนคงเป็นข้อความเดิม |
+| ย่อหน้าว่างติดกัน | บล็อก `space` สูงตามจำนวนบรรทัด (บรรทัดละประมาณ 6 mm) |
+| ตัดหน้า (`w:br w:type="page"`, `pageBreakBefore`) | บล็อก `page-break` |
+| รายการมีเลข/bullet | `<p>` ที่ขึ้นต้นด้วยเลขหรือ `•` ตามระดับ (ไม่ใช่ `<ul>`/`<ol>`) |
+| ตาราง (`w:tbl`) | ตารางคงที่ (`grid` ของ Designer); ความกว้างคอลัมน์จาก `w:tblGrid` เป็น mm; เส้นจาก `w:tblBorders`/`w:tcBorders` (มีเส้น = กรอบ 1px ทึบ); `gridSpan` เป็น `colspan`; `vMerge` เป็น `rowspan`; แถวหัว (`w:tblHeader`) เป็น `<th>`; หลายย่อหน้าในช่องต่อด้วย `<br>` |
+| รูป inline (`w:drawing` / `a:blip`) png/jpg/gif | asset + `<img>` กว้างตาม `wp:extent` เป็น mm; ชื่อ asset จาก `word/media` ปรับให้ตรงกติกาชื่อ |
+| header/footer | ข้อความและรูป (≤ 1 MB ตามกติกา header) เข้า `header.html`/`footer.html`; ฟิลด์ `PAGE`/`NUMPAGES` เป็น `<span class="pageNumber">`/`<span class="totalPages">` |
+| ฟอนต์ | TH Sarabun New ทั้งหมด; ขนาดตัวอักษรตาม `report.css` ไม่ตามต้นฉบับ (ดู Open Questions) |
+| track changes / comment | ใช้ข้อความหลังยอมรับการแก้ (`w:ins` เก็บ, `w:del` ทิ้ง); comment ทิ้ง |
+
+**ข้ามแล้วบอกใน `warnings`** (code + ข้อความไทย + ย่อหน้าที่เท่าไร): text box, รูปทรง, WordArt, รูปลอย (anchor), รูป EMF/WMF/TIFF, รูปจาก URL, footnote/endnote, ตารางซ้อน (เก็บแค่ข้อความ), section ที่ 2 ขึ้นไปที่กระดาษต่างจากแรก, ฟอนต์อื่นนอกจาก TH Sarabun New (เตือนครั้งเดียวพร้อมชื่อฟอนต์)
+
+## ความปลอดภัย (ไฟล์จากผู้ใช้)
+
+- ไฟล์ ≤ 25 MB เท่า zip และใช้ตารางกติกา zip เดิม: จำนวน entry, ขนาดหลังแตก, อัตราบีบอัด, path ปลอดภัย
+- ต้องมี `[Content_Types].xml` และ `word/document.xml` ไม่งั้น `INPUT_INVALID` "ไม่ใช่ไฟล์ Word (.docx)"; ไฟล์เข้ารหัส/มีรหัสผ่าน (OLE container) ก็ `INPUT_INVALID` พร้อมบอกสาเหตุ
+- XML อ่านด้วย `xml.etree.ElementTree` ของ stdlib (expat ≥ 2.4.1 กัน entity expansion) และปฏิเสธ DOCTYPE ทุกกรณี
+- ไม่ตาม relationship ที่ `TargetMode="External"`
+- ข้อความทุกชิ้น escape เป็น HTML; `{` และ `}` ในข้อความ Word ไม่กลายเป็น Jinja (ใช้ `{{ "{" }}` / `{{ "}" }}` หรือ `{% raw %}`)
+- ผลผ่าน `load_definition` + `bind` ด้วย `sample.json` ก่อนเขียน — ไม่ผ่าน = bug ของตัวแปลง (`INTERNAL`) ไม่ใช่ draft ที่เสีย
+
+## Testing Strategy v1.15
+
+- fixture .docx เล็ก ๆ สร้างใน test ด้วย `zipfile` + XML ที่เขียนเอง (ไม่ต้องมี Word): หนึ่ง test ต่อหนึ่งกฎในตารางการแปลง
+- แบบฟอร์มสมจริง 1 ไฟล์ (ทำใน LibreOffice, ไม่มีข้อมูลจริง) ใน `tests/fixtures`: นำเข้า, `bind` ไม่มี error, และ vitest ฝั่ง Studio อ่าน `template.html` ที่ได้ด้วย `readBlocks` แล้วไม่มี Custom Code ยกเว้นตาราง rowspan
+- ความปลอดภัย: zip bomb, DOCTYPE/entity, external relationship, `{{ }}` ในข้อความ Word, ไฟล์ที่ไม่ใช่ docx, docx เข้ารหัส
+- test live กับ Gotenberg: PDF ของแบบฟอร์มสมจริงได้ 1 หน้าและข้อความครบ
+
+## Boundaries v1.15
+
+- **Always:** escape ทุกข้อความ; สิ่งที่ข้ามได้เป็น warning ไม่ใช่ error; ผลเปิดใน Designer ได้
+- **Ask first:** เพิ่ม dependency (`python-docx`, `lxml`, `mammoth`) — แผนคือ stdlib เท่านั้น
+- **Never:** เรียก network, ใช้ AI, เก็บไฟล์ .docx ต้นฉบับ (เก็บแค่ผลแปลง)
+
+## Open Questions v1.15
+
+1. **ขนาดตัวอักษร:** แผนคือไม่ตามต้นฉบับ (ใช้ของ `report.css` ยกเว้นหัวข้อ) เพราะ Designer ปรับเองได้และไฟล์สะอาดกว่า — หรืออยากให้ตามขนาดใน Word (`font-size` ทุกย่อหน้า)?

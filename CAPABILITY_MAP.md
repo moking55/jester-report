@@ -242,3 +242,17 @@ module `tags` เล็กและไม่ขึ้นกับใคร: `tem
 ปล่อยเป็น `v1.14.0` · spec: หัวข้อ v1.14 ของ [SPEC-data-prep.md](SPEC-data-prep.md), [SPEC-public-api.md](SPEC-public-api.md), [SPEC-studio.md](SPEC-studio.md)
 
 **ไม่ทำ:** นับบรรทัดให้พอดีหน้าอัตโนมัติ · เลขลำดับฟอร์ม/คุมเล่ม · ข้อความหรือลายน้ำ "ฉบับเขียนมือ" · เติมบรรทัดให้ตารางที่เขียน HTML/Jinja เองนอกบล็อก Designer (เว้นว่างได้ แต่ไม่เติมบรรทัด) · แยกเอกสารเปล่าในประวัติการ render
+
+## v1.15: นำเข้าแบบฟอร์ม Word (.docx) (รออนุมัติ)
+
+เป้า: คนออกแบบนำเข้าแบบฟอร์มของหน่วยงานที่ทำใน Word (หัวกระดาษ, โลโก้, ข้อความ, ตารางตีเส้น) เป็นรายงานใหม่ แล้วลากช่องข้อมูลใส่ต่อใน Designer แทนการวาดใหม่ทั้งหน้า
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| แปลง .docx เป็นชุดไฟล์ของ draft (`read_docx`) แล้วนำเข้าทางเดียวกับ zip | `template-store` | — |
+| `POST /v1/templates/import` รับ .docx + `warnings` ใน response | `public-api` | template-store |
+| "นำเข้า (.zip / .docx)" ใน Studio และแสดงสิ่งที่แปลงไม่ได้ | `studio` | public-api |
+
+ปล่อยเป็น `v1.15.0` · spec: หัวข้อ v1.15 ของ [SPEC-template-store.md](SPEC-template-store.md), [SPEC-public-api.md](SPEC-public-api.md), [SPEC-studio.md](SPEC-studio.md)
+
+**ไม่ทำ:** หาช่องข้อมูลให้อัตโนมัติ / ใช้ AI · text box, รูปทรง, WordArt · .doc (Word 97–2003) · นำเข้า .docx ทับ draft ที่มีอยู่ · ส่งออกเป็น Word

@@ -350,3 +350,22 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 - `?allowEmpty=yes` → 422
 - API key ที่จำกัดรายงาน (allow-list) และ rate limit ทำงานเหมือนเดิมกับ `allowEmpty`
 - `test_contract` ผ่าน (param ใหม่มี description, example ผ่าน schema)
+
+---
+
+# v1.15: นำเข้าแบบฟอร์ม Word (.docx)
+
+สถานะ: **รออนุมัติ** · การแปลง: หัวข้อ v1.15 ใน [SPEC-template-store.md](SPEC-template-store.md)
+
+## Contract ที่เปลี่ยน
+
+- `POST /v1/templates/import` (multipart เดิม) รับ `file` เป็น .docx ได้ด้วย: แยกจาก zip ของ Jester ด้วยเนื้อใน (มี `word/document.xml`, ไม่มี `jester.json`) ไม่ใช่นามสกุล
+  - .docx ต้องมี `templateId` (ไม่มี manifest ให้เอา id) และรับ field ใหม่ `name` (ไม่บังคับ; ไม่ใส่ = ชื่อไฟล์)
+  - .docx + `If-Match` (ทับ draft) → `422 INPUT_INVALID` "นำเข้า Word ได้เฉพาะเป็นรายงานใหม่"
+  - id ซ้ำ → `409 CONFLICT` เหมือน zip
+- response เพิ่ม `warnings: Problem[]` (ว่างเสมอสำหรับ zip) รูปเดียวกับ `problems` ของ validate
+- OpenAPI: description และ example ของ .docx; `test_contract` ผ่าน
+
+## Testing Strategy v1.15
+
+- .docx ใหม่ → 201 + `warnings`; ไม่มี `templateId` → 422; มี `If-Match` → 422; ไฟล์ที่ไม่ใช่ทั้งสองแบบ → 422; test ของ zip เดิมผ่านทั้งหมดโดยไม่แก้
