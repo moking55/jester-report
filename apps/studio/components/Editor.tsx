@@ -11,6 +11,7 @@ import { basicSetup } from "codemirror";
 import { useEffect, useImperativeHandle, useRef, type Ref } from "react";
 
 import { diagnosticsFor, offsetOf } from "@/lib/diagnostics";
+import { formatFile } from "@/lib/prettier";
 import { suggest } from "@/lib/jinja-complete";
 import type { ValidationProblem } from "@/lib/workspace";
 
@@ -49,6 +50,21 @@ const jinjaHighlight = ViewPlugin.define((view) => ({ decorations: jinja.createD
 export const language = (name: string): Extension =>
   name.endsWith(".json") ? json() : name.endsWith(".css") ? css() : [html(), jinjaHighlight];
 
+async function format(view: EditorView, name: string) {
+  if (view.state.readOnly) return;
+  const before = view.state.doc;
+  let formatted: string;
+  try {
+    formatted = await formatFile(name, before.toString());
+  } catch {
+    return; // prettier cannot parse it (broken JSON, Jinja inside a tag): leave the file as it is
+  }
+  // typed into or switched file meanwhile: drop the result rather than overwrite newer text
+  if (view.state.doc !== before || formatted === before.toString()) return;
+  const at = Math.min(view.state.selection.main.head, formatted.length);
+  view.dispatch({ changes: { from: 0, to: before.length, insert: formatted }, selection: EditorSelection.cursor(at) });
+}
+
 export function Editor({ files, active, generation, problems, onDirty, onSave, readOnly = false, ref }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
@@ -79,7 +95,10 @@ export function Editor({ files, active, generation, problems, onDirty, onSave, r
         language(name),
         name.endsWith(".html") ? EditorState.languageData.of(() => [{ autocomplete: jinja }]) : [],
         EditorState.readOnly.of(readOnly),
-        keymap.of([{ key: "Mod-s", preventDefault: true, run: () => (callbacks.current.onSave(), true) }]),
+        keymap.of([
+          { key: "Mod-s", preventDefault: true, run: () => (callbacks.current.onSave(), true) },
+          { key: "Mod-Shift-Space", preventDefault: true, run: (v) => (format(v, name), true) },
+        ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !dirty.current.has(name)) {
             dirty.current.add(name);
