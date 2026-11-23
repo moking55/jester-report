@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
 
 from jsonschema import Draft202012Validator
+from markupsafe import Markup
 
 from ..report_definition.data_schema import FORMATS, safe_message
 from ..report_definition.loader import ReportDefinition
@@ -23,6 +24,25 @@ from .params import check_params
 MAX_PROBLEMS = 50
 # the `fmt` a template sees: text formatters plus the inline-SVG codes (SPEC-data-prep.md "v1.1")
 FMT = SimpleNamespace(**vars(FORMATTERS), qr=qr, barcode=barcode, promptpay=promptpay)
+
+
+def _blank_when_empty(make: Callable[..., Any], empty: Any) -> Callable[..., Any]:
+    """v1.14: on a blank form a code of a value left empty prints nothing instead of failing the render."""
+
+    def code(value: Any, *args: Any, **kwargs: Any) -> Any:
+        return empty if value is None or value == "" else make(value, *args, **kwargs)
+
+    return code
+
+
+BLANK_FMT = SimpleNamespace(
+    **vars(FMT)
+    | {
+        "qr": _blank_when_empty(qr, Markup("")),
+        "barcode": _blank_when_empty(barcode, Markup("")),
+        "promptpay": _blank_when_empty(promptpay, ""),
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -157,4 +177,6 @@ def prepare(
         return PrepareResult(None, _capped(problems))
     view_data = fill_missing(data, definition.data.schema)
     view_meta = {**meta, "blank": blank}  # always there: templates read meta.blank under StrictUndefined
-    return PrepareResult(Prepared(checked_params, view_data, lists, totals, view_meta, FMT), problems)
+    return PrepareResult(
+        Prepared(checked_params, view_data, lists, totals, view_meta, BLANK_FMT if blank else FMT), problems
+    )
