@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 import re
@@ -13,11 +14,12 @@ from psycopg import AsyncConnection, errors
 from psycopg_pool import AsyncConnectionPool
 
 from ..report_definition.loader import content_sha256
-from ..report_definition.problems import AssetInfo
+from ..report_definition.problems import AssetInfo, Problem
 from ..tags import TagError, normalize_tags
 from .assets import detect
 from .blobs import BlobStore
-from .bundle import FORMAT_VERSION, read_zip, write_zip
+from .bundle import FORMAT_VERSION, Bundle, read_zip, write_zip
+from .docx import read_docx
 from .errors import StoreError
 from .limits import (
     ASSET_FILE,
@@ -118,6 +120,31 @@ class ImportResult:
     summary: TemplateSummary
     revision: int
     created: bool  # True: a new template; False: the draft of an existing one was replaced
+    warnings: list[Problem] = field(default_factory=list)  # v1.15: what a Word file could not bring
+
+
+def _name_of(infos: dict[str, AssetInfo], info: AssetInfo) -> str:
+    return next(name for name, i in infos.items() if i is info)
+
+
+def _check_binds(bundle: Bundle, infos: dict[str, AssetInfo]) -> None:
+    """A draft made from a Word file validates and binds with its own sample, or the converter has a bug."""
+    from ..binder import bind
+    from ..data_prep import prepare
+    from ..report_definition import DefinitionInput, load_definition
+
+    loaded = load_definition(DefinitionInput(bundle.files, infos, frozenset({"TH Sarabun New"})))
+    errors_ = [p for p in loaded.problems if p.severity == "error"]
+    if loaded.definition is not None and not errors_:
+        prepared = prepare(loaded.definition, {}, json.loads(bundle.files["sample.json"]), {})
+        if prepared.prepared is not None:
+            bound = bind(loaded.definition, bundle.files, infos, prepared.prepared)
+            errors_ = [p for p in bound.problems if p.severity == "error"]
+            if bound.bound is not None and not errors_:
+                return
+        errors_ = errors_ or prepared.problems
+    detail = "; ".join(f"{p.code} {p.message}" for p in errors_[:3]) or "no definition"
+    raise StoreError("INTERNAL_ERROR", f"the Word file was converted to a draft that does not bind: {detail}")
 
 
 def _sha256(text: str) -> str:
@@ -335,17 +362,7 @@ class TemplateStore:
             if row is None:
                 if expected_revision is not None:
                     raise StoreError("NOT_FOUND", "template not found")
-                try:
-                    await conn.execute(
-                        "INSERT INTO templates (id, name, tags) VALUES (%s, %s, %s)",
-                        (template_id, bundle.name, bundle.tags),
-                    )
-                except errors.UniqueViolation:
-                    raise StoreError("CONFLICT", "a template with this id already exists") from None
-                await conn.execute(
-                    "INSERT INTO drafts (template_id, revision, updated_by) VALUES (%s, 1, %s)",
-                    (template_id, by),
-                )
+                await self._insert_template(conn, template_id, bundle.name, bundle.tags, by)
                 revision, created = 1, True
             else:
                 if row[0] is not None and not unarchive:
@@ -367,23 +384,66 @@ class TemplateStore:
                 await conn.execute(
                     "UPDATE drafts SET based_on_version = NULL WHERE template_id = %s", (template_id,)
                 )
-            for name, content in bundle.files.items():
-                await conn.execute(
-                    "INSERT INTO draft_files (template_id, name, content, sha256) VALUES (%s, %s, %s, %s)",
-                    (template_id, name, content, _sha256(content)),
-                )
-            for name, info in infos.items():
-                await conn.execute(
-                    "INSERT INTO blobs (sha256, content_type, size, font_family) VALUES (%s, %s, %s, %s) "
-                    "ON CONFLICT (sha256) DO NOTHING",
-                    (info.sha256, info.content_type, len(bundle.assets[name]), info.font_family),
-                )
-                await conn.execute(
-                    "INSERT INTO draft_assets (template_id, name, blob_sha256) VALUES (%s, %s, %s)",
-                    (template_id, name, info.sha256),
-                )
-            await self._check_draft_size(conn, template_id)
+            await self._write_bundle(conn, template_id, bundle, infos)
         return ImportResult(await self.get(template_id), revision, created)
+
+    async def import_docx(self, data: bytes, template_id: str, name: str, by: str) -> ImportResult:
+        """A new template from a Word form (SPEC-template-store.md v1.15); never replaces an existing one.
+
+        The converted draft must validate and bind with its own sample before anything is written: if it does
+        not, that is a bug in the converter (INTERNAL), not a draft for the user to fix.
+        """
+        _check(TEMPLATE_ID, template_id, "template")
+        name = " ".join(name.split())[:120] or "แบบฟอร์ม"
+        bundle, warnings = await asyncio.to_thread(read_docx, data, template_id, name)
+        infos = {asset: detect(asset, raw) for asset, raw in bundle.assets.items()}
+        await asyncio.to_thread(_check_binds, bundle, infos)
+        for info in infos.values():
+            await self._blobs.put_if_absent(
+                info.sha256, bundle.assets[_name_of(infos, info)], info.content_type
+            )
+        async with self._db.connection() as conn, conn.transaction():
+            exists = await self._one(conn, "SELECT 1 FROM templates WHERE id = %s FOR UPDATE", (template_id,))
+            if exists is not None:
+                raise StoreError(
+                    "CONFLICT", "a template with this id already exists; a Word file needs a new id"
+                )
+            await self._insert_template(conn, template_id, name, [], by)
+            await self._write_bundle(conn, template_id, bundle, infos)
+        return ImportResult(await self.get(template_id), 1, True, warnings)
+
+    async def _insert_template(
+        self, conn: AsyncConnection, template_id: str, name: str, tags: list[str], by: str
+    ) -> None:
+        try:
+            await conn.execute(
+                "INSERT INTO templates (id, name, tags) VALUES (%s, %s, %s)", (template_id, name, tags)
+            )
+        except errors.UniqueViolation:
+            raise StoreError("CONFLICT", "a template with this id already exists") from None
+        await conn.execute(
+            "INSERT INTO drafts (template_id, revision, updated_by) VALUES (%s, 1, %s)", (template_id, by)
+        )
+
+    async def _write_bundle(
+        self, conn: AsyncConnection, template_id: str, bundle: Bundle, infos: dict[str, AssetInfo]
+    ) -> None:
+        for name, content in bundle.files.items():
+            await conn.execute(
+                "INSERT INTO draft_files (template_id, name, content, sha256) VALUES (%s, %s, %s, %s)",
+                (template_id, name, content, _sha256(content)),
+            )
+        for name, info in infos.items():
+            await conn.execute(
+                "INSERT INTO blobs (sha256, content_type, size, font_family) VALUES (%s, %s, %s, %s) "
+                "ON CONFLICT (sha256) DO NOTHING",
+                (info.sha256, info.content_type, len(bundle.assets[name]), info.font_family),
+            )
+            await conn.execute(
+                "INSERT INTO draft_assets (template_id, name, blob_sha256) VALUES (%s, %s, %s)",
+                (template_id, name, info.sha256),
+            )
+        await self._check_draft_size(conn, template_id)
 
     async def duplicate(
         self, source_id: str, ref: Literal["draft"] | int, new_id: str, new_name: str, by: str

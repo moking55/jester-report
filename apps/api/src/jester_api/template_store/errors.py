@@ -10,6 +10,7 @@ StoreErrorCode = Literal[
     "UNSUPPORTED_MEDIA_TYPE",
     "INPUT_INVALID",
     "ARCHIVED",
+    "INTERNAL_ERROR",  # v1.15: a Word file converted to a draft that does not bind (a converter bug)
 ]
 
 
