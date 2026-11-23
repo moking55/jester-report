@@ -334,7 +334,7 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 # v1.14: ฟอร์มเปล่า
 
-สถานะ: **รออนุมัติ** · กติกาการเตรียมข้อมูล: หัวข้อ v1.14 ใน [SPEC-data-prep.md](SPEC-data-prep.md)
+สถานะ: **อนุมัติ 23 พ.ย. 2026** · กติกาการเตรียมข้อมูล: หัวข้อ v1.14 ใน [SPEC-data-prep.md](SPEC-data-prep.md)
 
 ## Contract ที่เปลี่ยน
 

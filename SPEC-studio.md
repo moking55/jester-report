@@ -1180,7 +1180,7 @@ rowspan · เลือกหลายเซลล์พร้อมกัน (�
 
 # v1.14: ฟอร์มเปล่า
 
-สถานะ: **รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.14 · api: [SPEC-public-api.md](SPEC-public-api.md) · การเตรียมข้อมูล: [SPEC-data-prep.md](SPEC-data-prep.md)
+สถานะ: **อนุมัติ 23 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.14 · api: [SPEC-public-api.md](SPEC-public-api.md) · การเตรียมข้อมูล: [SPEC-data-prep.md](SPEC-data-prep.md)
 
 ## Objective
 

@@ -296,7 +296,7 @@ apps/api/tests/data_prep/test_codes.py — ใหม่
 
 # v1.14: ฟอร์มเปล่า
 
-สถานะ: **รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.14 (interview 23 พ.ย. 2026)
+สถานะ: **อนุมัติ 23 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.14 (interview 23 พ.ย. 2026)
 
 ## Objective
 
