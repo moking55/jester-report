@@ -372,12 +372,12 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 ## Contract ที่เปลี่ยน
 
 - `POST /v1/templates/import` (multipart เดิม) รับ `file` เป็น .docx ได้ด้วย: แยกจาก zip ของ Jester ด้วยเนื้อใน (มี `word/document.xml`, ไม่มี `jester.json`) ไม่ใช่นามสกุล
-  - .docx ต้องมี `templateId` (ไม่มี manifest ให้เอา id) และรับ field ใหม่ `name` (ไม่บังคับ; ไม่ใส่ = ชื่อไฟล์)
-  - .docx + `If-Match` (ทับ draft) → `422 INPUT_INVALID` "นำเข้า Word ได้เฉพาะเป็นรายงานใหม่"
-  - id ซ้ำ → `409 CONFLICT` เหมือน zip
-- response เพิ่ม `warnings: Problem[]` (ว่างเสมอสำหรับ zip) รูปเดียวกับ `problems` ของ validate
+  - .docx ต้องมี `templateId` (ไม่มี manifest ให้เอา id) และรับ field ใหม่ `name` (ไม่บังคับ; ไม่ใส่ = ชื่อไฟล์); zip ไม่ใช้ `name` (ชื่อมาจาก manifest เหมือนเดิม)
+  - .docx + `If-Match` หรือ `unarchive=true` (ทับ draft, v1.14.1) → `422 INPUT_INVALID` "นำเข้า Word ได้เฉพาะเป็นรายงานใหม่"
+  - id ที่มีอยู่แล้ว ทั้งที่ archive และไม่ archive → `409 CONFLICT` (ไม่ใช่ `TEMPLATE_ARCHIVED`: Word ไม่ทับรายงานเดิม)
+- `ImportResult` เพิ่ม `warnings: Problem[]` (ส่งเสมอ ว่างสำหรับ zip) รูปเดียวกับ `problems` ของ validate; ฟิลด์เดิมเหมือนเดิม
 - OpenAPI: description และ example ของ .docx; `test_contract` ผ่าน
 
 ## Testing Strategy v1.15
 
-- .docx ใหม่ → 201 + `warnings`; ไม่มี `templateId` → 422; มี `If-Match` → 422; ไฟล์ที่ไม่ใช่ทั้งสองแบบ → 422; test ของ zip เดิมผ่านทั้งหมดโดยไม่แก้
+- .docx ใหม่ → 201 + `warnings`; ไม่มี `templateId` → 422; มี `If-Match` หรือ `unarchive=true` → 422; id ที่มีอยู่ (รวมที่ archive) → 409 `CONFLICT`; ไฟล์ที่ไม่ใช่ทั้งสองแบบ → 422; test ของ zip เดิม (รวม v1.14.1) ผ่านทั้งหมดโดยไม่แก้

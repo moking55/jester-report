@@ -458,16 +458,17 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 
 | Word | Jester |
 | --- | --- |
-| ขนาดกระดาษ/ขอบ (`w:pgSz`, `w:pgMar`) | `page.size` ถ้าตรงขนาดมาตรฐาน (±1 mm) ไม่งั้น `custom` + `widthMm`/`heightMm`; `orientation`; `marginsMm`; layout `flow` |
+| ขนาดกระดาษ/ขอบ (`w:pgSz`, `w:pgMar`) | `page.size` ถ้าตรงขนาดมาตรฐาน (±1 mm) ไม่งั้น `custom` + `widthMm`/`heightMm` (25–1000 × 25–2000); `orientation`; `marginsMm` (แต่ละด้าน 0–50 mm: เกินแล้วตัดที่ 50 + warning `PAGE_MARGIN_CLAMPED`); layout `flow` |
 | ย่อหน้า style Heading 1–3 / Title | `<h1>`–`<h3>` (Title เป็น `h1`) |
 | ย่อหน้าอื่น | `<p>`; จัดแนว (`w:jc`) เป็น `text-align` ใน `style` |
+| ระยะก่อน/หลังย่อหน้า (`w:spacing w:before/w:after`) | `margin-top`/`margin-bottom` เป็น mm ใน `style` (ค่าที่ตั้งในย่อหน้า → ของ paragraph style → `w:docDefaults` ใน `styles.xml`); ไม่มีค่า = 0 ไม่ใช้ระยะ 1em ของ browser |
 | run ตัวหนา/เอียง/ขีดเส้นใต้, ขึ้นบรรทัด (`w:br`), tab | `<b>`/`<i>`/`<u>`, `<br>`, เว้นวรรค; เส้นประ/จุดไข่ปลาสำหรับเขียนคงเป็นข้อความเดิม |
 | ย่อหน้าว่างติดกัน | บล็อก `space` สูงตามจำนวนบรรทัด (บรรทัดละประมาณ 6 mm) |
 | ตัดหน้า (`w:br w:type="page"`, `pageBreakBefore`) | บล็อก `page-break` |
 | รายการมีเลข/bullet | `<p>` ที่ขึ้นต้นด้วยเลขหรือ `•` ตามระดับ (ไม่ใช่ `<ul>`/`<ol>`) |
-| ตาราง (`w:tbl`) | ตารางคงที่ (`grid` ของ Designer); ความกว้างคอลัมน์จาก `w:tblGrid` เป็น mm; เส้นจาก `w:tblBorders`/`w:tcBorders` (มีเส้น = กรอบ 1px ทึบ); `gridSpan` เป็น `colspan`; `vMerge` เป็น `rowspan`; แถวหัว (`w:tblHeader`) เป็น `<th>`; หลายย่อหน้าในช่องต่อด้วย `<br>` |
-| รูป inline (`w:drawing` / `a:blip`) png/jpg/gif | asset + `<img>` กว้างตาม `wp:extent` เป็น mm; ชื่อ asset จาก `word/media` ปรับให้ตรงกติกาชื่อ |
-| header/footer | ข้อความและรูป (≤ 1 MB ตามกติกา header) เข้า `header.html`/`footer.html`; ฟิลด์ `PAGE`/`NUMPAGES` เป็น `<span class="pageNumber">`/`<span class="totalPages">` |
+| ตาราง (`w:tbl`) | ตารางคงที่แบบที่ Designer สร้าง (`<table data-jd="grid" style="width: 100%; border-collapse: collapse">`); ความกว้างคอลัมน์จาก `w:tblGrid` เป็น `width: N%` บนเซลล์แถวแรก (แบบที่แผง "ขนาดตาราง" ของ Designer อ่าน/เขียน); เส้นจาก `w:tblBorders`/`w:tcBorders`: มีเส้น = `border: 1px solid #000` บนเซลล์ (แบบปุ่มเส้นกรอบของ Designer) ไม่มี = ไม่มีเส้น; ทุกเซลล์ `padding: 1mm 2mm`; สีพื้นเซลล์ (`w:shd w:fill`) เป็น `background-color`; จัดแนวของย่อหน้าแรกในเซลล์เป็น `text-align` ของเซลล์; `gridSpan` เป็น `colspan`; `vMerge` เป็น `rowspan` (Designer อ่านเป็น Custom Code แต่ render ถูก); แถวหัว (`w:tblHeader`) เป็น `<th>`; หลายย่อหน้าในช่องต่อด้วย `<br>` |
+| รูป inline (`w:drawing` / `a:blip`) png/jpg/gif | asset + `<img>` กว้างตาม `wp:extent` เป็น mm; ชื่อ asset จาก `word/media` ปรับให้ตรงกติกาชื่อ; รูปเกิน 5 MB (กติกา asset) ข้าม + warning |
+| header/footer | ข้อความและรูปเข้า `header.html`/`footer.html`; รูปเกิน 1 MB (กติกา header) ข้าม + warning; ฟิลด์ `PAGE`/`NUMPAGES` เป็น `<span class="pageNumber">`/`<span class="totalPages">` |
 | ฟอนต์ | TH Sarabun New ทั้งหมด; ขนาดตัวอักษรตาม `report.css` ไม่ตามต้นฉบับ (ดู Open Questions) |
 | track changes / comment | ใช้ข้อความหลังยอมรับการแก้ (`w:ins` เก็บ, `w:del` ทิ้ง); comment ทิ้ง |
 
@@ -485,7 +486,7 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 ## Testing Strategy v1.15
 
 - fixture .docx เล็ก ๆ สร้างใน test ด้วย `zipfile` + XML ที่เขียนเอง (ไม่ต้องมี Word): หนึ่ง test ต่อหนึ่งกฎในตารางการแปลง
-- แบบฟอร์มสมจริง 1 ไฟล์ (ทำใน LibreOffice, ไม่มีข้อมูลจริง) ใน `tests/fixtures`: นำเข้า, `bind` ไม่มี error, และ vitest ฝั่ง Studio อ่าน `template.html` ที่ได้ด้วย `readBlocks` แล้วไม่มี Custom Code ยกเว้นตาราง rowspan
+- แบบฟอร์มสมจริง 1 ไฟล์ (จากผู้ใช้ถ้าได้ ดู Open Questions ข้อ 2 ไม่งั้นทำใน LibreOffice; ไม่มีข้อมูลจริง) ใน `tests/fixtures`: นำเข้า, `bind` ไม่มี error, และ vitest ฝั่ง Studio อ่าน `template.html` ที่ได้ด้วย `readBlocks` แล้วไม่มี Custom Code ยกเว้นตาราง rowspan
 - ความปลอดภัย: zip bomb, DOCTYPE/entity, external relationship, `{{ }}` ในข้อความ Word, ไฟล์ที่ไม่ใช่ docx, docx เข้ารหัส
 - test live กับ Gotenberg: PDF ของแบบฟอร์มสมจริงได้ 1 หน้าและข้อความครบ
 
@@ -498,3 +499,4 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 ## Open Questions v1.15
 
 1. **ขนาดตัวอักษร:** แผนคือไม่ตามต้นฉบับ (ใช้ของ `report.css` ยกเว้นหัวข้อ) เพราะ Designer ปรับเองได้และไฟล์สะอาดกว่า — หรืออยากให้ตามขนาดใน Word (`font-size` ทุกย่อหน้า)?
+2. **แบบฟอร์มจริงสำหรับทดสอบ:** มีไฟล์ Word แบบฟอร์มจริงของหน่วยงาน 1–3 ไฟล์ (ลบข้อมูลส่วนบุคคลแล้ว) ให้ใช้วัดผลไหม? ถ้าไม่มี จะทำตัวอย่างเองใน LibreOffice ซึ่งอาจไม่ครอบคลุมสิ่งที่ Word ของหน่วยงานใช้จริง
