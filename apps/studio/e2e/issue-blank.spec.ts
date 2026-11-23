@@ -30,6 +30,8 @@ test("a blank form: issued with nothing filled, partly filled, and previewed fro
   const publish = page.getByRole("dialog", { name: "Publish" });
   await publish.getByRole("button", { name: "Publish" }).click();
   await expect(publish).toHaveCount(0);
+  // the dialog closes before the publish is through: wait for the version, or the form below is still disabled
+  await expect(page.getByRole("tab", { name: "Versions" })).toHaveAttribute("aria-selected", "true");
 
   // 1. nothing filled: the required fields are not asked for, the PDF has no 0.00
   await page.goto(`/templates/${ID}?mode=issue`);
