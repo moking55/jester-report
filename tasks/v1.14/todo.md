@@ -32,15 +32,16 @@
   - Verify: `npx vitest run tests/doc-blocks.test.ts tests/doc-edit.test.ts`
   - Files: `lib/doc-blocks.ts`, `lib/doc-edit.ts`, `tests/doc-blocks.test.ts`, `tests/doc-edit.test.ts`
 
-- [ ] **T5 แผงคุณสมบัติ "บรรทัดเปล่าในฟอร์มเปล่า" + ตารางใหม่ = 10** (S)
+- [x] **T5 แผงคุณสมบัติ "บรรทัดเปล่าในฟอร์มเปล่า" + ตารางใหม่ = 10** (S)
   - Acceptance: ช่องจำนวนเต็ม 0–100 ในแผงของบล็อกตารางรายการ, undo ได้; ตารางที่ลากจาก palette มี 10; ผืนไม่วาดแถวเปล่า
   - Verify: vitest ของแผง/palette; `npm run lint && npm run typecheck`
   - Files: `components/designer/*` (แผงตาราง, palette), `lib/doc-edit.ts`
 
-- [ ] **T6 starter 4 ตัวได้บรรทัดเปล่า 10** (M)
+- [x] **T6 starter 4 ตัวได้บรรทัดเปล่า 10** (M)
   - Acceptance: `quotation`, `purchase-order`, `sales-grouped`, `tax-invoice` มีรูปแบบใน plan; vitest อ่านได้ N = 10 และ round-trip ไม่เปลี่ยน; ฟอร์มเปล่าด้วย `data={}` ผ่าน Gotenberg ได้ 1 หน้า A4 (ล้น → ลดเฉพาะตัวนั้นและจดไว้ที่นี่); `test_starter_pdf` ผ่านโดยไม่แก้ expected
   - Verify: `pytest tests/template_store tests/binder` (live บนเครื่องทดสอบ) + `npx vitest run tests/doc-blocks.test.ts`
   - Files: `template_store/starters/*/template.html` (4 ไฟล์), `tests/template_store/test_starter_blank.py`
+  - ผล: 10 บรรทัดได้ 1 หน้า A4 ทั้ง 4 ตัว (test live ผ่านบนเครื่องทดสอบ: pytest 819 passed / 3 skipped); `sales-grouped` เป็นตารางแบ่งกลุ่ม (Custom Code ใน Designer) จึงเขียนมือในรูปแบบเดียวกัน; `purchase-order` วนตารางต่อใบสั่งซื้อ: ฟอร์มเปล่าที่ไม่ส่งใบสั่งซื้อเลยจะไม่มีตาราง ต้องส่งอย่างน้อย 1 ใบ (เช่น `{"orders": [{"orderId": ""}]}`)
 
 ### Checkpoint B: Designer และ starter
 - [ ] สร้างรายงานจาก `quotation` บน stack rc → ฟอร์มเปล่าผ่าน API ได้ 10 บรรทัด; Designer เปิด starter ได้โดยตารางไม่เป็น Custom Code
@@ -48,7 +49,7 @@
 
 ## Phase 3: Studio ออกเอกสาร
 
-- [ ] **T7 checkbox "ฟอร์มเปล่า (สำหรับเขียนมือ)"** (M)
+- [x] **T7 checkbox "ฟอร์มเปล่า (สำหรับเขียนมือ)"** (M)
   - Acceptance: ไม่ติ๊ก = เหมือนเดิม; ติ๊ก → `validate` ข้ามช่องบังคับแต่ยังจับค่าผิดรูปแบบ, ส่ง `/issue/<id>?allowEmpty=true`, ชื่อไฟล์เริ่มต้น `<id>-blank-v<version>.pdf`; Developer dialog มี `?allowEmpty=true` และ body เฉพาะค่าที่กรอก
   - Verify: `npx vitest run tests/form.test.ts tests/render.test.ts` + lint/typecheck
   - Files: `components/IssueForm.tsx`, `lib/form.ts`, `lib/render.ts`, `app/issue/[id]/route.ts`, tests
