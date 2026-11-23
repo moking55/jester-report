@@ -2,6 +2,7 @@
 
 import io
 import os
+import unicodedata
 
 import pytest
 from pypdf import PdfReader
@@ -16,6 +17,16 @@ from jester_api.template_store.docx import read_docx
 from .form import FIXTURES
 
 pytestmark = pytest.mark.engine
+
+
+def thai(text: str) -> str:
+    """What a PDF's text layer and the source share: no marks, private glyph forms or spaces (e2e thai())."""
+    text = text.replace("ำ", "า")
+    return "".join(
+        c
+        for c in text
+        if unicodedata.category(c) != "Mn" and not 0xF700 <= ord(c) <= 0xF8FF and not c.isspace()
+    )
 
 
 async def test_the_form_prints_one_page_with_its_text_and_the_footer_on_the_right():
@@ -34,14 +45,14 @@ async def test_the_form_prints_one_page_with_its_text_and_the_footer_on_the_righ
     reader = PdfReader(io.BytesIO(out.pdf))
     assert len(reader.pages) == 1
     page = reader.pages[0]
-    text = page.extract_text()
-    for needle in ("เบิกพัสดุ", "หมายเหตุ", "รวม", "ผู้อนุมัติ"):
-        assert needle in text.replace(" ", "")
+    text = thai(page.extract_text())
+    for needle in ("แบบคำขอเบิกพัสดุ", "หมายเหตุ", "รวม", "ผู้อนุมัติ", "ตำแหน่ง"):
+        assert thai(needle) in text
 
     xs: list[float] = []
 
     def visit(t, cm, tm, font, size):
-        if "หน้า" in t:
+        if thai("หน้า") in thai(t):
             xs.append(tm[4])
 
     page.extract_text(visitor_text=visit)
