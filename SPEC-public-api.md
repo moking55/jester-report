@@ -342,12 +342,14 @@ async def render(request: Request, caller: RenderCaller) -> Response:
   - `true` → render service เรียก `prepare(..., blank=True)`: ข้ามช่องบังคับ ยอดที่คำนวณไม่ได้เว้นว่าง `meta.blank` เป็น `true`
   - body, response, header, การนับ quota, การเก็บเอกสาร และ run history เหมือนเดิมทุกอย่าง (เอกสารเปล่าเป็นเอกสารที่ออกตามปกติ)
 - คำอธิบายของ operation และ example ใน `apps/api/openapi/public-api.yaml` ระบุ `allowEmpty` และตัวอย่าง body `{"template":…,"params":{},"data":{}}`
+- `POST /v1/templates/{templateId}/draft/preview` และ `.../draft/prepared` รับ `allowEmpty` แบบเดียวกัน (คนออกแบบดูฟอร์มเปล่าก่อน publish)
 - Studio route `/issue/<id>` ส่ง `?allowEmpty=true` ต่อให้ api เมื่อผู้ใช้ติ๊กฟอร์มเปล่า (route เดิม ไม่มี endpoint ใหม่)
 
 ## Testing Strategy v1.14
 
 - รายงานที่มีช่องบังคับ: ไม่ส่ง `allowEmpty` + `data={}` → 422 เหมือนเดิม; `?allowEmpty=true` + `data={}` → 200 PDF และมี run ใน history
 - `?allowEmpty=yes` → 422
+- `draft/preview?allowEmpty=true` + `data={}` บน draft ที่มีช่องบังคับ → 200 PDF
 - API key ที่จำกัดรายงาน (allow-list) และ rate limit ทำงานเหมือนเดิมกับ `allowEmpty`
 - `test_contract` ผ่าน (param ใหม่มี description, example ผ่าน schema)
 

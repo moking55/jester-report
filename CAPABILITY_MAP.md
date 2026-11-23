@@ -235,9 +235,10 @@ module `tags` เล็กและไม่ขึ้นกับใคร: `tem
 | งาน | module | ขึ้นกับ |
 | --- | --- | --- |
 | โหมดฟอร์มเปล่าใน `prepare` (ข้ามช่องบังคับ, ยอดเว้นว่าง, `meta.blank`, QR/barcode ว่าง) | `data-prep` | — |
-| `allowEmpty` ใน `POST /v1/render` และ contract | `public-api`, `render-service` | data-prep |
+| `allowEmpty` ใน `POST /v1/render`, `draft/preview`, `draft/prepared` และ contract | `public-api`, `render-service` | data-prep |
 | checkbox "ฟอร์มเปล่า" ในฟอร์มออกเอกสาร + Developer dialog | `studio` | public-api |
-| คุณสมบัติ "บรรทัดเปล่าในฟอร์มเปล่า" ของบล็อกตารางรายการใน Designer | `studio` | data-prep (`meta.blank`) |
+| คุณสมบัติ "บรรทัดเปล่าในฟอร์มเปล่า" ของบล็อกตารางรายการใน Designer (ใหม่ = 10) + "ดูแบบฟอร์มเปล่า" ใน Preview | `studio` | data-prep (`meta.blank`) |
+| starter ที่มีตาราง 4 ตัวได้ 10 บรรทัดเปล่า | `template-store` | studio (รูปแบบ Jinja ของบล็อก) |
 
 ปล่อยเป็น `v1.14.0` · spec: หัวข้อ v1.14 ของ [SPEC-data-prep.md](SPEC-data-prep.md), [SPEC-public-api.md](SPEC-public-api.md), [SPEC-studio.md](SPEC-studio.md)
 
