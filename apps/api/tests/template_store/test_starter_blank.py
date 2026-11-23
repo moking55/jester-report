@@ -15,7 +15,7 @@ from ..binder.test_tax_invoice import PARAMS as TAX_PARAMS
 from ..data_prep.conftest import fixture_files, load_fixture, sample
 from .test_starter_pdf import PNG
 
-BLANK_ROW = 'data-jd="blank"'
+BLANK_ROW = '<tr data-jd="blank">'
 # purchase-order repeats a table per order: a blank form needs one order sent to have a table at all
 BLANK_DATA = {
     "quotation": {},
@@ -44,6 +44,7 @@ def bound(name: str, params: dict, data, blank: bool):
 def test_blank_form_has_ten_empty_rows_and_no_empty_list_note(name):
     index = bound(name, {}, BLANK_DATA[name], blank=True).index_html.decode()
     assert index.count(BLANK_ROW) == 10
+    assert 'tr[data-jd="blank"] > td { border-bottom' in index  # a line to write on, borders or not
     assert "ไม่มีรายการ" not in index and "ไม่มีข้อมูลในช่วงเวลาที่เลือก" not in index
 
 

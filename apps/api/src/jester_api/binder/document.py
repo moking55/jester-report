@@ -13,6 +13,9 @@ BASE_CSS = "thead { display: table-header-group; }\ntr { break-inside: auto; }\n
 # v1.8: a background image for lining boxes up is never printed; free layout counts from the sheet's edge
 GUIDE_CSS = '[data-jd="guide"] { display: none; }\n'
 FREE_CSS = 'body { margin: 0; }\n[data-jd="page"] { overflow: hidden; }\n'
+# v1.14: a blank form's empty rows get a line to write on, even in a table drawn without borders;
+# in a table with solid borders (border-collapse) the solid line wins, so nothing changes there
+BLANK_CSS = 'tr[data-jd="blank"] > td { border-bottom: 1px dotted #777; }\n'
 
 
 def css_string(value: str) -> str:
@@ -41,7 +44,8 @@ def index_html(body: str, report: ReportJson, assets: Mapping[str, AssetInfo]) -
     )
     return (
         '<!doctype html>\n<html lang="th"><head><meta charset="utf-8">\n'
-        f"<style>\n{css}{BASE_CSS}{GUIDE_CSS}{FREE_CSS if report.page.layout == 'free' else ''}</style>\n"
+        f"<style>\n{css}{BASE_CSS}{GUIDE_CSS}{BLANK_CSS}"
+        f"{FREE_CSS if report.page.layout == 'free' else ''}</style>\n"
         f"</head><body>\n{body}\n</body></html>\n"
     )
 
