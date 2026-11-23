@@ -367,7 +367,7 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 # v1.15: นำเข้าแบบฟอร์ม Word (.docx)
 
-สถานะ: **รออนุมัติ** · การแปลง: หัวข้อ v1.15 ใน [SPEC-template-store.md](SPEC-template-store.md)
+สถานะ: **อนุมัติ 24 พ.ย. 2026** · การแปลง: หัวข้อ v1.15 ใน [SPEC-template-store.md](SPEC-template-store.md)
 
 ## Contract ที่เปลี่ยน
 

@@ -1254,7 +1254,7 @@ rowspan · เลือกหลายเซลล์พร้อมกัน (�
 
 # v1.15: นำเข้าแบบฟอร์ม Word (.docx)
 
-สถานะ: **รออนุมัติ** · api: หัวข้อ v1.15 ใน [SPEC-public-api.md](SPEC-public-api.md) · การแปลง: [SPEC-template-store.md](SPEC-template-store.md)
+สถานะ: **อนุมัติ 24 พ.ย. 2026** · api: หัวข้อ v1.15 ใน [SPEC-public-api.md](SPEC-public-api.md) · การแปลง: [SPEC-template-store.md](SPEC-template-store.md)
 
 - ปุ่มในหน้ารายงานเปลี่ยนเป็น **"นำเข้า (.zip / .docx)"**; ช่องเลือกไฟล์รับ `.zip,.docx`
 - เลือก .docx: dialog มีช่อง **id** (เดาจากชื่อไฟล์เป็น kebab-case ASCII; ชื่อไทยล้วนได้ `form-<yyyymmdd>`) และ **ชื่อรายงาน** (ชื่อไฟล์); ไม่มีตัวเลือก "ทับรายงานเดิม" หรือ "ทับและเลิก archive" (v1.14.1): id ที่มีอยู่แล้วได้ข้อความ "มีรายงาน id นี้อยู่แล้ว ใช้ id ใหม่" แล้วกลับไปช่อง id

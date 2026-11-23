@@ -438,7 +438,7 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 
 # v1.15: นำเข้าแบบฟอร์ม Word (.docx)
 
-สถานะ: **รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.15 (ผู้ใช้ตัดสิน 23 พ.ย. 2026: สร้างรายงานใหม่จาก .docx ไม่ใช้ AI; เอกสารต้นทางเป็นแบบฟอร์มที่มีตารางตีเส้น)
+สถานะ: **อนุมัติ 24 พ.ย. 2026** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.15 (ผู้ใช้ตัดสิน 23 พ.ย. 2026: สร้างรายงานใหม่จาก .docx ไม่ใช้ AI; เอกสารต้นทางเป็นแบบฟอร์มที่มีตารางตีเส้น)
 
 ## Objective
 
