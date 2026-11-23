@@ -156,6 +156,17 @@ describe("validate", () => {
     (values.data as Record<string, unknown>).items = [];
     expect(validate(spec, values)["/data/items"]).toBe("ต้องมีอย่างน้อย 1 แถว");
   });
+
+  it("a blank form (v1.14) requires nothing but still checks what was typed", () => {
+    expect(validate(spec, emptyValues(spec), true)).toEqual({});
+    const values = emptyValues(spec);
+    values.params.issueDate = "18/11/2026";
+    (values.data as Record<string, unknown>).items = [{ qty: "", unitPrice: "1,250", unit: "" }];
+    expect(validate(spec, values, true)).toEqual({
+      "/params/issueDate": "วันที่ต้องเป็นรูปแบบ ปปปป-ดด-วว",
+      "/data/items/0/unitPrice": "ใส่ตัวเลข เช่น 1250.50 (ไม่ใส่จุลภาค)",
+    });
+  });
 });
 
 describe("renderBody", () => {

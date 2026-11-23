@@ -267,10 +267,10 @@ export function fieldRows(spec: FormSpec): FieldRow[] {
 
 const isEmpty = (v: Value | undefined) => v === undefined || v === "" || (typeof v === "string" && !v.trim());
 
-function checkScalar(field: ScalarField, value: Value | undefined): string | null {
+function checkScalar(field: ScalarField, value: Value | undefined, blank = false): string | null {
   if (field.kind === "boolean") return null;
   const v = typeof value === "string" ? value.trim() : "";
-  if (!v) return field.required ? "กรุณากรอกช่องนี้" : null;
+  if (!v) return field.required && !blank ? "กรุณากรอกช่องนี้" : null;
   switch (field.kind) {
     case "date":
       return DATE.test(v) ? null : "วันที่ต้องเป็นรูปแบบ ปปปป-ดด-วว";
@@ -310,28 +310,28 @@ function checkScalar(field: ScalarField, value: Value | undefined): string | nul
   }
 }
 
-function check(field: Field, value: Value | undefined, pointer: string, errors: Errors): void {
+function check(field: Field, value: Value | undefined, pointer: string, errors: Errors, blank: boolean): void {
   if (field.kind === "object") {
     const obj = isObject(value) ? (value as Record<string, Value>) : {};
-    for (const f of field.fields) check(f, obj[f.key], `${pointer}/${f.key}`, errors);
+    for (const f of field.fields) check(f, obj[f.key], `${pointer}/${f.key}`, errors, blank);
     return;
   }
   if (field.kind === "array") {
     const rows = Array.isArray(value) ? value : [];
-    if (rows.length < field.minItems) errors[pointer] = `ต้องมีอย่างน้อย ${field.minItems} แถว`;
+    if (rows.length < field.minItems && !blank) errors[pointer] = `ต้องมีอย่างน้อย ${field.minItems} แถว`;
     else if (field.maxItems !== undefined && rows.length > field.maxItems) errors[pointer] = `มีได้ไม่เกิน ${field.maxItems} แถว`;
-    rows.forEach((row, i) => check(field.item, row, `${pointer}/${i}`, errors));
+    rows.forEach((row, i) => check(field.item, row, `${pointer}/${i}`, errors, blank));
     return;
   }
-  const message = checkScalar(field, value);
+  const message = checkScalar(field, value, blank);
   if (message) errors[pointer] = message;
 }
 
-/** Problems the form can find itself, by JSON pointer; the api checks the rest. */
-export function validate(spec: FormSpec, values: FormValues): Errors {
+/** Problems the form can find itself, by JSON pointer; the api checks the rest. blank (v1.14): nothing is required. */
+export function validate(spec: FormSpec, values: FormValues, blank = false): Errors {
   const errors: Errors = {};
-  for (const f of spec.params) check(f, values.params[f.key], `/params/${f.key}`, errors);
-  check(spec.data, values.data, "/data", errors);
+  for (const f of spec.params) check(f, values.params[f.key], `/params/${f.key}`, errors, blank);
+  check(spec.data, values.data, "/data", errors, blank);
   return errors;
 }
 

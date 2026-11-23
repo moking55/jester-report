@@ -2,10 +2,10 @@
 // The key always comes from JESTER_API_KEY: Studio never shows a real secret here.
 
 /** What another system would run in sh/bash. Status line and headers go to the terminal (-D -). No --fail-with-body: curl before 7.76 lacks it. */
-export function curlExample(body: string): string {
+export function curlExample(body: string, query = ""): string {
   const quoted = `'${body.replace(/'/g, `'\\''`)}'`; // safe inside single quotes in sh/bash
   return [
-    'curl -X POST "$JESTER_API/v1/render" \\',
+    `curl -X POST "$JESTER_API/v1/render${query}" \\`,
     '  -H "Authorization: Bearer $JESTER_API_KEY" \\',
     '  -H "Content-Type: application/json" \\',
     `  -d ${quoted} \\`,
@@ -16,11 +16,11 @@ export function curlExample(body: string): string {
 
 // The body stays the exact text (a JSON string literal is valid JS and Python), so long decimals keep every digit.
 
-export function fetchExample(body: string): string {
+export function fetchExample(body: string, query = ""): string {
   return [
     "// Node 18+ (ES module) or a browser behind your own server: never put the key in a web page",
     `const body = ${JSON.stringify(body)};`,
-    "const response = await fetch(`${process.env.JESTER_API}/v1/render`, {",
+    `const response = await fetch(\`\${process.env.JESTER_API}/v1/render${query}\`, {`,
     '  method: "POST",',
     "  headers: {",
     "    Authorization: `Bearer ${process.env.JESTER_API_KEY}`,",
@@ -35,14 +35,14 @@ export function fetchExample(body: string): string {
   ].join("\n");
 }
 
-export function pythonExample(body: string): string {
+export function pythonExample(body: string, query = ""): string {
   return [
     "# Python 3, standard library only",
     "import json, os, urllib.error, urllib.request",
     "",
     `body = ${JSON.stringify(body)}`,
     "request = urllib.request.Request(",
-    '    os.environ["JESTER_API"] + "/v1/render",',
+    `    os.environ["JESTER_API"] + "/v1/render${query}",`,
     '    data=body.encode("utf-8"),',
     "    headers={",
     '        "Authorization": "Bearer " + os.environ["JESTER_API_KEY"],',

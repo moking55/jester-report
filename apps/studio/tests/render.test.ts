@@ -25,6 +25,16 @@ describe("curl example", () => {
   });
 });
 
+describe("blank form examples (v1.14)", () => {
+  it("every language calls /v1/render?allowEmpty=true when asked", () => {
+    const body = '{"template":{"id":"q","version":"published"},"params":{},"data":{}}';
+    for (const example of [curlExample, fetchExample, pythonExample]) {
+      expect(example(body, "?allowEmpty=true")).toContain("/v1/render?allowEmpty=true");
+      expect(example(body)).not.toContain("allowEmpty");
+    }
+  });
+});
+
 describe("fetch and Python examples", () => {
   it("send the body text exactly, digits and all", () => {
     expect(literal(fetchExample(TRICKY))).toBe(TRICKY);

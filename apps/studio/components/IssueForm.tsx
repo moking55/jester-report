@@ -35,7 +35,7 @@ type Props = {
   templateId: string;
   source: IssueSource;
   onPdf: (pdf: IssuedPdf) => void;
-  onBody?: (body: string) => void; // the request the form would send now (the developer dialog's curl)
+  onBody?: (body: string, blank: boolean) => void; // the request the form would send now (the developer dialog's curl)
   preview?: boolean; // v1.6 builder preview: the form as it would look, nothing is sent
 };
 
@@ -86,13 +86,16 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
   const [general, setGeneral] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [kept, setKept] = useState(false); // v1.5: every issued PDF is stored
+  const [blank, setBlank] = useState(false); // v1.14: a blank form for handwriting (?allowEmpty=true)
+  const defaultName = `${templateId}-${blank ? "blank-" : ""}v${source.version}.pdf`;
 
   useEffect(() => {
     // the developer's curl leaves `tags` out unless they were changed: an integrator copying it should get the
     // template's tags at the time of each call, not today's tags for ever; gaps are filled so the copy runs (v1.12)
-    const example = exampleValues(spec, values, source.sampleJson);
-    onBody?.(renderBody(templateId, spec, example, filename, sameTags(tags, source.tags ?? []) ? undefined : tags));
-  }, [onBody, templateId, spec, values, filename, tags, source.tags, source.sampleJson]);
+    // — except for a blank form, whose point is the gaps (v1.14)
+    const example = blank ? values : exampleValues(spec, values, source.sampleJson);
+    onBody?.(renderBody(templateId, spec, example, filename, sameTags(tags, source.tags ?? []) ? undefined : tags), blank);
+  }, [onBody, templateId, spec, values, filename, tags, source.tags, source.sampleJson, blank]);
 
   const setParam = (key: string, v: Value) => setValues((s) => ({ ...s, params: { ...s.params, [key]: v } }));
   const setData = (path: (string | number)[], v: Value) => setValues((s) => ({ ...s, data: setAt(s.data, path, v) }));
@@ -108,7 +111,7 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
   }
 
   async function issue() {
-    const found = validate(spec, values);
+    const found = validate(spec, values, blank);
     setErrors(found);
     if (preview) return focusFirst(found); // the builder's preview checks, never sends
     setGeneral([]);
@@ -118,14 +121,14 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
     if (!issued.ok) return setGeneral([issued.error]);
     setBusy(true);
     try {
-      const response = await fetch(`/issue/${templateId}`, {
+      const response = await fetch(`/issue/${templateId}${blank ? "?allowEmpty=true" : ""}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: renderBody(templateId, spec, values, filename, issued.tags),
+        body: renderBody(templateId, spec, values, filename.trim() || (blank ? defaultName : ""), issued.tags),
       });
       if (response.ok) {
         const blob = await response.blob();
-        const fallback = filename.trim() || `${templateId}-v${source.version}.pdf`;
+        const fallback = filename.trim() || defaultName;
         onPdf({ url: URL.createObjectURL(blob), filename: filenameOf(response.headers.get("content-disposition"), fallback) });
         setKept(true);
         return;
@@ -334,6 +337,9 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
         >
           ล้างฟอร์ม
         </button>
+        <label className={styles.blank} title="ช่องที่ไม่กรอกและยอดที่คำนวณไม่ได้จะเว้นว่าง ตารางมีบรรทัดเปล่าตามที่ตั้งไว้">
+          <input type="checkbox" checked={blank} disabled={busy} onChange={(e) => setBlank(e.target.checked)} /> ฟอร์มเปล่า (สำหรับเขียนมือ)
+        </label>
         <button type="submit" className={styles.primary} disabled={busy}>
           {preview ? "ตรวจฟอร์ม" : busy ? "กำลังออก PDF…" : "ออก PDF"}
         </button>
@@ -366,7 +372,7 @@ export function IssueForm({ templateId, source, onPdf, onBody, preview = false }
         <input
           id="issue-filename"
           value={filename}
-          placeholder={`${templateId}-v${source.version}.pdf`}
+          placeholder={defaultName}
           onChange={(e) => setFilename(e.target.value)}
         />
       </div>

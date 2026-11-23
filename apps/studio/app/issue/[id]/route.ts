@@ -22,7 +22,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const t = template as { id?: unknown; version?: unknown } | undefined;
   if (t?.id !== id || t?.version !== "published") return problem(422, "INPUT_INVALID", "only the published version");
   try {
-    const pdf = await apiRaw("/v1/render", { method: "POST", json: body });
+    // v1.14: the form's "ฟอร์มเปล่า" box; anything but exactly true is a normal render
+    const blank = new URL(request.url).searchParams.get("allowEmpty") === "true";
+    const pdf = await apiRaw(`/v1/render${blank ? "?allowEmpty=true" : ""}`, { method: "POST", json: body });
     const headers = new Headers({ "Content-Type": "application/pdf", "Cache-Control": "no-store" });
     for (const name of ["Content-Disposition", "Jester-Run-Id", "Jester-Template-Version"]) {
       const value = pdf.headers.get(name);

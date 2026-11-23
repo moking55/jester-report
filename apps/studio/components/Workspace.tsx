@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useImmer } from "use-immer";
 
 import {
@@ -96,7 +96,11 @@ export function Workspace({
   const previewForm = useRef<HTMLFormElement>(null);
   const router = useRouter();
   const writing = useRef(false);
-  const [devBody, setDevBody] = useState(""); // the issue form's request, for the developer dialog
+  const [dev, setDev] = useState({ body: "", blank: false }); // the issue form's request, for the developer dialog
+  const onBody = useCallback(
+    (body: string, blank: boolean) => setDev((d) => (d.body === body && d.blank === blank ? d : { body, blank })),
+    [],
+  );
   const [showDev, setShowDev] = useState(false);
   const main = useRef<HTMLDivElement>(null);
   const [assetPreview, setAssetPreview] = useState<string | null>(null); // an image asset shown in the editor pane
@@ -395,7 +399,7 @@ export function Workspace({
   if (issue) {
     return (
       <div className={styles.workspace}>
-        {showDev && <DeveloperDialog body={devBody} source={issue} onClose={() => setShowDev(false)} />}
+        {showDev && <DeveloperDialog body={dev.body} blank={dev.blank} source={issue} onClose={() => setShowDev(false)} />}
         <div className={styles.toolbar}>
           <b>{name}</b>
           <code>{state.templateId}</code>
@@ -417,7 +421,7 @@ export function Workspace({
           style={{ "--preview-w": `${sizes.preview}px` } as CSSProperties}
         >
           <section className={styles.formPane} aria-label="ฟอร์ม">
-            <IssueForm templateId={state.templateId} source={issue} onPdf={setIssued} onBody={setDevBody} />
+            <IssueForm templateId={state.templateId} source={issue} onPdf={setIssued} onBody={onBody} />
           </section>
           <Resizer
             orientation="vertical"

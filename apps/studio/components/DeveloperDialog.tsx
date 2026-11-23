@@ -47,11 +47,11 @@ function problemExample(rows: FieldRow[]): string {
 }
 
 /** "สำหรับนักพัฒนา" in the issue mode: the request another system sends, ready to run, and what each field means. */
-export function DeveloperDialog({ body, source, onClose }: { body: string; source: IssueSource; onClose: () => void }) {
+export function DeveloperDialog({ body, blank = false, source, onClose }: { body: string; blank?: boolean; source: IssueSource; onClose: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [lang, setLang] = useState(0);
   const [copied, setCopied] = useState(false);
-  const code = LANGS[lang][1](body);
+  const code = LANGS[lang][1](body, blank ? "?allowEmpty=true" : ""); // v1.14: the form's blank box
   const rows = useMemo(() => fieldRows(formSpec(source.reportJson, source.schemaJson, source.formJson)), [source]);
 
   useEffect(() => {

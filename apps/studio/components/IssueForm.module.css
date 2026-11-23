@@ -25,6 +25,14 @@
   flex: 1;
 }
 
+.blank {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  color: var(--color-text);
+}
+
 .form button {
   border: 1px solid var(--line-button);
   border-radius: var(--radius);
