@@ -425,6 +425,17 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 
 ---
 
+# v1.14.1: นำเข้าทับรายงานที่ archive
+
+สถานะ: **ผู้ใช้ขอ 23 พ.ย. 2026** (แก้ข้อบกพร่อง: นำเข้า zip ไปที่ id ที่ archive อยู่ได้แค่ error)
+
+- `import_zip(..., *, unarchive=False)`: รายงานที่ archive ยัง `ARCHIVED` เหมือนเดิมเมื่อไม่ตั้ง `unarchive` (ผู้เรียกต้องถามผู้ใช้ก่อน)
+- `unarchive=True` + รายงานที่ archive + revision ถูก: ทับ draft และล้าง `archived_at`/`archived_by` ใน transaction เดียวกัน; version ที่ publish แล้วและ alias ไม่เปลี่ยน
+- ไม่ส่ง revision → `CONFLICT`, revision ผิด → `REVISION_CONFLICT` และ**ไม่เลิก archive** (transaction ย้อนกลับ); id ใหม่หรือรายงานที่ไม่ได้ archive: `unarchive` ไม่มีผล
+- ทดสอบ: store (ไม่ตั้ง flag, ตั้ง flag, revision ผิด, ไม่ได้ archive/ id ใหม่) และหลังเลิก archive เขียนได้อีก
+
+---
+
 # v1.15: นำเข้าแบบฟอร์ม Word (.docx)
 
 สถานะ: **รออนุมัติ** · ที่มา: [CAPABILITY_MAP.md](CAPABILITY_MAP.md) หัวข้อ v1.15 (ผู้ใช้ตัดสิน 23 พ.ย. 2026: สร้างรายงานใหม่จาก .docx ไม่ใช้ AI; เอกสารต้นทางเป็นแบบฟอร์มที่มีตารางตีเส้น)

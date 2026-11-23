@@ -1241,6 +1241,17 @@ rowspan · เลือกหลายเซลล์พร้อมกัน (�
 
 ไม่มี (ปิดใน interview 23 พ.ย. 2026: ดูก่อน publish ได้, starter ที่มีตารางได้ 10 บรรทัด, ตารางใหม่ใน Designer ได้ 10)
 
+# v1.14.1: นำเข้าทับรายงานที่ archive
+
+สถานะ: **ผู้ใช้ขอ 23 พ.ย. 2026** · api: หัวข้อ v1.14.1 ใน [SPEC-public-api.md](SPEC-public-api.md)
+
+- ถ้า id ปลายทางเป็นรายงานที่ archive อยู่ dialog "นำเข้า" ไม่ขึ้น error ตรง ๆ แต่ถามก่อน: "รายงาน id X ถูก archive อยู่ จะทับ draft ของรายงานที่ archive ด้วยไฟล์นี้และเอากลับออกจาก archive หรือนำเข้าเป็น id ใหม่?"
+  - **ทับและเลิก archive:** ส่ง `overwrite=1` + `unarchive=1` → `/import` อ่าน revision ปัจจุบันแล้วส่ง `unarchive=true` ให้ api; สำเร็จแล้วเปิดรายงานที่ใช้งานได้ (ไม่ archive)
+  - **ใช้ id ใหม่:** กลับไปแก้ id โดยยังไม่ส่งอะไร
+- route `/import`: `unarchive=1` ต้องมาพร้อม `overwrite=1` ไม่งั้น `422`; ไม่ยืนยัน = ไม่ส่ง `unarchive`
+- รายงานที่มีอยู่แต่ไม่ archive ยังได้คำถามเดิม ("ทับ draft ของรายงานเดิม")
+- Test: vitest (route, dialog ทั้งสามทาง) + E2E ขั้นที่ 4b ใน `lifecycle.spec.ts`
+
 # v1.15: นำเข้าแบบฟอร์ม Word (.docx)
 
 สถานะ: **รออนุมัติ** · api: หัวข้อ v1.15 ใน [SPEC-public-api.md](SPEC-public-api.md) · การแปลง: [SPEC-template-store.md](SPEC-template-store.md)

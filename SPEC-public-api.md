@@ -355,6 +355,16 @@ async def render(request: Request, caller: RenderCaller) -> Response:
 
 ---
 
+# v1.14.1: นำเข้าทับรายงานที่ archive
+
+สถานะ: **ผู้ใช้ขอ 23 พ.ย. 2026** · store: หัวข้อ v1.14.1 ใน [SPEC-template-store.md](SPEC-template-store.md)
+
+- `POST /v1/templates/import` (multipart) รับ field ใหม่ `unarchive` (`"true"` | `"false"`, ค่าเริ่มต้น `"false"`; ค่าอื่น → `422`)
+- รายงานที่ archive: ไม่ตั้ง → `409 TEMPLATE_ARCHIVED` เหมือนเดิม; `"true"` + `If-Match` ถูก → `200` ทับ draft และ `template.archivedAt` เป็น `null`
+- Test: ครบสามทาง (ไม่ตั้ง, ค่าผิด, ตั้ง) ผ่าน HTTP; `test_contract` ผ่าน
+
+---
+
 # v1.15: นำเข้าแบบฟอร์ม Word (.docx)
 
 สถานะ: **รออนุมัติ** · การแปลง: หัวข้อ v1.15 ใน [SPEC-template-store.md](SPEC-template-store.md)
