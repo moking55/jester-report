@@ -49,7 +49,7 @@ def _job(
     data: Any,
     meta: Mapping[str, Any],
 ) -> WorkerResult:
-    prepared = prepare(definition, params, data, meta)
+    prepared = prepare(definition, params, data, meta, blank=bool(meta.get("blank")))
     if prepared.prepared is None:
         return WorkerResult(None, prepared.problems)
     bound = bind(definition, files, assets, prepared.prepared)
@@ -59,7 +59,7 @@ def _job(
 def _prepare_job(
     definition: ReportDefinition, params: Mapping[str, Any], data: Any, meta: Mapping[str, Any]
 ) -> PrepareOnly:
-    prepared = prepare(definition, params, data, meta)
+    prepared = prepare(definition, params, data, meta, blank=bool(meta.get("blank")))
     view = prepared.prepared.view_model() if prepared.prepared is not None else None
     return PrepareOnly(view, prepared.problems)
 

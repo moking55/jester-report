@@ -55,11 +55,19 @@ paths:
         `"published"` means the version the published alias points to at request time;
         the resolved number is returned in `Jester-Template-Version`. There is no fallback
         to drafts. Data comes only from the caller.
+
+        `?allowEmpty=true` (v1.14) renders a blank form for handwriting: required parameters and
+        the schema's `required`/`minItems` are not enforced, a total that cannot be computed from
+        what was sent (including a sum of no rows) prints blank instead of `0.00`, and
+        `meta.blank` is `true` in the template. Values that are sent are still checked. The render
+        is recorded and its document kept like any other; e.g. body
+        `{"template": {"id": "quotation", "version": "published"}, "params": {}, "data": {}}`.
       security:
         - ApiKeyAuth: []
         - SessionAuth: []
       parameters:
         - $ref: '#/components/parameters/RequestId'
+        - $ref: '#/components/parameters/AllowEmpty'
       requestBody:
         required: true
         content:
@@ -1322,6 +1330,9 @@ paths:
       description: |
         Uses the same engine, options and fonts as a real render, plus a DRAFT watermark.
         Without `data`, uses `sampleFile` from the draft (default `sample.json`).
+        `?allowEmpty=true` previews the blank form (send `"data": {}`), as in /v1/render.
+      parameters:
+        - $ref: '#/components/parameters/AllowEmpty'
       requestBody:
         required: false
         content:
@@ -1366,6 +1377,9 @@ paths:
         Runs data-prep on the draft in the same worker as a render. Without `data`, uses `sampleFile`
         from the draft (default `sample.json`). Decimal numbers come back as decimal strings so nothing
         is rounded on the way (`"3210.00"`). Nothing is recorded in the run history.
+        `?allowEmpty=true` prepares the blank form, as in /v1/render (totals that cannot be computed are null).
+      parameters:
+        - $ref: '#/components/parameters/AllowEmpty'
       requestBody:
         required: false
         content:
@@ -2352,6 +2366,15 @@ components:
       required: true
       description: Draft revision the change is based on, e.g. `"12"`
       schema: { type: string }
+    AllowEmpty:
+      name: allowEmpty
+      in: query
+      required: false
+      description: |
+        `true` = a blank form for handwriting (v1.14): fields left out stay empty, totals that cannot
+        be computed are blank, `meta.blank` is `true`. Only `true` or `false`.
+      schema: { type: string, enum: ['true', 'false'], default: 'false' }
+      example: 'true'
     RequestId:
       name: X-Request-Id
       in: header

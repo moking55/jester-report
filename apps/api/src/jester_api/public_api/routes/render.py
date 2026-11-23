@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from pydantic import Field, ValidationError
 
@@ -18,6 +18,10 @@ from ..state import services
 
 router = APIRouter()
 FILENAME = r'^[^\\/"\x00-\x1f\x7f]{1,200}$'  # public-api.yaml RenderRequest.filename
+
+
+# v1.14 blank form: "true" or "false" only (FastAPI's bool would also take yes/1/on)
+AllowEmpty = Annotated[Literal["true", "false"], Query()]
 
 
 class TemplateRef(views.Body):
@@ -73,7 +77,7 @@ def pdf_response(outcome: Any) -> Response:
 
 
 @router.post("/v1/render")
-async def render(request: Request, caller: RenderCaller) -> Response:
+async def render(request: Request, caller: RenderCaller, allowEmpty: AllowEmpty = "false") -> Response:  # noqa: N803
     quota = await services(request).auth.consume_render_quota(caller)  # before the body is even read
     if not quota.allowed:
         refused = problem_response(
@@ -91,23 +95,34 @@ async def render(request: Request, caller: RenderCaller) -> Response:
         (request.headers.get("X-Request-Id") or "")[:128] or None,
         body.filename,
         body.tags,
+        blank=allowEmpty == "true",
     )
     return pdf_response(outcome)
 
 
 @router.post("/v1/templates/{templateId}/draft/prepared")
-async def prepared(request: Request, caller: SessionCaller, templateId: str) -> dict:  # noqa: N803
+async def prepared(
+    request: Request,
+    caller: SessionCaller,
+    templateId: str,  # noqa: N803
+    allowEmpty: AllowEmpty = "false",  # noqa: N803
+) -> dict:
     body: PreviewBody = parse(PreviewBody, await decimal_json(request))
     view, warnings = await services(request).render.prepared(
-        templateId, body.params, body.data, body.sampleFile
+        templateId, body.params, body.data, body.sampleFile, blank=allowEmpty == "true"
     )
     return {**view, "problems": views.problems(warnings)}
 
 
 @router.post("/v1/templates/{templateId}/draft/preview")
-async def preview(request: Request, caller: SessionCaller, templateId: str) -> Response:  # noqa: N803
+async def preview(
+    request: Request,
+    caller: SessionCaller,
+    templateId: str,  # noqa: N803
+    allowEmpty: AllowEmpty = "false",  # noqa: N803
+) -> Response:
     body: PreviewBody = parse(PreviewBody, await decimal_json(request))
     outcome = await services(request).render.preview(
-        templateId, body.params, body.data, body.sampleFile, caller
+        templateId, body.params, body.data, body.sampleFile, caller, blank=allowEmpty == "true"
     )
     return pdf_response(outcome)

@@ -19,6 +19,13 @@ export interface paths {
          *     `"published"` means the version the published alias points to at request time;
          *     the resolved number is returned in `Jester-Template-Version`. There is no fallback
          *     to drafts. Data comes only from the caller.
+         *
+         *     `?allowEmpty=true` (v1.14) renders a blank form for handwriting: required parameters and
+         *     the schema's `required`/`minItems` are not enforced, a total that cannot be computed from
+         *     what was sent (including a sum of no rows) prints blank instead of `0.00`, and
+         *     `meta.blank` is `true` in the template. Values that are sent are still checked. The render
+         *     is recorded and its document kept like any other; e.g. body
+         *     `{"template": {"id": "quotation", "version": "published"}, "params": {}, "data": {}}`.
          */
         post: operations["render"];
         delete?: never;
@@ -559,6 +566,7 @@ export interface paths {
          * Render the draft through the same pipeline as /v1/render
          * @description Uses the same engine, options and fonts as a real render, plus a DRAFT watermark.
          *     Without `data`, uses `sampleFile` from the draft (default `sample.json`).
+         *     `?allowEmpty=true` previews the blank form (send `"data": {}`), as in /v1/render.
          */
         post: operations["previewDraft"];
         delete?: never;
@@ -583,6 +591,7 @@ export interface paths {
          * @description Runs data-prep on the draft in the same worker as a render. Without `data`, uses `sampleFile`
          *     from the draft (default `sample.json`). Decimal numbers come back as decimal strings so nothing
          *     is rounded on the way (`"3210.00"`). Nothing is recorded in the run history.
+         *     `?allowEmpty=true` prepares the blank form, as in /v1/render (totals that cannot be computed are null).
          */
         post: operations["prepareDraft"];
         delete?: never;
@@ -1597,6 +1606,12 @@ export interface components {
         TagFilter: string[];
         /** @description Draft revision the change is based on, e.g. `"12"` */
         IfMatchRevision: string;
+        /**
+         * @description `true` = a blank form for handwriting (v1.14): fields left out stay empty, totals that cannot
+         *     be computed are blank, `meta.blank` is `true`. Only `true` or `false`.
+         * @example true
+         */
+        AllowEmpty: "true" | "false";
         /** @description Optional caller correlation id; echoed in logs and the run record */
         RequestId: string;
     };
@@ -1611,7 +1626,14 @@ export type $defs = Record<string, never>;
 export interface operations {
     render: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description `true` = a blank form for handwriting (v1.14): fields left out stay empty, totals that cannot
+                 *     be computed are blank, `meta.blank` is `true`. Only `true` or `false`.
+                 * @example true
+                 */
+                allowEmpty?: components["parameters"]["AllowEmpty"];
+            };
             header?: {
                 /** @description Optional caller correlation id; echoed in logs and the run record */
                 "X-Request-Id"?: components["parameters"]["RequestId"];
@@ -3282,7 +3304,14 @@ export interface operations {
     };
     previewDraft: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description `true` = a blank form for handwriting (v1.14): fields left out stay empty, totals that cannot
+                 *     be computed are blank, `meta.blank` is `true`. Only `true` or `false`.
+                 * @example true
+                 */
+                allowEmpty?: components["parameters"]["AllowEmpty"];
+            };
             header?: never;
             path: {
                 templateId: components["parameters"]["TemplateId"];
@@ -3332,7 +3361,14 @@ export interface operations {
     };
     prepareDraft: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description `true` = a blank form for handwriting (v1.14): fields left out stay empty, totals that cannot
+                 *     be computed are blank, `meta.blank` is `true`. Only `true` or `false`.
+                 * @example true
+                 */
+                allowEmpty?: components["parameters"]["AllowEmpty"];
+            };
             header?: never;
             path: {
                 templateId: components["parameters"]["TemplateId"];

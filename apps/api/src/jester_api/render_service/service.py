@@ -306,6 +306,8 @@ class RenderService:
         request_id: str | None = None,
         filename: str | None = None,
         tags: Sequence[str] | None = None,
+        *,
+        blank: bool = False,
     ) -> RenderOutcome:
         checked = _checked_tags(tags)  # before anything else: a bad tag costs no run row and no file
         if caller.templates is not None and template_id not in caller.templates:
@@ -336,6 +338,7 @@ class RenderService:
             filename,
             watermark=False,
             tags=checked,
+            blank=blank,
         )
 
     async def _run(
@@ -351,6 +354,7 @@ class RenderService:
         *,
         watermark: bool,
         tags: list[str] | None = None,
+        blank: bool = False,
     ) -> RenderOutcome:
         started = time.monotonic()
         stored: StoredDefinition | None = None
@@ -363,6 +367,7 @@ class RenderService:
                     "templateId": template_id,
                     "version": stored.version,
                     "renderedAt": self._now().isoformat(),
+                    "blank": blank,  # the worker reads it for prepare(blank=...)
                 }
                 bound, warnings = await self._bound(stored, params, data, meta)
                 index_html = _with_watermark(bound.index_html) if watermark else bound.index_html
@@ -450,13 +455,24 @@ class RenderService:
         data: Any | None,
         sample_file: str | None,
         caller: Principal,
+        *,
+        blank: bool = False,
     ) -> RenderOutcome:
         """The draft through the same pipeline as render, with a DRAFT watermark; no data = a sample file."""
         if data is None:
             stored = await self._resolve(template_id, "draft")
             data = _load_sample(stored.files, sample_file or "sample.json")
         return await self._run(
-            "preview", template_id, "draft", dict(params or {}), data, caller, None, None, watermark=True
+            "preview",
+            template_id,
+            "draft",
+            dict(params or {}),
+            data,
+            caller,
+            None,
+            None,
+            watermark=True,
+            blank=blank,
         )
 
     async def prepared(
@@ -465,6 +481,8 @@ class RenderService:
         params: Mapping[str, Any] | None,
         data: Any | None,
         sample_file: str | None,
+        *,
+        blank: bool = False,
     ) -> tuple[dict[str, Any], list[Problem]]:
         """The draft's view model for Studio (data-prep only); errors match preview, no run is recorded."""
         async with self._slot():
@@ -474,7 +492,12 @@ class RenderService:
             definition, problems = await self._definition(stored)
             if definition is None:
                 raise RenderError("DRAFT_INVALID", 422, "the draft does not validate", problems=problems)
-            meta = {"templateId": template_id, "version": None, "renderedAt": self._now().isoformat()}
+            meta = {
+                "templateId": template_id,
+                "version": None,
+                "renderedAt": self._now().isoformat(),
+                "blank": blank,
+            }
             try:
                 result = await prepare_in_worker(
                     definition, dict(params or {}), data, meta, timeout_s=self._settings.bind_timeout_s
