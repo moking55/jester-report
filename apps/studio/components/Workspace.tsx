@@ -646,6 +646,9 @@ export function Workspace({
                 });
               }}
             />
+            <label className={styles.blankPreview}>
+              <input type="checkbox" name="blank" value="1" /> ดูแบบฟอร์มเปล่า
+            </label>
           </form>
           {!previewed && !showBuilder && (
             <div className={styles.previewEmpty}>

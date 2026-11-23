@@ -10,10 +10,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   if (!sameOrigin(request)) return page(403, "คำขอนี้ไม่ได้มาจาก Studio");
   if (!isTemplateId(id)) return page(404, "ไม่พบรายงานนี้");
-  const parsed = parseParams(String((await request.formData()).get("params") ?? ""));
+  const form = await request.formData();
+  const parsed = parseParams(String(form.get("params") ?? ""));
   if ("error" in parsed) return page(400, parsed.error);
+  // v1.14 "ดูแบบฟอร์มเปล่า": the blank form with nothing filled in, instead of sample.json
+  const blank = form.get("blank") === "1";
   try {
-    const pdf = await apiRaw(`/v1/templates/${id}/draft/preview`, { method: "POST", body: { params: parsed.params } });
+    const pdf = await apiRaw(`/v1/templates/${id}/draft/preview${blank ? "?allowEmpty=true" : ""}`, {
+      method: "POST",
+      body: blank ? { params: parsed.params, data: {} } : { params: parsed.params },
+    });
     return new Response(pdf.body, {
       headers: { "Content-Type": "application/pdf", "Content-Disposition": "inline", "Cache-Control": "no-store" },
     });

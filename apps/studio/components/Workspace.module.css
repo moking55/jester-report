@@ -253,6 +253,17 @@
   font-size: 0.9em;
 }
 
+.params .blankPreview {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.params .blankPreview input {
+  flex: none;
+}
+
 .params input {
   flex: 1;
   min-width: 0;
