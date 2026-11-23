@@ -486,7 +486,7 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 ## Testing Strategy v1.15
 
 - fixture .docx เล็ก ๆ สร้างใน test ด้วย `zipfile` + XML ที่เขียนเอง (ไม่ต้องมี Word): หนึ่ง test ต่อหนึ่งกฎในตารางการแปลง
-- แบบฟอร์มสมจริง 1 ไฟล์ (จากผู้ใช้ถ้าได้ ดู Open Questions ข้อ 2 ไม่งั้นทำใน LibreOffice; ไม่มีข้อมูลจริง) ใน `tests/fixtures`: นำเข้า, `bind` ไม่มี error, และ vitest ฝั่ง Studio อ่าน `template.html` ที่ได้ด้วย `readBlocks` แล้วไม่มี Custom Code ยกเว้นตาราง rowspan
+- แบบฟอร์มสมจริง 1 ไฟล์ (ผู้ใช้ไม่มีไฟล์จริง: สร้างด้วยสคริปต์ใน `tests/` จาก OOXML ที่เขียนเองแบบเดียวกับที่ Word บันทึก — โลโก้, หัวข้อ, ข้อความจุดไข่ปลา, ตารางตีเส้นมีช่องรวมทั้งแนวนอนและแนวตั้ง, สีพื้นแถวหัว, header/footer มีเลขหน้า; ไม่มีข้อมูลจริง): นำเข้า, `bind` ไม่มี error, และ vitest ฝั่ง Studio อ่าน `template.html` ที่ได้ด้วย `readBlocks` แล้วไม่มี Custom Code ยกเว้นตาราง rowspan
 - ความปลอดภัย: zip bomb, DOCTYPE/entity, external relationship, `{{ }}` ในข้อความ Word, ไฟล์ที่ไม่ใช่ docx, docx เข้ารหัส
 - test live กับ Gotenberg: PDF ของแบบฟอร์มสมจริงได้ 1 หน้าและข้อความครบ
 
@@ -499,4 +499,4 @@ apps/api/tests/template_store/test_bundle.py, test_store_lifecycle.py — ให
 ## Open Questions v1.15
 
 1. ~~ขนาดตัวอักษร~~ ปิดแล้ว (24 พ.ย. 2026): ไม่ตาม Word ใช้ขนาดของ `report.css` แล้วปรับใน Designer
-2. **แบบฟอร์มจริงสำหรับทดสอบ:** มีไฟล์ Word แบบฟอร์มจริงของหน่วยงาน 1–3 ไฟล์ (ลบข้อมูลส่วนบุคคลแล้ว) ให้ใช้วัดผลไหม? ถ้าไม่มี จะทำตัวอย่างเองใน LibreOffice ซึ่งอาจไม่ครอบคลุมสิ่งที่ Word ของหน่วยงานใช้จริง
+2. ~~แบบฟอร์มจริงสำหรับทดสอบ~~ ปิดแล้ว (24 พ.ย. 2026): ไม่มีไฟล์จริง ทำตัวอย่างเอง (ความเสี่ยง: อาจไม่ครอบคลุมสิ่งที่ Word ของหน่วยงานใช้จริง ลองกับไฟล์จริงหลังปล่อยแล้วเก็บเป็น fixture เพิ่ม)
