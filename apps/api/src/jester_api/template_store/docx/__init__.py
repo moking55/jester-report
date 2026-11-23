@@ -45,7 +45,7 @@ def _running(
         return None
     left, right = side_mm
     style = (
-        f'<style>body {{ font-family: "{ENGINE_FONT}"; font-size: 12px; padding: 0 {right}mm 0 {left}mm; '
+        f'<style>body {{ font-family: "{ENGINE_FONT}"; font-size: 12px; padding: 0 {right:g}mm 0 {left:g}mm; '
         "box-sizing: border-box; width: 100%; }</style>"
     )
     return style + "\n" + "\n".join(content) + "\n"
