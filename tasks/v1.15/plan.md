@@ -1,6 +1,6 @@
 # แผน v1.15: นำเข้าแบบฟอร์ม Word (.docx)
 
-สถานะ: **รออนุมัติ** · task list: [todo.md](todo.md)
+สถานะ: **อนุมัติ 24 พ.ย. 2026 (ผู้ใช้สั่งทำทุก phase)** · task list: [todo.md](todo.md)
 ที่มา: หัวข้อ v1.15 ของ [SPEC-template-store.md](../../SPEC-template-store.md), [SPEC-public-api.md](../../SPEC-public-api.md), [SPEC-studio.md](../../SPEC-studio.md), [CAPABILITY_MAP.md](../../CAPABILITY_MAP.md) (อนุมัติ 24 พ.ย. 2026) · ฐาน: `v1.14.1`
 
 ## Overview
