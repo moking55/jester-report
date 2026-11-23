@@ -314,8 +314,11 @@ apps/api/tests/data_prep/test_codes.py — ใหม่
    - ยอดที่พึ่งยอดที่เป็น `None` ก็เป็น `None` ต่อกันไป
    - error อื่น (หารศูนย์จากค่าที่กรอกจริง, ไม่ใช่ตัวเลข) ยังเป็น error
 4. **`fmt`:** `money`/`number`/`thai_date`/`baht_text` คืน `""` เมื่อได้ `None` อยู่แล้ว; เพิ่ม `qr`/`barcode`/`promptpay` คืนค่าว่าง (`Markup("")` / `""`) เมื่อค่าที่เข้ารหัสเป็น `None` หรือ `""` **เฉพาะในโหมดนี้** (โหมดปกติยัง error เหมือนเดิม)
-5. **`meta.blank`:** `True` ในโหมดนี้, `False` ในโหมดปกติ — template ใช้ตัดสินใจเองได้ (เช่น เติมบรรทัดเปล่า ซ่อนแถว "ไม่มีรายการ")
-6. ข้อมูลที่ขาดเติมด้วย `fill_missing` แบบเดิม (object โครงว่าง, `[]`, `None`) ซึ่ง binder พิมพ์เป็นช่องว่างอยู่แล้ว
+5. **`meta.blank`:** `prepare` ตั้งเองทุกครั้งทับค่าใน `meta` ที่ผู้เรียกส่งมา: `True` ในโหมดนี้, `False` ในโหมดปกติ — จึงมีเสมอในทุกทาง
+   (render, draft preview, MCP, `jester_pack.py`, fixture ของ test) และ template ที่อ่าน `meta.blank` ไม่ล้มด้วย `StrictUndefined`;
+   template ใช้ตัดสินใจเองได้ (เช่น เติมบรรทัดเปล่า ซ่อนแถว "ไม่มีรายการ")
+6. **sort / groupBy:** แถวที่ค่าใน key ของ sort หรือ groupBy ขาด ไม่เป็น `VALUE_MISSING` — เรียงไว้ท้าย (ลำดับเดิมระหว่างกัน) และอยู่ในกลุ่มที่ key เป็น `None`
+7. ข้อมูลที่ขาดเติมด้วย `fill_missing` แบบเดิม (object โครงว่าง, `[]`, `None`) ซึ่ง binder พิมพ์เป็นช่องว่างอยู่แล้ว
 
 ## Testing Strategy v1.14
 
@@ -324,6 +327,8 @@ apps/api/tests/data_prep/test_codes.py — ใหม่
   - กรอกบางช่อง (เช่น ชื่อแผนก + รายการ 1 แถวที่มีราคาแต่ไม่มีจำนวน) → ช่องที่กรอกอยู่ครบ; computed ของแถวนั้นและยอดที่พึ่งมันเป็น `None`
   - ค่าผิดชนิด (`"abc"` ในช่อง decimal) → ยัง error
   - หารศูนย์จากค่าที่กรอก → ยัง error
+  - `sales-grouped` ที่แถวหนึ่งไม่มี key ของ sort/group → ไม่มี error, แถวนั้นอยู่ท้าย
+  - `meta` ที่ผู้เรียกส่งมาไม่มี `blank` → `meta.blank` ยังมี (`False`)
 - `fmt.qr(None)` / `fmt.promptpay(None)` / `fmt.barcode("")` ในโหมดเปล่า → ว่าง; โหมดปกติ → error เหมือนเดิม
 - ผ่าน binder จริง: starter ทั้ง 5 ตัว bind ด้วย `data={}` ในโหมดเปล่าแล้วไม่มี error และ HTML ไม่มี `None` หรือ `0.00`
 - coverage ของ `data_prep` ≥ 90% (เท่าเดิม)
