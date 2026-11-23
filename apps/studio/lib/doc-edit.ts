@@ -273,7 +273,7 @@ export function addColumn(src: string, block: Block, after: number, head: string
   };
   if (d.head) put(d.head, `<th>${head}</th>`);
   put(d.cells, `<td>${cell}</td>`);
-  for (const row of [...(d.emptyRow ? [d.emptyRow] : []), ...d.footer]) {
+  for (const row of [...(d.emptyRow ? [d.emptyRow] : []), ...(d.blankRows ? [d.blankRows.cells] : []), ...d.footer]) {
     const s = spanning(src, row, Math.max(0, after));
     if (s && s.span > 1) patches.push(setColspan(src, s.cell, s.span + 1));
     else put(row, "<td></td>");
@@ -291,7 +291,7 @@ export function removeColumn(src: string, block: Block, col: number): Result<Edi
   const drop = (cells: { range: Range }[], i: number) => patches.push({ ...cells[i].range, text: "" });
   if (d.head) drop(d.head, col);
   drop(d.cells, col);
-  for (const row of [...(d.emptyRow ? [d.emptyRow] : []), ...d.footer]) {
+  for (const row of [...(d.emptyRow ? [d.emptyRow] : []), ...(d.blankRows ? [d.blankRows.cells] : []), ...d.footer]) {
     const s = spanning(src, row, col);
     if (!s) continue;
     if (s.span > 1) patches.push(setColspan(src, s.cell, s.span - 1));
@@ -606,6 +606,45 @@ export function addDetailRow(src: string, block: Block): Result<Edited> {
   const text = `
 ${indent}<tr data-jd="detail"><td colspan="${colspan}"></td></tr>`;
   return tableEdit(src, block, [{ start: d.row.end, end: d.row.end, text }]);
+}
+
+/** v1.14: how many empty rows a blank form prints after the list's rows (0 = none: the table is as it was). */
+export function setBlankRows(src: string, block: Block, count: number): Result<Edited> {
+  if (block.detail.kind !== "table") return fail("ไม่ใช่ตารางรายการ");
+  if (!Number.isInteger(count) || count < 0 || count > 100) return fail("จำนวนบรรทัดเปล่าต้องเป็น 0–100");
+  const d = block.detail;
+  const patches: Patch[] = [];
+  if (count === 0) {
+    if (!d.blankRows) return ok({ src, at: { start: block.start, end: block.end } });
+    patches.push({ ...removal(src, d.blankRows.range), text: "" });
+    if (d.emptyGuard) patches.push({ ...d.emptyGuard.range, text: src.slice(d.emptyGuard.row.start, d.emptyGuard.row.end) });
+  } else if (d.blankRows) {
+    patches.push({ ...d.blankRows.countAt, text: String(count) });
+  } else {
+    const indent = indentAt(src, d.loopRange.start);
+    // one empty cell per loop cell, keeping its attributes so borders and widths match
+    const cells = d.cells.map((c) => `${src.slice(c.range.start, c.inner.start)}&nbsp;</td>`).join("");
+    const text = `
+${indent}{% if meta.blank %}{% for _ in range(${count} - ${d.loop.iterable}|length) %}
+${indent}<tr data-jd="blank">${cells}</tr>
+${indent}{% endfor %}{% endif %}`;
+    patches.push({ start: d.loopRange.end, end: d.loopRange.end, text });
+    if (d.emptyRow && !d.emptyGuard) {
+      // the "no items" row would sit above the empty rows of a blank form: only a normal form shows it
+      const row = { start: d.emptyRow[0].range.start, end: d.emptyRow[d.emptyRow.length - 1].range.end };
+      const tr = trAround(src, row);
+      if (tr) patches.push({ start: tr.start, end: tr.end, text: `{% if not meta.blank %}${src.slice(tr.start, tr.end)}{% endif %}` });
+    }
+  }
+  const out = applyPatches(src, patches);
+  return ok({ src: out, at: { start: block.start, end: block.end + out.length - src.length } });
+}
+
+/** The <tr>…</tr> around a run of cells (the else row of a list table). */
+function trAround(src: string, cells: Range): Range | null {
+  const start = src.lastIndexOf("<tr", cells.start);
+  const close = src.indexOf("</tr>", cells.end);
+  return start < 0 || close < 0 ? null : { start, end: close + "</tr>".length };
 }
 
 /** The detail row goes, with everything in it. */

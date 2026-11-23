@@ -47,6 +47,8 @@ export type Block = Range & {
 };
 
 export type Cell = { range: Range; inner: Range }; // a <th>/<td>: the whole cell and its content
+/** v1.14: `count` empty rows a blank form prints after a list table's rows; `countAt` is N in range(N - …). */
+export type BlankRows = { count: number; range: Range; countAt: Range; cells: Cell[] };
 export type GridCell = Cell & { node: ElementNode; span?: number }; // span: colspan of a fixed table's cell (v1.10)
 export type Detail =
   | { kind: "text"; tag: string; inner: Range }
@@ -63,6 +65,9 @@ export type Detail =
       footer: Cell[][];
       row: Range; // the row of cells in the loop
       detailRow: { range: Range; cell: ElementNode } | null; // v1.8: a second row under every row, holding blocks
+      loopRange: Range; // the whole {% for %}…{% endfor %}
+      emptyGuard: { range: Range; row: Range } | null; // v1.14: {% if not meta.blank %}<else row>{% endif %}
+      blankRows: BlankRows | null; // v1.14: rows printed only on a blank form
     }
   | { kind: "summary"; rows: { label: Cell; value: Cell }[] }
   | { kind: "grid"; rows: { range: Range; cells: GridCell[] }[]; head: boolean; cols: number } // head: the first row is <th>; cols: columns, counting spans
@@ -75,6 +80,8 @@ export type Detail =
 const INLINE = new Set(["b", "strong", "i", "em", "u", "small", "span", "br", "sub", "sup"]);
 const TEXT_TAGS = new Set(["p", "h1", "h2", "h3", "h4", "div"]);
 const LOOP = /^for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_][\w.]*)$/;
+// v1.14 blank form rows after the loop: {% if meta.blank %}{% for _ in range(N - <list>|length) %}<tr data-jd="blank">…{% endfor %}{% endif %}
+const BLANK_LOOP = /^for\s+_\s+in\s+range\((\d{1,3})\s*-\s*([A-Za-z_][\w.]*)\s*\|\s*length\)$/;
 
 const isGap = (src: string, n: Node) => n.kind === "text" && src.slice(n.start, n.end).trim() === "";
 const jd = (el: ElementNode) => attr(el, "data-jd");
@@ -167,12 +174,20 @@ function tableDetail(src: string, el: ElementNode): Detail | null {
   const cells = rowOf(detailRow ? body0.slice(0, 1) : loop.branches[0].children);
   if (!cells || (head && head.length !== cells.length)) return null;
   let emptyRow: Cell[] | null = null;
+  let emptyGuard: { range: Range; row: Range } | null = null;
   if (loop.branches.length === 2) {
-    emptyRow = rowOf(loop.branches[1].children);
+    const guard = solid(src, loop.branches[1].children);
+    const g = guard.length === 1 ? guard[0] : null;
+    if (g?.kind === "block" && g.keyword === "if" && !g.broken && g.branches.length === 1 && g.branches[0].tag.inner.trim() === "if not meta.blank") {
+      const rows = solid(src, g.branches[0].children);
+      emptyRow = rows.length === 1 ? cellsOf(src, rows[0], "td") : null;
+      if (emptyRow) emptyGuard = { range: { start: g.start, end: g.end }, row: { start: rows[0].start, end: rows[0].end } };
+    } else emptyRow = rowOf(loop.branches[1].children);
     if (!emptyRow) return null;
   }
+  const blankRows = blankRowsOf(src, parts[1], m[2]);
   const footer: Cell[][] = [];
-  for (const tr of parts.slice(1)) {
+  for (const tr of parts.slice(blankRows ? 2 : 1)) {
     const row = cellsOf(src, tr, "td");
     if (!row) return null;
     footer.push(row);
@@ -186,7 +201,29 @@ function tableDetail(src: string, el: ElementNode): Detail | null {
     footer,
     row: { start: body0[0].start, end: body0[0].end },
     detailRow,
+    loopRange: { start: loop.start, end: loop.end },
+    emptyGuard,
+    blankRows,
   };
+}
+
+/** v1.14: the blank-form rows that follow a list table's loop over `iterable`, or null when `node` is not them. */
+function blankRowsOf(src: string, node: Node | undefined, iterable: string): BlankRows | null {
+  if (node?.kind !== "block" || node.keyword !== "if" || node.broken || node.branches.length !== 1) return null;
+  if (node.branches[0].tag.inner.trim() !== "if meta.blank") return null;
+  const inside = solid(src, node.branches[0].children);
+  const loop = inside.length === 1 ? inside[0] : null;
+  if (loop?.kind !== "block" || loop.keyword !== "for" || loop.broken || loop.branches.length !== 1) return null;
+  const tag = loop.branches[0].tag;
+  const m = BLANK_LOOP.exec(tag.inner.trim());
+  if (!m || m[2] !== iterable) return null;
+  const rows = solid(src, loop.branches[0].children);
+  const tr = rows.length === 1 ? rows[0] : null;
+  if (tr?.kind !== "element" || jd(tr) !== "blank") return null;
+  const cells = cellsOf(src, tr, "td");
+  if (!cells) return null;
+  const digits = src.indexOf(m[1], tag.start);
+  return { count: Number(m[1]), range: { start: node.start, end: node.end }, countAt: { start: digits, end: digits + m[1].length }, cells };
 }
 
 /** A fixed table: rows (directly or in one <tbody>) of the same number of plain <td>/<th> cells; the first row may be <th>. */
