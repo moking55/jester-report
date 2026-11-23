@@ -227,3 +227,18 @@ module `tags` เล็กและไม่ขึ้นกับใคร: `tem
 ปล่อยเป็น `v1.13.0` · spec: [SPEC-mcp.md](SPEC-mcp.md), หัวข้อ v1.13 ของ SPEC-auth/public-api · intent: [docs/intent/mcp-report-authoring.md](docs/intent/mcp-report-authoring.md) · task: [tasks/v1.13/todo.md](tasks/v1.13/todo.md)
 
 **ไม่ทำ:** publish/alias ผ่าน AI · จัดการผู้ใช้/API key/retention/theme ผ่าน MCP · stdio สำหรับ dev · role/RBAC
+
+## v1.14: ฟอร์มเปล่า (รออนุมัติ)
+
+เป้า: เจ้าหน้าที่พิมพ์ฟอร์มกระดาษไว้เขียนมือจากรายงานที่ publish แล้ว โดยไม่ต้องทำ template แยก: ช่องที่กรอกพิมพ์, ช่องที่ไม่กรอกและยอดที่คำนวณไม่ได้เว้นว่าง, ตารางรายการเติมบรรทัดเปล่าตามจำนวนที่คนออกแบบกำหนด
+
+| งาน | module | ขึ้นกับ |
+| --- | --- | --- |
+| โหมดฟอร์มเปล่าใน `prepare` (ข้ามช่องบังคับ, ยอดเว้นว่าง, `meta.blank`, QR/barcode ว่าง) | `data-prep` | — |
+| `allowEmpty` ใน `POST /v1/render` และ contract | `public-api`, `render-service` | data-prep |
+| checkbox "ฟอร์มเปล่า" ในฟอร์มออกเอกสาร + Developer dialog | `studio` | public-api |
+| คุณสมบัติ "บรรทัดเปล่าในฟอร์มเปล่า" ของบล็อกตารางรายการใน Designer | `studio` | data-prep (`meta.blank`) |
+
+ปล่อยเป็น `v1.14.0` · spec: หัวข้อ v1.14 ของ [SPEC-data-prep.md](SPEC-data-prep.md), [SPEC-public-api.md](SPEC-public-api.md), [SPEC-studio.md](SPEC-studio.md)
+
+**ไม่ทำ:** นับบรรทัดให้พอดีหน้าอัตโนมัติ · เลขลำดับฟอร์ม/คุมเล่ม · ข้อความหรือลายน้ำ "ฉบับเขียนมือ" · เติมบรรทัดให้ตารางที่เขียน HTML/Jinja เองนอกบล็อก Designer (เว้นว่างได้ แต่ไม่เติมบรรทัด) · แยกเอกสารเปล่าในประวัติการ render
