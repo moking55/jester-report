@@ -744,6 +744,8 @@ export type NewBlock =
   | { kind: "set"; name: string; expr: string }
   | { kind: "custom" };
 
+export const NEW_TABLE_BLANK_ROWS = 10; // SPEC-studio v1.14
+
 export function newBlockHtml(b: NewBlock): string {
   switch (b.kind) {
     case "text":
@@ -768,6 +770,10 @@ export function newBlockHtml(b: NewBlock): string {
         `  {% for ${b.variable} in ${b.iterable} %}`,
         `    <tr>${b.columns.map((c) => `<td>{{ ${c.expr} }}</td>`).join("")}</tr>`,
         "  {% endfor %}",
+        // v1.14: a new table prints 10 empty rows on a blank form (setBlankRows writes the same form)
+        `  {% if meta.blank %}{% for _ in range(${NEW_TABLE_BLANK_ROWS} - ${b.iterable}|length) %}`,
+        `  <tr data-jd="blank">${"<td>&nbsp;</td>".repeat(b.columns.length)}</tr>`,
+        "  {% endfor %}{% endif %}",
         "  </tbody>",
         "</table>",
       ].join("\n");

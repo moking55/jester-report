@@ -20,6 +20,7 @@ import {
   removeElse,
   replaceIn,
   setAttr,
+  setBlankRows,
   setColumnFlex,
   setTagArgs,
   unwrapRow,
@@ -342,6 +343,12 @@ export function BlockPanel(props: Props) {
               แถวรายละเอียดใต้ทุกแถว (ใส่ตารางหรือวนซ้ำของรายการลูกได้)
             </label>
           )}
+          <Field
+            label="บรรทัดเปล่าในฟอร์มเปล่า (0–100)"
+            value={String(d.blankRows?.count ?? 0)}
+            readOnly={readOnly}
+            onCommit={(v) => apply(/^\d+$/.test(v.trim()) ? setBlankRows(src, block, Number(v.trim())) : fail("ใส่จำนวนเต็ม 0–100"))}
+          />
           <h3>คอลัมน์</h3>
           {d.cells.map((c, i) => (
             <div key={`${i}-${c.range.start}`} className={styles.column}>

@@ -108,6 +108,13 @@ export function renderSource(src: string, mode: RenderMode, scope: Scope | null 
         if (n.close) out.push(src.slice(n.close.start, n.close.end));
         break;
       case "block": {
+        // v1.14: the paper is a normal form; a blank form's empty rows are not drawn, the "no items" row is
+        const only = n.keyword === "if" && n.branches.length === 1 ? n.branches[0].tag.inner.trim() : "";
+        if (only === "if meta.blank") break;
+        if (only === "if not meta.blank") {
+          n.branches[0].children.forEach((c) => walk(c, sc));
+          break;
+        }
         if (n.keyword === "if" && sc) {
           // the first branch whose test holds; unknown → every branch (as without a sample)
           let chosen = -1;

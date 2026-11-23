@@ -4,7 +4,8 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { allBlocks, readBlocks, type Block } from "@/lib/doc-blocks";
-import { addColumn, removeColumn, setBlankRows } from "@/lib/doc-edit";
+import { addColumn, insertBlock, newBlockHtml, removeColumn, setBlankRows } from "@/lib/doc-edit";
+import { renderSource } from "@/lib/doc-render";
 
 const STARTERS = join(__dirname, "../../api/src/jester_api/template_store/starters");
 const starter = (name: string) => readFileSync(join(STARTERS, name, "template.html"), "utf8");
@@ -72,6 +73,24 @@ describe("blank rows of a list table", () => {
     const removed = removeColumn(ten, tableOf(ten), 0);
     if (!removed.ok) throw new Error(removed.error);
     expect(detail(removed.value.src).blankRows?.cells).toHaveLength(1);
+  });
+
+  it("a table dropped from the palette prints 10 empty rows on a blank form", () => {
+    const page = "<p>a</p>\n";
+    const html = newBlockHtml({ kind: "table", variable: "it", iterable: "lists.items", columns: [{ head: "A", expr: "it.a" }, { head: "B", expr: "it.b" }] });
+    const src = insertBlock(page, readBlocks(page), 1, html).src;
+    expect(detail(src).blankRows?.count).toBe(10);
+    expect(detail(src).blankRows?.cells).toHaveLength(2);
+    expect(detail(set(src, 0)).blankRows).toBeNull();
+  });
+
+  it("the paper does not draw the blank rows, with or without sample data", () => {
+    const ten = set(WITH_ELSE, 10);
+    for (const sample of [null, { lists: { rows: [] } }]) {
+      const html = renderSource(ten, { sample, asset: (n: string) => n });
+      expect(html).not.toContain('data-jd="blank"');
+      expect(html).toContain("ไม่มีรายการ");
+    }
   });
 
   it("refuses counts outside 0-100", () => {
