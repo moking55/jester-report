@@ -251,3 +251,39 @@ const setModalCode = (page: Page, text: string) =>
     const view = el.cmTile.view;
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: value } });
   }, text);
+
+test("a condition shows one branch at a time on tabs: the paper is as tall as the branch shown", async ({ page }) => {
+  // v1.16: every branch used to be drawn one under the other, so the paper ran longer than the PDF (one branch)
+  test.setTimeout(180_000);
+  const rid = `${ID}-tabs`;
+  await login(page);
+  await createReport(page, rid, "เงื่อนไขเป็นแท็บ", "ใบเสนอราคา");
+  await page.goto(`/templates/${rid}/designer`);
+  await expect(blocks(page).first()).toBeVisible({ timeout: 30_000 });
+  await drag(page, palette(page, "condition"), pageEnd(page), 1.2);
+  await page.waitForTimeout(150); // @dnd-kit swallows clicks for 50 ms after a drag ends; a person is slower
+  await panel(page).getByRole("button", { name: "+ ไม่เช่นนั้น", exact: true }).click(); // a new condition has its if only
+  const tabs = page.getByRole("tablist", { name: "สาขาของเงื่อนไข" }).last();
+  await expect(tabs.getByRole("tab")).toHaveCount(2); // ถ้า … | ไม่เช่นนั้น
+  await expect(tabs.getByRole("tab").first()).toHaveAttribute("aria-selected", "true");
+  const shownBranch = async () => listOf(page, "condition"); // only the branch shown has a list on the paper
+  const ifList = await shownBranch();
+  await drag(page, palette(page, "text"), list(page, ifList));
+  const paperHeight = () => page.evaluate(() => (document.querySelector("[data-paper]")!.shadowRoot!.querySelector("[data-jd-list='root']") as HTMLElement).offsetHeight);
+  const withIf = await paperHeight();
+
+  // three blocks in the else branch: drawn only on its tab, and the if tab's paper is as tall as before
+  await page.waitForTimeout(150); // @dnd-kit swallows clicks for 50 ms after a drag ends; a person is slower
+  await tabs.getByRole("tab").last().click();
+  await expect(tabs.getByRole("tab").last()).toHaveAttribute("aria-selected", "true");
+  const elseList = await shownBranch();
+  expect(elseList).not.toBe(ifList);
+  for (let i = 0; i < 3; i++) await drag(page, palette(page, "text"), list(page, elseList));
+  await expect(list(page, elseList).locator("[data-jd-block]")).toHaveCount(3);
+  await expect(list(page, ifList)).toHaveCount(0);
+  await page.waitForTimeout(150);
+  await tabs.getByRole("tab").first().click();
+  await expect(list(page, ifList).locator("[data-jd-block]")).toHaveCount(1);
+  await expect(list(page, elseList)).toHaveCount(0);
+  expect(await paperHeight()).toBe(withIf);
+});

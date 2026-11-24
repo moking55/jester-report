@@ -116,6 +116,11 @@ const PAPER_CSS = `
 .jd-editing .jd-if { cursor: pointer; }
 .jd-container { position: relative; outline: 1px dashed #9db4d6; outline-offset: 2px; min-height: 8mm; }
 .jd-container-label { display: block; font: 10px system-ui; color: #5b7aa5; margin: 2px 0; }
+/* a condition's branches: tabs above its top edge, outside the flow, so the paper is as tall as the branch shown */
+.jd-tabs { position: absolute; left: 0; bottom: 100%; z-index: 2; display: flex; gap: 2px; margin-bottom: 3px; }
+.jd-tab { font: 10px/16px system-ui; padding: 0 6px; border: 1px solid #9db4d6; border-radius: 3px 3px 0 0; background: #f2f6fc;
+  color: #5b7aa5; cursor: pointer; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.jd-tab-on { background: #2f6fe0; border-color: #2f6fe0; color: #fff; }
 .jd-custom { position: relative; outline: 1px dashed #b98; outline-offset: 2px; }
 .jd-custom-label { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #a76; background: #fff; padding: 0 3px; }
 .jd-empty { font: 11px system-ui; color: #9aa; padding: 2mm; }
@@ -141,6 +146,8 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
   const [root, setRoot] = useState<ShadowRoot | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const [bodyHeight, setBodyHeight] = useState(0);
+  // v1.16: the branch each condition shows (by its list id); the PDF prints one branch, so the paper shows one too
+  const [tabs, setTabs] = useState<Record<string, number>>({});
   const paper = useMemo(() => paperOf(files["report.json"]), [files]);
   const mode: RenderMode = useMemo(() => ({ sample, asset: asset(templateId) }), [sample, templateId]);
 
@@ -229,21 +236,37 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
           only = d.branches.findIndex((br) => br.keyword === "else" || test(br.test, scope) === true);
           if (d.branches.some((br, i) => i < (only < 0 ? d.branches.length : only) && br.keyword !== "else" && test(br.test, scope) === undefined)) only = -2;
         }
+        // no sample, or one it cannot work out: one branch at a time, chosen on tabs that take no room on the paper
+        const key = listId(b, 0);
+        const shown = Math.min(tabs[key] ?? 0, b.lists.length - 1);
+        const stop = (e: React.SyntheticEvent) => e.stopPropagation(); // a tab is not a click or a drag on the block
         inner =
           only >= 0 && scope ? (
             // the sample picks a branch: drawn as the PDF would draw it, with no frame or label
             <div>{renderList(b.lists[only].list, scope, listId(b, only))}</div>
+          ) : only === -1 && scope ? (
+            <div /> // no branch holds for the sample and there is no else: the PDF prints nothing here
           ) : (
-          <div>
-            {b.lists.map((l, i) =>
-              only >= -1 && scope && i !== only ? null : (
-                <div key={l.key} className="jd-container">
-                  <span className="jd-container-label">{l.label}</span>
-                  {renderList(l.list, scope, listId(b, i))}
-                </div>
-              ),
-            )}
-          </div>
+            <div className="jd-container">
+              <div className="jd-tabs" role="tablist" aria-label="สาขาของเงื่อนไข" onPointerDown={stop} onMouseDown={stop}>
+                {b.lists.map((l, i) => (
+                  <button
+                    key={l.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={i === shown}
+                    className={i === shown ? "jd-tab jd-tab-on" : "jd-tab"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTabs((t) => ({ ...t, [key]: i }));
+                    }}
+                  >
+                    {l.label}
+                  </button>
+                ))}
+              </div>
+              {renderList(b.lists[shown].list, scope, listId(b, shown))}
+            </div>
           );
         break;
       }
