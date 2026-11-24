@@ -63,4 +63,4 @@
 - [x] Success Criteria v1.15 ครบ (ข้อ 2 ลากช่องข้อมูลใส่ตาราง: ใช้เครื่องมือ Designer เดิมกับ grid ที่นำเข้า ไม่ได้มี E2E แยก); vitest 604 passed, E2E สด 17 ตัวผ่าน; build Docker ของ Studio เคยพังเพราะ client import โมดูล server-only → แก้ (`1014c9b`)
 - [ ] ผู้ใช้ลองบน stack rc แล้วอนุมัติปล่อย
 
-- [ ] **T10 release 1.15.0** (S) — ทำแล้ว: `chore: release 1.15.0` (`bb9ed23`) · รออนุมัติ: tag, push, deploy — เลข version 8 ไฟล์, commit `chore: release 1.15.0`, tag `v1.15.0`, push + deploy หลังผู้ใช้อนุมัติ, backup ก่อน deploy
+- [x] **T10 release 1.15.0** (S) — ปล่อยแล้ว 24 พ.ย. 2026: tag `v1.15.0` บน `7ab9d23` (หลัง release commit `bb9ed23` มีแยกปุ่มนำเข้า + modal ซ้อนสำหรับ warnings ตามที่ผู้ใช้ขอ), push `88badc9..7ab9d23`, backup `jester-backup-20261124-032602`, deploy stack หลัก (api/studio `1.15.0`, health up, 4 รายงานครบ), ปิด stack rc · ก่อนปล่อย E2E สดบน rc 17 ตัวผ่าน · ทำก่อนหน้า: เลข version 8 ไฟล์, commit `chore: release 1.15.0`, tag `v1.15.0`, push + deploy หลังผู้ใช้อนุมัติ, backup ก่อน deploy
