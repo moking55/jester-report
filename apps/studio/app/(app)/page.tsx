@@ -125,6 +125,7 @@ export default async function CatalogPage({
       <div className={styles.heading}>
         <h1>รายงาน</h1>
         <ImportDialog className={styles.import} />
+        <ImportDialog className={styles.import} word />
         <ViewToggle view={view} />
       </div>
       <p className={styles.sub}>

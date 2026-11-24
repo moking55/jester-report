@@ -17,8 +17,8 @@ test("import a Word form, land in the Designer, preview one page", async ({ page
   await login(page);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "นำเข้า (.zip / .docx)" }).click();
-  const dialog = page.getByRole("dialog", { name: "นำเข้ารายงาน" });
+  await page.getByRole("button", { name: "นำเข้า Word (.docx)" }).click();
+  const dialog = page.getByRole("dialog", { name: "นำเข้าแบบฟอร์ม Word" });
   await dialog.getByLabel(/แบบฟอร์ม Word/).setInputFiles({
     name: "แบบคำขอเบิกพัสดุ.docx",
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -47,7 +47,7 @@ test("import a Word form, land in the Designer, preview one page", async ({ page
 
   // the same id again: a Word file never replaces a report
   await page.goto("/");
-  await page.getByRole("button", { name: "นำเข้า (.zip / .docx)" }).click();
+  await page.getByRole("button", { name: "นำเข้า Word (.docx)" }).click();
   await dialog.getByLabel(/แบบฟอร์ม Word/).setInputFiles({
     name: "form.docx",
     mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

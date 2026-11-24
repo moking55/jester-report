@@ -15,14 +15,17 @@ import styles from "./RenderDialog.module.css";
 type Step = "pick" | "ask" | "archived" | "warnings";
 type Warning = { code: string; message: string };
 
-/** "นำเข้า (.zip / .docx)": a template zip becomes a new report or replaces a draft; a Word form, a new report. */
-export function ImportDialog({ className }: { className?: string }) {
+/**
+ * "นำเข้า (.zip)": a template zip becomes a new report or replaces a draft.
+ * "นำเข้า Word (.docx)" (`word`, v1.15): a Word form becomes a new report, never a replace.
+ */
+export function ImportDialog({ className, word = false }: { className?: string; word?: boolean }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const idInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [manifest, setManifest] = useState<ZipManifest | null>(null);
-  const [word, setWord] = useState(false);
+  const [ready, setReady] = useState(false); // a Word file was chosen (the zip dialog waits for its manifest)
   const [id, setId] = useState("");
   const [name, setName] = useState("");
   const [step, setStep] = useState<Step>("pick");
@@ -34,18 +37,25 @@ export function ImportDialog({ className }: { className?: string }) {
     setFile(chosen);
     setStep("pick");
     setError(null);
-    const isWord = !!chosen && isWordFile(chosen);
-    setWord(isWord);
-    if (isWord) {
-      setManifest(null);
-      setId(idFromFile(chosen.name));
-      setName(nameFromFile(chosen.name));
+    if (word) {
+      const ok = !!chosen && isWordFile(chosen);
+      setReady(ok);
+      if (chosen && !ok) return setError("เลือกไฟล์ Word (.docx) — zip ของ Jester ใช้ปุ่ม \"นำเข้า (.zip)\"");
+      if (chosen) {
+        setId(idFromFile(chosen.name));
+        setName(nameFromFile(chosen.name));
+      }
       return;
     }
     const found = chosen ? await readManifest(chosen) : null;
     setManifest(found);
     setId(found?.id ?? "");
-    if (chosen && !found) setError("ไฟล์นี้ไม่ใช่ zip ที่ export จาก Jester หรือไฟล์ Word (.docx)");
+    if (chosen && !found)
+      setError(
+        chosen && isWordFile(chosen)
+          ? "ไฟล์นี้เป็น Word: ใช้ปุ่ม \"นำเข้า Word (.docx)\""
+          : "ไฟล์นี้ไม่ใช่ zip ที่ export จาก Jester",
+      );
   }
 
   const backToId = () => {
@@ -105,9 +115,9 @@ export function ImportDialog({ className }: { className?: string }) {
   return (
     <>
       <button type="button" className={className} onClick={() => dialog.current?.showModal()}>
-        นำเข้า (.zip / .docx)
+        {word ? "นำเข้า Word (.docx)" : "นำเข้า (.zip)"}
       </button>
-      <dialog ref={dialog} className={styles.dialog} aria-label="นำเข้ารายงาน">
+      <dialog ref={dialog} className={styles.dialog} aria-label={word ? "นำเข้าแบบฟอร์ม Word" : "นำเข้ารายงาน"}>
         <form
           className={styles.form}
           onSubmit={(e) => {
@@ -116,16 +126,16 @@ export function ImportDialog({ className }: { className?: string }) {
           }}
         >
           <div className={styles.head}>
-            <h2>นำเข้ารายงานจาก .zip หรือแบบฟอร์ม Word</h2>
+            <h2>{word ? "นำเข้าแบบฟอร์ม Word เป็นรายงานใหม่" : "นำเข้ารายงานจาก .zip"}</h2>
             <button type="button" className={styles.close} onClick={() => dialog.current?.close()} aria-label="ปิด">
               ×
             </button>
           </div>
           <label>
-            ไฟล์ zip ที่ export จาก Jester หรือแบบฟอร์ม Word (.docx)
+            {word ? "ไฟล์แบบฟอร์ม Word (.docx)" : "ไฟล์ zip ที่ export จาก Jester"}
             <input
               type="file"
-              accept=".zip,.docx,application/zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              accept={word ? ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" : ".zip,application/zip"}
               required
               onChange={(e) => choose(e.target.files?.[0] ?? null)}
             />
@@ -135,7 +145,7 @@ export function ImportDialog({ className }: { className?: string }) {
               รายงานในไฟล์: <b>{manifest.name}</b> (<code>{manifest.id}</code>)
             </p>
           )}
-          {word && (
+          {word && ready && (
             <>
               <p>แบบฟอร์ม Word: สร้างรายงานใหม่ที่แก้ต่อใน Designer ได้ (ไม่ทับรายงานเดิม)</p>
               <label>
@@ -210,7 +220,7 @@ export function ImportDialog({ className }: { className?: string }) {
             </div>
           ) : (
             <div className={styles.buttons}>
-              <button type="submit" className={styles.primary} disabled={busy || !(manifest || word)}>
+              <button type="submit" className={styles.primary} disabled={busy || !(word ? ready : manifest)}>
                 {busy ? "กำลังนำเข้า…" : "นำเข้า"}
               </button>
             </div>

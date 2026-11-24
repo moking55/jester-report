@@ -22,7 +22,7 @@ function pick(fileName: string) {
   vi.stubGlobal("fetch", fetchMock);
   HTMLDialogElement.prototype.showModal ??= vi.fn();
   HTMLDialogElement.prototype.close ??= vi.fn();
-  render(<ImportDialog />);
+  render(<ImportDialog word />);
   fireEvent.change(screen.getByLabelText(/แบบฟอร์ม Word \(\.docx\)/), { target: { files: [new File(["PK"], fileName)] } });
 }
 
@@ -64,6 +64,17 @@ describe("ImportDialog with a Word file", () => {
     expect(await screen.findByText(/มีรายงาน id นี้อยู่แล้ว ใช้ id ใหม่/)).toBeTruthy();
     expect(screen.queryByText("ทับ draft ของรายงานเดิม")).toBeNull();
     expect(screen.queryByText("ทับและเลิก archive")).toBeNull();
+  });
+
+  it("each button takes its own kind of file and points to the other", async () => {
+    pick("report.zip");
+    expect(await screen.findByText(/เลือกไฟล์ Word \(\.docx\)/)).toBeTruthy();
+    cleanup();
+    render(<ImportDialog />);
+    fireEvent.change(screen.getByLabelText("ไฟล์ zip ที่ export จาก Jester"), {
+      target: { files: [new File(["PK"], "form.docx")] },
+    });
+    expect(await screen.findByText(/ใช้ปุ่ม "นำเข้า Word \(\.docx\)"/)).toBeTruthy();
   });
 
   it("a Thai-only file name gets form-<date>", () => {
