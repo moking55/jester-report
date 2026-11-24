@@ -1,4 +1,4 @@
-// Ctrl/Cmd+Shift+Space in the code editor: prettier, loaded on first use so it costs nothing until then.
+// Shift+Alt+F in the code editor (Shift+Option+F on a Mac): prettier, loaded on first use so it costs nothing until then.
 // Jinja tags are masked, so even {% %} inside a tag (<td {% if x %}class="a"{% endif %}>) is formatted: every tag comes
 // back exactly, though prettier may add a space or line break between attributes. A file prettier cannot parse
 // (broken JSON or HTML) makes it throw; the editor then leaves the file alone.

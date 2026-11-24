@@ -97,7 +97,7 @@ export function Editor({ files, active, generation, problems, onDirty, onSave, r
         EditorState.readOnly.of(readOnly),
         keymap.of([
           { key: "Mod-s", preventDefault: true, run: () => (callbacks.current.onSave(), true) },
-          { key: "Mod-Shift-Space", preventDefault: true, run: (v) => (format(v, name), true) },
+          { key: "Shift-Alt-f", preventDefault: true, run: (v) => (format(v, name), true) }, // as VS Code
         ]),
         EditorView.updateListener.of((u) => {
           if (u.docChanged && !dirty.current.has(name)) {
