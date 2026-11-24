@@ -95,7 +95,7 @@ export function renderSource(src: string, mode: RenderMode, scope: Scope | null 
         break;
       case "expr": {
         const shown = sc ? evaluate(n.inner, sc) : null;
-        const box = sc && !shown?.ok ? codeBox(n.inner, sc) : null;
+        const box = !shown?.ok ? codeBox(n.inner, sc ?? {}) : null; // its printed size, with a sample or not
         out.push(shown?.ok ? escapeHtml(shown.text) : (box ?? (sc ? chip("jd-expr jd-unknown", shortLabel(n.inner)) : chip("jd-expr", compactLabel(n.inner), `{{ ${n.inner} }}`))));
         break;
       }

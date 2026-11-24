@@ -32,3 +32,9 @@ export function writeCode(c: CodeBlock): string {
   }
   return `fmt.${c.type}(${a}${c.more})`;
 }
+
+/** `more` with the keyword argument `name` set to `value` (added when missing). */
+export function withArg(more: string, name: string, value: number): string {
+  const re = new RegExp(`${name}\\s*=\\s*[\\d.]+`);
+  return re.test(more) ? more.replace(re, `${name}=${value}`) : `${more}, ${name}=${value}`;
+}

@@ -194,3 +194,32 @@ describe("snapping (v1.8)", () => {
     expect(west.rect).toEqual(R(16, 10, 1, 5)); // right edge is 17 (20 + -3)
   });
 });
+
+describe("a resized box takes its QR code, barcode or picture with it (v1.16)", () => {
+  const one = (inner: string) => `<div data-jd="page" style="position: relative; width: 148mm; height: 105mm">\n<div data-jd="box" style="position: absolute; left: 10mm; top: 10mm; width: 25mm; height: 25mm">\n  ${inner}\n</div>\n</div>\n`;
+  const resize = (src: string, w: number, h: number) => value(setBoxRect(src, boxes(src)[0], { w, h }));
+
+  it("a QR code's size_mm is the box's shorter side", () => {
+    const out = resize(one("<div>{{ fmt.qr(data.title) }}</div>"), 50, 40);
+    expect(out).toContain("{{ fmt.qr(data.title, size_mm=40) }}");
+    expect(resize(out, 60, 60)).toContain("size_mm=60)");
+    expect(resize(out, 5, 5)).toContain("size_mm=10)"); // fmt.qr takes 10-100
+  });
+
+  it("a barcode's height_mm is the box's height", () => {
+    const out = resize(one("<div>{{ fmt.barcode(item.no, height_mm=15, module_mm=0.25) }}</div>"), 60, 20);
+    expect(out).toContain("{{ fmt.barcode(item.no, height_mm=20, module_mm=0.25) }}");
+  });
+
+  it("a picture fills the box, keeping its proportions", () => {
+    const out = resize(one('<img src="logo.png" alt="" style="width: 40mm">'), 30, 20);
+    expect(out).toContain('<img src="logo.png" alt="" style="width: 100%; height: 100%; object-fit: contain">');
+  });
+
+  it("moving a box or a box of text changes nothing inside", () => {
+    const qr = one("<div>{{ fmt.qr(data.title) }}</div>");
+    expect(value(setBoxRect(qr, boxes(qr)[0], { x: 20 }))).toContain("{{ fmt.qr(data.title) }}");
+    const text = one("<p>สวัสดี</p>");
+    expect(resize(text, 50, 10)).toContain("<p>สวัสดี</p>");
+  });
+});

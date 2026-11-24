@@ -90,8 +90,10 @@ const PAPER_CSS = `
 .jd-fbox.jd-over { outline: 2px dashed #d33; outline-offset: 0; }
 .jd-fbox.jd-over::after { content: "ข้อความล้นกล่อง"; position: absolute; left: 0; top: 100%; font: 10px system-ui; color: #fff; background: #d33; padding: 0 4px; white-space: nowrap; z-index: 3; }
 .jd-fbox { box-sizing: border-box; cursor: move; touch-action: none; user-select: none; }
+.jd-fbox svg { vertical-align: top; } /* as binder's FREE_CSS: no gap under a QR code or barcode */
 .jd-fbox:hover { outline: 1px solid #b9cdf0; }
-.jd-fbox.jd-selected { outline: 2px solid #2f6fe0; z-index: 1; }
+/* no z-index: the stack is document order (ยกขึ้นหน้าสุด / ส่งไปหลังสุด), and a selected box keeps its place in it */
+.jd-fbox.jd-selected { outline: 2px solid #2f6fe0; }
 .jd-fbox.jd-moving { opacity: .85; }
 .jd-fbox img { -webkit-user-drag: none; user-select: none; }
 .jd-fbox[data-kind="line"]::before { content: ""; position: absolute; left: 0; right: 0; top: -2mm; bottom: -2mm; }

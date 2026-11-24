@@ -3,7 +3,8 @@
 // source and the new range of the block it touched (to reselect it after the file is read again).
 // Undo is a stack of whole sources: small files, exact bytes back.
 
-import { readBlocks, type Block, type BlockList, type GridCell, type Rect } from "./doc-blocks";
+import { readCode, withArg, writeCode } from "./code-block";
+import { allBlocks, readBlocks, type Block, type BlockList, type GridCell, type Rect } from "./doc-blocks";
 import type { ElementNode, Node, Range } from "./doc-parse";
 
 export type Edited = { src: string; at: Range | null };
@@ -852,7 +853,7 @@ export function boxSize(b: NewBox): { w: number; h: number } {
     case "image":
       return { w: 40, h: 30 };
     case "code":
-      return { w: 25, h: 25 };
+      return { w: 30, h: 30 }; // fmt.qr's default size_mm
     case "grid":
       return { w: 80, h: 26 }; // three rows of the fixed table are 23.7 mm tall
     case "rect":
@@ -897,7 +898,42 @@ export function setBoxRect(src: string, block: Block, rect: Partial<Rect>): Resu
   put("top", rect.y);
   put("width", rect.w === undefined ? undefined : Math.max(1, rect.w));
   if (block.kind !== "line") put("height", rect.h === undefined ? undefined : Math.max(1, rect.h));
-  return setStyle(src, block, props);
+  const out = setStyle(src, block, props);
+  if (!out.ok || block.kind !== "box" || (rect.w === undefined && rect.h === undefined)) return out;
+  return ok(fitContent(out.value));
+}
+
+/**
+ * A box holding only a QR code, a barcode or a picture: the content takes the box's new size (v1.16), as a QR code's
+ * size_mm, a barcode's height_mm and a picture's width / height were fixed and a resized box changed nothing printed.
+ */
+function fitContent(edited: Edited): Edited {
+  const at = edited.at;
+  if (!at) return edited;
+  const box = allBlocks(readBlocks(edited.src)).find((b) => b.kind === "box" && b.start === at.start);
+  const inner = box?.lists[0]?.list.items ?? [];
+  const r = box?.rect;
+  if (!box || !r || inner.length !== 1) return edited;
+  const [b] = inner;
+  const d = b.detail;
+  let patch: { range: Range; text: string } | null = null;
+  if (d.kind === "code") {
+    const code = readCode(d.inner);
+    if (!code) return edited;
+    const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, Math.floor(n)));
+    const more =
+      code.type === "barcode"
+        ? withArg(code.more, "height_mm", clamp(r.h, 5, 50))
+        : withArg(code.more, "size_mm", clamp(Math.min(r.w, r.h), 10, 100));
+    patch = { range: d.expr, text: `{{ ${writeCode({ ...code, more })} }}` };
+  } else if (d.kind === "image" && b.style && !b.style.readOnly) {
+    const styled = setStyle(edited.src, b, { width: "100%", height: "100%", "object-fit": "contain" });
+    if (!styled.ok) return edited;
+    return { src: styled.value.src, at: { start: box.start, end: box.end + styled.value.src.length - edited.src.length } };
+  }
+  if (!patch) return edited;
+  const src = applyPatches(edited.src, [{ ...patch.range, text: patch.text }]);
+  return { src, at: { start: box.start, end: box.end + src.length - edited.src.length } };
 }
 
 /** Stack order is document order (later = in front): front, back, one step up or one step down. */

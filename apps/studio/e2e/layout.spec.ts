@@ -211,6 +211,47 @@ test("ข้อความล้นกล่อง: a selected box is not flagg
   await expect(page.locator("[data-paper] .jd-over")).toHaveCount(1);
 });
 
+test("layers and resizing: ส่งไปหลังสุด shows at once, a resized QR box resizes the QR code", async ({ page }) => {
+  // regressions (v1.16): the selected box was always drawn in front, and a QR code kept its size in a resized box
+  test.setTimeout(120_000);
+  const rid = id("e2e-layers");
+  await login(page);
+  await createBlank(page, rid, "ชั้นและขนาด", async (dialog) => {
+    await dialog.getByRole("radio", { name: /จัดวางแบบอิสระ/ }).click();
+    await dialog.getByLabel("ขนาดกระดาษ").selectOption("A5");
+  });
+  await openDesigner(page, rid);
+  const sheet = await sheetBox(page, "[data-jd-page]");
+  const mm = sheet.w / 148;
+  await dropAt(page, "code", sheet.x + 10 * mm, sheet.y + 10 * mm); // QR box 30 x 30 mm at (10, 10)
+  await expect(page.locator("[data-paper] .jd-over")).toHaveCount(0); // the default 30 mm QR code fits its box
+  await dropAt(page, "rect", sheet.x + 20 * mm, sheet.y + 20 * mm); // a rectangle over its corner, selected
+  const kindAt = (xMm: number, yMm: number) =>
+    page.evaluate(([x, y]) => {
+      const el = document.querySelector("[data-paper]")!.shadowRoot!.elementFromPoint(x, y)?.closest(".jd-fbox") as HTMLElement | null;
+      return el?.dataset.kind ?? "none";
+    }, [sheet.x + xMm * mm, sheet.y + yMm * mm] as const);
+  expect(await kindAt(30, 30)).toBe("rect");
+  await page.waitForTimeout(150); // @dnd-kit swallows clicks for 50 ms after a drag ends; a person is slower
+  await page.getByRole("button", { name: "ส่งไปหลังสุด" }).click();
+  await expect(page.locator("[data-paper] .jd-selected")).toHaveAttribute("data-kind", "rect"); // still selected …
+  await expect.poll(() => kindAt(30, 30)).toBe("box"); // … and already behind the QR box
+
+  // drag the QR box's corner from 30 to 50 mm: the QR code (drawn at its printed size) grows with it
+  const qr = page.locator('[data-paper] .jd-fbox[data-kind="box"]').first();
+  await qr.click();
+  const size = () => qr.locator("svg").evaluate((e) => Math.round(e.getBoundingClientRect().width));
+  expect(Math.abs((await size()) - 30 * mm)).toBeLessThan(3); // fmt.qr's default 30 mm
+  const h = (await page.locator("[data-paper] .jd-rh-se").boundingBox())!;
+  await page.mouse.move(h.x + 4, h.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(h.x + 4 + 20 * mm, h.y + 4 + 20 * mm, { steps: 10 });
+  await page.mouse.up();
+  await expect(page.getByLabel("กว้าง (mm)")).toHaveValue("50");
+  await expect.poll(size).toBeGreaterThan(48 * mm);
+  await expect(page.locator("[data-paper] .jd-over")).toHaveCount(0);
+});
+
 test("a header logo and a footer with page numbers repeat on every page", async ({ page }) => {
   test.setTimeout(240_000);
   const rid = id("e2e-running");
