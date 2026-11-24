@@ -904,7 +904,7 @@ export function setBoxRect(src: string, block: Block, rect: Partial<Rect>): Resu
 }
 
 /**
- * A box holding only a QR code, a barcode or a picture: the content takes the box's new size (v1.16), as a QR code's
+ * A box holding only a QR code, a barcode or a picture: the content takes the box's new size (v1.15.2), as a QR code's
  * size_mm, a barcode's height_mm and a picture's width / height were fixed and a resized box changed nothing printed.
  */
 function fitContent(edited: Edited): Edited {

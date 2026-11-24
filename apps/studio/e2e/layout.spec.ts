@@ -181,7 +181,7 @@ test("a free A5 sheet: boxes dropped at the pointer, dragged, snapped, then prin
 });
 
 test("ข้อความล้นกล่อง: a selected box is not flagged, text longer than its box is", async ({ page }) => {
-  // regression: the resize handles of a selected box hang below it and were measured as its content (v1.16 fix)
+  // regression: the resize handles of a selected box hang below it and were measured as its content (v1.15.2 fix)
   test.setTimeout(120_000);
   const rid = id("e2e-overflow");
   await login(page);
@@ -212,7 +212,7 @@ test("ข้อความล้นกล่อง: a selected box is not flagg
 });
 
 test("layers and resizing: ส่งไปหลังสุด shows at once, a resized QR box resizes the QR code", async ({ page }) => {
-  // regressions (v1.16): the selected box was always drawn in front, and a QR code kept its size in a resized box
+  // regressions (v1.15.2): the selected box was always drawn in front, and a QR code kept its size in a resized box
   test.setTimeout(120_000);
   const rid = id("e2e-layers");
   await login(page);

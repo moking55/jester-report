@@ -12,7 +12,7 @@ from ..report_definition.problems import AssetInfo
 BASE_CSS = "thead { display: table-header-group; }\ntr { break-inside: auto; }\n"
 # v1.8: a background image for lining boxes up is never printed; free layout counts from the sheet's edge
 GUIDE_CSS = '[data-jd="guide"] { display: none; }\n'
-# v1.16: a QR code or barcode sits on the top of its line, with no descender gap under it (as the designer draws it)
+# v1.15.2: a QR code or barcode sits on the top of its line, with no descender gap under it (as the designer draws it)
 FREE_CSS = 'body { margin: 0; }\n[data-jd="page"] { overflow: hidden; }\n[data-jd="box"] svg { vertical-align: top; }\n'
 # v1.14: a blank form's empty rows get a line to write on, even in a table drawn without borders;
 # in a table with solid borders (border-collapse) the solid line wins, so nothing changes there

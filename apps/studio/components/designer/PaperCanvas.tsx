@@ -152,7 +152,7 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
   const [root, setRoot] = useState<ShadowRoot | null>(null);
   const body = useRef<HTMLDivElement>(null);
   const [bodyHeight, setBodyHeight] = useState(0);
-  // v1.16: the branch each condition shows (by its list id); the PDF prints one branch, so the paper shows one too
+  // v1.15.2: the branch each condition shows (by its list id); the PDF prints one branch, so the paper shows one too
   const [tabs, setTabs] = useState<Record<string, number>>({});
   const paper = useMemo(() => paperOf(files["report.json"]), [files]);
   const mode: RenderMode = useMemo(() => ({ sample, asset: asset(templateId) }), [sample, templateId]);

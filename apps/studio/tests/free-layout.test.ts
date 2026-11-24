@@ -195,7 +195,7 @@ describe("snapping (v1.8)", () => {
   });
 });
 
-describe("a resized box takes its QR code, barcode or picture with it (v1.16)", () => {
+describe("a resized box takes its QR code, barcode or picture with it (v1.15.2)", () => {
   const one = (inner: string) => `<div data-jd="page" style="position: relative; width: 148mm; height: 105mm">\n<div data-jd="box" style="position: absolute; left: 10mm; top: 10mm; width: 25mm; height: 25mm">\n  ${inner}\n</div>\n</div>\n`;
   const resize = (src: string, w: number, h: number) => value(setBoxRect(src, boxes(src)[0], { w, h }));
 

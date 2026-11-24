@@ -253,7 +253,7 @@ const setModalCode = (page: Page, text: string) =>
   }, text);
 
 test("a condition shows one branch at a time on tabs: the paper is as tall as the branch shown", async ({ page }) => {
-  // v1.16: every branch used to be drawn one under the other, so the paper ran longer than the PDF (one branch)
+  // v1.15.2: every branch used to be drawn one under the other, so the paper ran longer than the PDF (one branch)
   test.setTimeout(180_000);
   const rid = `${ID}-tabs`;
   await login(page);
