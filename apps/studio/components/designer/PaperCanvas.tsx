@@ -116,11 +116,17 @@ const PAPER_CSS = `
 .jd-editing .jd-if { cursor: pointer; }
 .jd-container { position: relative; outline: 1px dashed #9db4d6; outline-offset: 2px; min-height: 8mm; }
 .jd-container-label { display: block; font: 10px system-ui; color: #5b7aa5; margin: 2px 0; }
-/* a condition's branches: tabs above its top edge, outside the flow, so the paper is as tall as the branch shown */
-.jd-tabs { position: absolute; left: 0; bottom: 100%; z-index: 2; display: flex; gap: 2px; margin-bottom: 3px; }
-.jd-tab { font: 10px/16px system-ui; padding: 0 6px; border: 1px solid #9db4d6; border-radius: 3px 3px 0 0; background: #f2f6fc;
+/* a condition's branches: tabs above its top edge, outside the flow (the paper is as tall as the branch shown), no wider
+   than the block (‹ › scroll them), and only while the condition is under the pointer or it or a block in it is selected */
+.jd-tabs { position: absolute; left: 0; right: 0; bottom: 100%; z-index: 2; display: flex; align-items: flex-end; margin-bottom: 3px;
+  visibility: hidden; }
+.jd-block:hover > .jd-cond > .jd-tabs, .jd-block.jd-selected > .jd-cond > .jd-tabs, .jd-cond:has(.jd-selected) > .jd-tabs { visibility: visible; }
+.jd-tabs-strip { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.jd-tab { flex: none; font: 10px/16px system-ui; padding: 0 6px; border: 1px solid #9db4d6; border-radius: 3px 3px 0 0; background: #f2f6fc;
   color: #5b7aa5; cursor: pointer; white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .jd-tab-on { background: #2f6fe0; border-color: #2f6fe0; color: #fff; }
+.jd-tab-scroll { flex: none; font: 11px/16px system-ui; width: 16px; padding: 0; border: 1px solid #9db4d6; border-radius: 3px; background: #fff;
+  color: #2f6fe0; cursor: pointer; }
 .jd-custom { position: relative; outline: 1px dashed #b98; outline-offset: 2px; }
 .jd-custom-label { position: absolute; right: 0; top: -14px; font: 10px system-ui; color: #a76; background: #fff; padding: 0 3px; }
 .jd-empty { font: 11px system-ui; color: #9aa; padding: 2mm; }
@@ -239,7 +245,6 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
         // no sample, or one it cannot work out: one branch at a time, chosen on tabs that take no room on the paper
         const key = listId(b, 0);
         const shown = Math.min(tabs[key] ?? 0, b.lists.length - 1);
-        const stop = (e: React.SyntheticEvent) => e.stopPropagation(); // a tab is not a click or a drag on the block
         inner =
           only >= 0 && scope ? (
             // the sample picks a branch: drawn as the PDF would draw it, with no frame or label
@@ -247,24 +252,9 @@ export function PaperCanvas({ src, blocks, files, templateId, sample, frame, lis
           ) : only === -1 && scope ? (
             <div /> // no branch holds for the sample and there is no else: the PDF prints nothing here
           ) : (
-            <div className="jd-container">
-              <div className="jd-tabs" role="tablist" aria-label="สาขาของเงื่อนไข" onPointerDown={stop} onMouseDown={stop}>
-                {b.lists.map((l, i) => (
-                  <button
-                    key={l.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={i === shown}
-                    className={i === shown ? "jd-tab jd-tab-on" : "jd-tab"}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setTabs((t) => ({ ...t, [key]: i }));
-                    }}
-                  >
-                    {l.label}
-                  </button>
-                ))}
-              </div>
+            <div className="jd-container jd-cond">
+              {/* a tab click also reaches the block's frame, which selects the condition (its panel: branches, ลบ) */}
+              <CondTabs labels={b.lists.map((l) => l.label)} shown={shown} onPick={(i) => setTabs((t) => ({ ...t, [key]: i }))} />
               {renderList(b.lists[shown].list, scope, listId(b, shown))}
             </div>
           );
@@ -517,4 +507,52 @@ function tableHtml(src: string, b: Block, mode: RenderMode, scope: Scope | null)
   for (const f of d.footer) rows.push(`<tr>${cellsHtml(f, scope)}</tr>`);
   const tbodyOpen = tbody && tbody.kind === "element" ? slice(tbody.open) : "<tbody>";
   return `${slice(el.open)}${thead ? renderSource(slice(thead), mode, scope) : ""}${tbodyOpen}${rows.join("")}</tbody></table>`;
+}
+
+/** The branch tabs of a condition: one per branch, scrolled with ‹ › when they are wider than the block. */
+function CondTabs({ labels, shown, onPick }: { labels: string[]; shown: number; onPick: (i: number) => void }) {
+  const strip = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ left: false, right: false });
+  const measure = () => {
+    const s = strip.current;
+    if (!s) return;
+    const next = { left: s.scrollLeft > 0, right: s.scrollLeft + s.clientWidth < s.scrollWidth - 1 };
+    setEdge((e) => (e.left === next.left && e.right === next.right ? e : next));
+  };
+   
+  useLayoutEffect(measure);
+  useLayoutEffect(() => {
+    // the tab shown stays in view
+    const s = strip.current;
+    const tab = s?.children[shown] as HTMLElement | undefined;
+    if (!s || !tab) return;
+    if (tab.offsetLeft < s.scrollLeft) s.scrollLeft = tab.offsetLeft;
+    else if (tab.offsetLeft + tab.offsetWidth > s.scrollLeft + s.clientWidth) s.scrollLeft = tab.offsetLeft + tab.offsetWidth - s.clientWidth;
+    measure();
+  }, [shown]);
+  const scroll = (by: number) => {
+    strip.current?.scrollBy({ left: by });
+    measure();
+  };
+  return (
+    <div className="jd-tabs">
+      {edge.left && (
+        <button type="button" className="jd-tab-scroll" aria-label="สาขาก่อนหน้า" onClick={(e) => (e.stopPropagation(), scroll(-120))}>
+          ‹
+        </button>
+      )}
+      <div ref={strip} className="jd-tabs-strip" role="tablist" aria-label="สาขาของเงื่อนไข" onScroll={measure}>
+        {labels.map((label, i) => (
+          <button key={i} type="button" role="tab" aria-selected={i === shown} title={label} className={i === shown ? "jd-tab jd-tab-on" : "jd-tab"} onClick={() => onPick(i)}>
+            {label}
+          </button>
+        ))}
+      </div>
+      {edge.right && (
+        <button type="button" className="jd-tab-scroll" aria-label="สาขาถัดไป" onClick={(e) => (e.stopPropagation(), scroll(120))}>
+          ›
+        </button>
+      )}
+    </div>
+  );
 }

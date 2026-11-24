@@ -26,6 +26,7 @@ import {
   unwrapRow,
   type Edited,
   type Result,
+  removeBlock,
 } from "@/lib/doc-edit";
 import type { Range } from "@/lib/doc-parse";
 
@@ -411,6 +412,19 @@ export function BlockPanel(props: Props) {
               </button>
               <ElseButton block={block} src={src} apply={apply} add="+ ไม่เช่นนั้น" remove="เอา ไม่เช่นนั้น ออก" />
             </div>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              className={styles.danger}
+              onClick={() => {
+                const blocksIn = block.lists.reduce((n, l) => n + l.list.items.length, 0);
+                if (blocksIn && !window.confirm(`ลบเงื่อนไขนี้พร้อมบล็อกในทุกสาขา (${blocksIn} บล็อก)?`)) return;
+                apply(removeBlock(src, block));
+              }}
+            >
+              ลบเงื่อนไข
+            </button>
           )}
           <p className={styles.hint}>ลากบล็อกลงในแต่ละสาขาบนกระดาษ</p>
           {cond !== null && d.branches[cond] && (

@@ -286,4 +286,31 @@ test("a condition shows one branch at a time on tabs: the paper is as tall as th
   await expect(list(page, ifList).locator("[data-jd-block]")).toHaveCount(1);
   await expect(list(page, elseList)).toHaveCount(0);
   expect(await paperHeight()).toBe(withIf);
+
+  // a tab click selects the condition: its panel can delete it; the tabs show only while it is in use
+  await expect(panel(page).getByRole("button", { name: "ลบเงื่อนไข" })).toBeVisible();
+  // the grey right of the paper, in view (the paper itself may start above the window): nothing selected
+  const paperBox = (await page.locator("[data-paper]").boundingBox())!;
+  const view = (await page.locator('[class*="paperScroll"]').boundingBox())!;
+  await page.mouse.click(paperBox.x + paperBox.width + 30, view.y + view.height / 2);
+  await expect(page.locator("[data-paper] .jd-selected")).toHaveCount(0);
+  await expect(tabs).toBeHidden();
+  await list(page, ifList).locator("[data-jd-block]").first().click(); // a block in a branch: its condition's tabs show
+  await expect(tabs).toBeVisible();
+
+  // more tabs than the block is wide: ‹ › scroll them
+  await tabs.getByRole("tab").first().click();
+  for (let i = 0; i < 8; i++) await panel(page).getByRole("button", { name: "+ ไม่เช่นนั้นถ้า" }).click();
+  await expect(tabs.getByRole("tab")).toHaveCount(10);
+  const next = page.getByRole("button", { name: "สาขาถัดไป" }).last();
+  await expect(next).toBeVisible();
+  const left = () => tabs.evaluate((e) => e.scrollLeft);
+  await next.click();
+  await expect.poll(left).toBeGreaterThan(0);
+  await expect(page.getByRole("button", { name: "สาขาก่อนหน้า" }).last()).toBeVisible();
+
+  // delete it, with what is in its branches (asked first)
+  page.once("dialog", (d) => void d.accept());
+  await panel(page).getByRole("button", { name: "ลบเงื่อนไข" }).click();
+  await expect(page.getByRole("tablist", { name: "สาขาของเงื่อนไข" })).toHaveCount(0);
 });
