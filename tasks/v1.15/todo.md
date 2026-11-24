@@ -68,3 +68,7 @@
 ## v1.15.1 (hotfix)
 
 - [x] ปุ่มจัดรูปแบบใน code editor เปลี่ยนจาก Ctrl+Shift+Space เป็น **Shift+Alt+F** ตาม VS Code (ผู้ใช้ขอ 24 พ.ย. 2026) · มี test กดปุ่มจริงใน CodeMirror (`editor-format-key.test.tsx`) · ปล่อยแล้ว: tag `v1.15.1` บน `9c54107`, push `7ab9d23..9c54107`, backup `jester-backup-20261124-034046`, deploy stack หลัก, Meditech บน host และ CT 115 (merge `6129916`; ยังไม่ push ไป GitLab) · ไม่ได้รัน E2E ชุดเต็มบน rc รอบนี้ (แก้บรรทัดเดียว: vitest 608, lint, typecheck, `next build` ผ่าน)
+
+## v1.15.2 (bug fixes จาก Meditech v1.16.1)
+
+- [x] นำ fix ที่ไม่ใช่สติ๊กเกอร์จาก `v1.16.1-meditech` มา: กล่องที่เลือกไม่ถูกแจ้ง "ข้อความล้นกล่อง" (ปุ่มย่อ/ขยายถูกนับเป็นเนื้อหา), ส่งไปหลังสุด/ยกขึ้นหน้าสุดเห็นผลทันที, ย่อ/ขยายกล่อง QR/บาร์โค้ด/รูปแล้วเนื้อหาตาม, เงื่อนไขแสดงทีละสาขาบนแท็บ (ผืนสูงเท่า PDF) และเลือก/ลบเงื่อนไขได้อีกครั้ง · ไม่เอา: สติ๊กเกอร์, "เมื่อยาวเกิน", ตัวเลขใต้บาร์โค้ด, Basic auth · tsc, vitest 612, pytest binder 83, E2E สดบน rc 20/20 · ปล่อยแล้ว 25 พ.ย. 2026: tag `v1.15.2` บน `30d0d74`, push `cff4c72..30d0d74`, backup `jester-backup-20261124-202656`, deploy stack หลัก (api/studio `1.15.2`, health up), ปิด stack rc
