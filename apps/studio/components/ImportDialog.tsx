@@ -11,8 +11,8 @@ import { readManifest, type ZipManifest } from "@/lib/zip";
 import styles from "./RenderDialog.module.css";
 
 // ask: the id exists, replace its draft or pick another id; archived: the same, but the report is in the archive
-// and replacing it brings it back (v1.14.1); warnings: a Word file came in, with what it could not bring (v1.15)
-type Step = "pick" | "ask" | "archived" | "warnings";
+// and replacing it brings it back (v1.14.1). A Word file that came in with warnings opens a second dialog on top (v1.15)
+type Step = "pick" | "ask" | "archived";
 type Warning = { code: string; message: string };
 
 /**
@@ -22,6 +22,7 @@ type Warning = { code: string; message: string };
 export function ImportDialog({ className, word = false }: { className?: string; word?: boolean }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
+  const result = useRef<HTMLDialogElement>(null); // stacked over `dialog`: what the Word file could not bring
   const idInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [manifest, setManifest] = useState<ZipManifest | null>(null);
@@ -30,6 +31,7 @@ export function ImportDialog({ className, word = false }: { className?: string; 
   const [name, setName] = useState("");
   const [step, setStep] = useState<Step>("pick");
   const [warnings, setWarnings] = useState<Warning[]>([]);
+  const [created, setCreated] = useState<{ id: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -82,7 +84,8 @@ export function ImportDialog({ className, word = false }: { className?: string; 
         const found: Warning[] = body.warnings ?? [];
         if (found.length) {
           setWarnings(found);
-          return setStep("warnings"); // read first, then open the Designer
+          setCreated({ id: body.template.id, name });
+          return requestAnimationFrame(() => result.current?.showModal()); // on top of this dialog: read, then open
         }
         dialog.current?.close();
         return router.push(`/templates/${body.template.id}/designer`);
@@ -169,30 +172,7 @@ export function ImportDialog({ className, word = false }: { className?: string; 
               autoComplete="off"
             />
           </label>
-          {step === "warnings" ? (
-            <div role="status">
-              <p>
-                นำเข้าแล้ว: <b>{name}</b> (<code>{id}</code>) มีบางส่วนที่แปลงไม่ได้
-              </p>
-              <ul aria-label="สิ่งที่แปลงไม่ได้">
-                {warnings.map((w, i) => (
-                  <li key={i}>{w.message}</li>
-                ))}
-              </ul>
-              <div className={styles.buttons}>
-                <button
-                  type="button"
-                  className={styles.primary}
-                  onClick={() => {
-                    dialog.current?.close();
-                    router.push(`/templates/${id}/designer`);
-                  }}
-                >
-                  เปิดใน Designer
-                </button>
-              </div>
-            </div>
-          ) : step === "archived" ? (
+          {step === "archived" ? (
             <div role="alert">
               <p>
                 รายงาน id <code>{id}</code> ถูก archive อยู่ จะทับ draft ของรายงานที่ archive ด้วยไฟล์นี้และเอากลับออกจาก archive
@@ -227,6 +207,55 @@ export function ImportDialog({ className, word = false }: { className?: string; 
           )}
           {error && <p role="alert">{error}</p>}
         </form>
+      </dialog>
+      <dialog
+        ref={result}
+        className={styles.dialog}
+        aria-label="ผลการนำเข้า Word"
+        onClose={() => {
+          // closed without opening the Designer: the report exists, so show it in the catalog
+          if (created) {
+            dialog.current?.close();
+            router.refresh();
+          }
+        }}
+      >
+        {created && (
+          <div className={styles.form} role="status">
+            <div className={styles.head}>
+              <h2>นำเข้าแล้ว แต่มีบางส่วนที่แปลงไม่ได้</h2>
+              <button type="button" className={styles.close} onClick={() => result.current?.close()} aria-label="ปิด">
+                ×
+              </button>
+            </div>
+            <p>
+              <b>{created.name}</b> (<code>{created.id}</code>) ถูกสร้างเป็นรายงานใหม่แล้ว ส่วนต่อไปนี้ไม่ได้ถูกนำเข้า:
+            </p>
+            <ul aria-label="สิ่งที่แปลงไม่ได้">
+              {warnings.map((w, i) => (
+                <li key={i}>{w.message}</li>
+              ))}
+            </ul>
+            <div className={styles.buttons}>
+              <button
+                type="button"
+                className={styles.primary}
+                onClick={() => {
+                  const id = created.id;
+                  setCreated(null); // so onClose below does not also refresh
+                  result.current?.close();
+                  dialog.current?.close();
+                  router.push(`/templates/${id}/designer`);
+                }}
+              >
+                เปิดใน Designer
+              </button>
+              <button type="button" onClick={() => result.current?.close()}>
+                ปิด
+              </button>
+            </div>
+          </div>
+        )}
       </dialog>
     </>
   );

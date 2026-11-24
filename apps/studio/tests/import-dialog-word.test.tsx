@@ -49,7 +49,9 @@ describe("ImportDialog with a Word file", () => {
     fetchMock.mockResolvedValueOnce(created([{ code: "DOCX_TEXTBOX", message: "ย่อหน้าที่ 4: text box ข้ามไป" }]));
     pick("Purchase Request.docx");
     submit();
-    expect(await screen.findByText("ย่อหน้าที่ 4: text box ข้ามไป")).toBeTruthy();
+    const item = await screen.findByText("ย่อหน้าที่ 4: text box ข้ามไป");
+    expect(item.closest("dialog")?.getAttribute("aria-label")).toBe("ผลการนำเข้า Word"); // its own dialog on top
+    expect(item.closest("dialog")).not.toBe(document.querySelector('dialog[aria-label="นำเข้าแบบฟอร์ม Word"]'));
     expect(push).not.toHaveBeenCalled();
     fireEvent.click(screen.getByText("เปิดใน Designer"));
     expect(push).toHaveBeenCalledWith("/templates/purchase-request/designer");
