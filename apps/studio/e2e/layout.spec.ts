@@ -180,6 +180,37 @@ test("a free A5 sheet: boxes dropped at the pointer, dragged, snapped, then prin
   }
 });
 
+test("ข้อความล้นกล่อง: a selected box is not flagged, text longer than its box is", async ({ page }) => {
+  // regression: the resize handles of a selected box hang below it and were measured as its content (v1.16 fix)
+  test.setTimeout(120_000);
+  const rid = id("e2e-overflow");
+  await login(page);
+  await createBlank(page, rid, "กล่องล้น", async (dialog) => {
+    await dialog.getByRole("radio", { name: /จัดวางแบบอิสระ/ }).click();
+    await dialog.getByLabel("ขนาดกระดาษ").selectOption("A5");
+  });
+  await openDesigner(page, rid);
+  const sheet = await sheetBox(page, "[data-jd-page]");
+  const mm = sheet.w / 148;
+  await dropAt(page, "text", sheet.x + 20 * mm, sheet.y + 20 * mm);
+  const text = page.locator('[data-paper] .jd-fbox[data-kind="box"]').first();
+  await text.click();
+  await expect(text).toHaveClass(/jd-selected/);
+  await expect(page.locator("[data-paper] .jd-rh")).not.toHaveCount(0); // the handles are there
+  await expect(page.locator("[data-paper] .jd-over")).toHaveCount(0);
+
+  // three lines in a box one line tall: flagged, selected or not
+  await text.dblclick();
+  await expect(page.locator(".jd-editing")).toBeVisible();
+  await page.keyboard.press("Control+A");
+  await page.keyboard.type("ข้อความยาวมากที่ไม่พอดีกล่อง ".repeat(6));
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".jd-editing")).toHaveCount(0);
+  await expect(page.locator("[data-paper] .jd-over")).toHaveCount(1);
+  await page.mouse.click(sheet.x + 120 * mm, sheet.y + 150 * mm); // nothing selected
+  await expect(page.locator("[data-paper] .jd-over")).toHaveCount(1);
+});
+
 test("a header logo and a footer with page numbers repeat on every page", async ({ page }) => {
   test.setTimeout(240_000);
   const rid = id("e2e-running");

@@ -191,6 +191,8 @@ function BoxView({
     const box = e.getBoundingClientRect();
     let bottom = 0;
     for (const c of e.querySelectorAll("*")) {
+      // the resize handles of a selected box hang 4 px below it: they are the designer's, not the box's content
+      if (c.classList.contains("jd-rh")) continue;
       const r = c.getBoundingClientRect();
       if (r.height > 0) bottom = Math.max(bottom, r.bottom - box.top);
     }
