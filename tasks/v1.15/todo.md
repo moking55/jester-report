@@ -64,3 +64,7 @@
 - [ ] ผู้ใช้ลองบน stack rc แล้วอนุมัติปล่อย
 
 - [x] **T10 release 1.15.0** (S) — ปล่อยแล้ว 24 พ.ย. 2026: tag `v1.15.0` บน `7ab9d23` (หลัง release commit `bb9ed23` มีแยกปุ่มนำเข้า + modal ซ้อนสำหรับ warnings ตามที่ผู้ใช้ขอ), push `88badc9..7ab9d23`, backup `jester-backup-20261124-032602`, deploy stack หลัก (api/studio `1.15.0`, health up, 4 รายงานครบ), ปิด stack rc · ก่อนปล่อย E2E สดบน rc 17 ตัวผ่าน · ทำก่อนหน้า: เลข version 8 ไฟล์, commit `chore: release 1.15.0`, tag `v1.15.0`, push + deploy หลังผู้ใช้อนุมัติ, backup ก่อน deploy
+
+## v1.15.1 (hotfix)
+
+- [x] ปุ่มจัดรูปแบบใน code editor เปลี่ยนจาก Ctrl+Shift+Space เป็น **Shift+Alt+F** ตาม VS Code (ผู้ใช้ขอ 24 พ.ย. 2026) · มี test กดปุ่มจริงใน CodeMirror (`editor-format-key.test.tsx`) · ปล่อยแล้ว: tag `v1.15.1` บน `9c54107`, push `7ab9d23..9c54107`, backup `jester-backup-20261124-034046`, deploy stack หลัก, Meditech บน host และ CT 115 (merge `6129916`; ยังไม่ push ไป GitLab) · ไม่ได้รัน E2E ชุดเต็มบน rc รอบนี้ (แก้บรรทัดเดียว: vitest 608, lint, typecheck, `next build` ผ่าน)
